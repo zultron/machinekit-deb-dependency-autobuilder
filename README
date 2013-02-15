@@ -6,8 +6,21 @@ Targets:
 
 test:  list some variables and their values for debugging
 
-<codename>/base-<arch>.tgz:  e.g. precise/base-i386.tgz
+<codename>/<arch>/base.tgz:  e.g. precise/base-i386.tgz
     Build the base chroot tarball with pbuilder --create
+
+<codename>/<arch>/.stamp-xenomai:
+    Build the xenomai packages
+
+
+---------------------------
+TODO
+
+- build only binary packages
+  - build arch-indep binary packages only once
+- build other packages
+  - figure out how to do so with prereqs installed
+
 
 ---------------------------
 Random notes follow
