@@ -43,13 +43,13 @@ BASE_CHROOT_TARBALLS = $(foreach C,$(CODENAMES),$(foreach A,$(ARCHES),\
 MIRROR = $(if $(findstring $(1),$(UBUNTU_CODENAMES)),$(UBUNTU_MIRROR),\
 	$(if $(findstring $(1),$(DEBIAN_CODENAMES)),$(DEBIAN_MIRROR)))
 
-# Given codename, return --keyring= arg
+# Given codename, return --keyring arg
 KEYRING_OPT = $(if $(findstring $(1),$(UBUNTU_CODENAMES)),\
-	--keyring=$(TOPDIR)/admin/ubuntu-keyring.gpg)
+	--keyring $(TOPDIR)/admin/ubuntu-keyring.gpg)
 
 # Given codename, return --debootstrapopts --keyring= args to pbuilder
 DEBOOTSTRAPOPTS = $(if $(findstring $(1),$(UBUNTU_CODENAMES)),\
-	--debootstrapopts $(call KEYRING_OPT,$(1)))
+	--debootstrapopts --keyring=$(TOPDIR)/admin/ubuntu-keyring.gpg)
 
 
 ###################################################
