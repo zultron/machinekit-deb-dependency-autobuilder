@@ -17,6 +17,10 @@ UBUNTU_KEYID = 40976EAF437D05B5
 UBUNTU_KEYRING = $(TOPDIR)/admin/ubuntu-keyring.gpg
 KEYSERVER = hkp://keys.gnupg.net
 
+# Xenomai package
+PACKAGES += xenomai
+GITURL_XENOMAI = git@github.com:zultron/xenomai-src.git
+GITBRANCH_XENOMAI = v2.6.2.1-deb
 
 ###################################################
 # Variables that should not change much
@@ -25,7 +29,7 @@ KEYSERVER = hkp://keys.gnupg.net
 # Other variables
 TOPDIR = $(shell pwd)
 SUDO = sudo
-DIRS = admin tmp
+DIRS = admin tmp src git stamps
 ALLDIRS = $(patsubst %,%/.dir-exists,$(DIRS) $(CODENAMES))
 CODENAMES = $(UBUNTU_CODENAMES) $(DEBIAN_CODENAMES)
 BASE_CHROOT_TARBALLS = $(foreach C,$(CODENAMES),$(foreach A,$(ARCHES),\
@@ -54,13 +58,21 @@ endif
 
 
 ###################################################
-# Rules
+# Misc rules
 
 .PHONY:  all
 all:  $(BASE_CHROOT_TARBALLS)
 
 .dir-exists%:
 	mkdir -p $(@D) && touch $@
+
+test:
+	@echo BASE_CHROOT_TARBALLS:
+	@for i in $(BASE_CHROOT_TARBALLS); do echo "    $$i"; done
+
+
+###################################################
+# Base chroot tarball rules
 
 admin/ubuntu-keyring.gpg: $(ALLDIRS)
 	gpg --no-default-keyring --keyring=$(UBUNTU_KEYRING) \
@@ -70,7 +82,6 @@ admin/ubuntu-keyring.gpg: $(ALLDIRS)
 # base chroot tarballs are named e.g. lucid/base-i386.tgz
 # in this case, $(*D) = lucid; $(*F) = i386
 base-%.tgz: admin/ubuntu-keyring.gpg $(*D)/aptcache/$(*F)/.dir-exists
-	@echo "distro $(*D); arch $(*F); mirror $(call MIRROR,$(*D))"
 	$(SUDO) pbuilder --create --basetgz $@ --buildplace tmp \
 	  --buildresult $(*D) --distribution $(*D) --architecture $(*F) \
 	  --logfile $(*D)/$$(basename $@ .tgz).create.log \
@@ -87,6 +98,14 @@ clean_base_chroot_tarballs:
 	    done \
 	done
 
-test:
-	@echo BASE_CHROOT_TARBALLS:
-	@for i in $(BASE_CHROOT_TARBALLS); do echo "    $$i"; done
+###################################################
+# Source rules
+
+# clone & update the xenomai submodule
+stamps/xenomai-submodule: $(ALLDIRS)
+	# be sure the submodule has been checked out
+	test -f git/xenomai/.git || \
+	    git submodule add -b $(GITBRANCH_XENOMAI) -- $(GITURL_XENOMAI) \
+		git/xenomai
+	git submodule update git/xenomai
+	touch $@

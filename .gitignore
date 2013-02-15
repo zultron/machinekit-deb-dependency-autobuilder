@@ -1,2 +1,6 @@
-# ignore all directories
+# ignore all directories except /git/
 /*/
+!/git/
+
+# ignore any directory creation stamps
+.dir-exists*
