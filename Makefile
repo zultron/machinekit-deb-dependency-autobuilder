@@ -65,7 +65,9 @@ endif
 # Misc rules
 
 .PHONY:  all
-all:  $(BASE_CHROOT_TARBALLS)
+all:  $(foreach c,$(CODENAME),\
+	$(foreach a,$(ARCHES),\
+	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
 
 .dir-exists%:
 	mkdir -p $(@D) && touch $@
