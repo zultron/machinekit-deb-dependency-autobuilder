@@ -29,7 +29,7 @@ GITBRANCH_XENOMAI = v2.6.2.1-deb
 # Other variables
 TOPDIR = $(shell pwd)
 SUDO = sudo
-DIRS = admin tmp src git stamps
+DIRS = admin tmp src git
 ALLDIRS = $(patsubst %,%/.dir-exists,$(DIRS) $(CODENAMES))
 CODENAMES = $(UBUNTU_CODENAMES) $(DEBIAN_CODENAMES)
 BASE_CHROOT_TARBALLS = $(foreach C,$(CODENAMES),$(foreach A,$(ARCHES),\
@@ -83,15 +83,16 @@ admin/ubuntu-keyring.gpg: admin/.dir-exists
 		--keyserver=$(KEYSERVER) --recv-keys \
 		--trust-model always $(UBUNTU_KEYID)
 
-# base chroot tarballs are named e.g. lucid/base-i386.tgz
+# base chroot tarballs are named e.g. lucid/i386/base.tgz
 # in this case, $(*D) = lucid; $(*F) = i386
-base-%.tgz: admin/ubuntu-keyring.gpg $(*D)/aptcache/$(*F)/.dir-exists
+%/base.tgz: admin/ubuntu-keyring.gpg %/aptcache/.dir-exists
 	$(SUDO) pbuilder --create --basetgz $@ --buildplace tmp \
-	  --buildresult $(*D) --distribution $(*D) --architecture $(*F) \
-	  --logfile $(*D)/$$(basename $@ .tgz).create.log \
+	  --distribution $(*D) --architecture $(*F) \
+	  --logfile $*/create.log \
 	  --mirror $(call MIRROR,$(*D)) \
-	  --aptcache $(TOPDIR)/$(*D)/aptcache/$(*F) \
-	  $(call DEBOOTSTRAPOPTS,$(*D))
+	  --aptcache $(TOPDIR)/$*/aptcache \
+	  $(call DEBOOTSTRAPOPTS,$(*D)) || \
+	    rm -f $@ && exit 1
 
 .PHONY:  clean_base_chroot_tarballs
 clean_base_chroot_tarballs:
@@ -106,7 +107,7 @@ clean_base_chroot_tarballs:
 # Source rules
 
 # clone & update the xenomai submodule
-stamps/xenomai-submodule: $(ALLDIRS)
+git/.stamp-xenomai: git/.dir-exists
 	# be sure the submodule has been checked out
 	test -f git/xenomai/.git || \
 	    git submodule add -b $(GITBRANCH_XENOMAI) -- $(GITURL_XENOMAI) \
@@ -115,5 +116,7 @@ stamps/xenomai-submodule: $(ALLDIRS)
 	touch $@
 
 # create the source package
-stamps/xenomai-src.dsc: stamps/xenomai-submodule
-	cd src && dpkg-source -b ../git/xenomai
+src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
+	rm -f src/xenomai_*
+	cd src && dpkg-source -b $(TOPDIR)/git/xenomai
+	touch $@
