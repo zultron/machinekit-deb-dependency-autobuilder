@@ -2,6 +2,13 @@ A Makefile to automatically build Xenomai packages for many
 Debian/Ubuntu release and architecture combinations
 
 
+Targets:
+
+test:  list some variables and their values for debugging
+
+<codename>/base-<arch>.tgz:  e.g. precise/base-i386.tgz
+    Build the base chroot tarball with pbuilder --create
+
 ---------------------------
 Random notes follow
 
