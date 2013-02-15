@@ -161,4 +161,11 @@ git/.stamp-linux: git/.dir-exists
 
 src/$(LINUX_TARBALL): src/.dir-exists
 	cd src && wget $(LINUX_URL)/$(LINUX_TARBALL)
+	touch $@  # be sure timestamp is correct
+
+src/.stamp-linux: src/$(LINUX_TARBALL) git/.stamp-linux
+	# unpack tarball into git directory & create source pkg
+	tar xjCf git/linux src/$(LINUX_TARBALL) --strip-components=1
+	cd src && dpkg-source -b $(TOPDIR)/git/linux
+	touch $@
 

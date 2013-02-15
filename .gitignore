@@ -2,6 +2,10 @@
 /*/
 !/git/
 
+# ignore unpacked linux tarball files
+/git/linux/
+!/git/linux/debian
+
 # ignore stamps
 .dir-exists*
 .stamp-*
