@@ -26,6 +26,8 @@ GITBRANCH_XENOMAI = v2.6.2.1-deb
 PACKAGES += linux
 GITURL_LINUX = git://github.com/zultron/kernel-rt-deb.git
 GITBRANCH_LINUX = master
+LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
+LINUX_VERSION = 3.5.7
 
 
 ###################################################
@@ -40,6 +42,7 @@ ALLDIRS = $(patsubst %,%/.dir-exists,$(DIRS) $(CODENAMES))
 CODENAMES = $(UBUNTU_CODENAMES) $(DEBIAN_CODENAMES)
 BASE_CHROOT_TARBALLS = $(foreach C,$(CODENAMES),$(foreach A,$(ARCHES),\
   $(C)/base-$(A).tgz))
+LINUX_TARBALL = linux-$(LINUX_VERSION).tar.bz2
 ALLSTAMPS = $(foreach c,$(CODENAMES),\
 	$(foreach a,$(ARCHES),\
 	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
@@ -155,3 +158,7 @@ git/.stamp-linux: git/.dir-exists
 	fi
 	git submodule update git/linux/debian
 	touch $@
+
+src/$(LINUX_TARBALL): src/.dir-exists
+	cd src && wget $(LINUX_URL)/$(LINUX_TARBALL)
+
