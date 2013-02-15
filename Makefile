@@ -19,7 +19,7 @@ KEYSERVER = hkp://keys.gnupg.net
 
 # Xenomai package
 PACKAGES += xenomai
-GITURL_XENOMAI = git@github.com:zultron/xenomai-src.git
+GITURL_XENOMAI = git://github.com/zultron/xenomai-src.git
 GITBRANCH_XENOMAI = v2.6.2.1-deb
 
 # Linux package
