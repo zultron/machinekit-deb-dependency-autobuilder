@@ -104,7 +104,7 @@ clean_base_chroot_tarballs:
 	done
 
 ###################################################
-# Source rules
+# Xeno build rules
 
 # clone & update the xenomai submodule
 git/.stamp-xenomai: git/.dir-exists
@@ -122,7 +122,7 @@ src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
 	touch $@
 
 # build the binary packages
-%/.stamp-xenomai: src/.stamp-xenomai 
+%/.stamp-xenomai: src/.stamp-xenomai %/base.tgz
 	test -d $(*D)/pkgs || mkdir -p $(*D)/pkgs
 	$(SUDO) pbuilder --build --basetgz $*/base.tgz \
 	    --buildplace tmp --buildresult $(*D)/pkgs \
