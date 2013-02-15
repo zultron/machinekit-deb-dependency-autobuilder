@@ -120,3 +120,15 @@ src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
 	rm -f src/xenomai_*
 	cd src && dpkg-source -b $(TOPDIR)/git/xenomai
 	touch $@
+
+# build the binary packages
+%/.stamp-xenomai: src/.stamp-xenomai 
+	test -d $(*D)/pkgs || mkdir -p $(*D)/pkgs
+	$(SUDO) pbuilder --build --basetgz $*/base.tgz \
+	    --buildplace tmp --buildresult $(*D)/pkgs \
+	    --mirror $(call MIRROR,$(*D)) --distribution $(*D) \
+	    --architecture $(*F) --aptcache $*/aptcache \
+	    --logfile $*/xenomai.build.log \
+	    $(call KEYRING_OPT,$(*D)) \
+	    src/xenomai_*.dsc
+	touch $@
