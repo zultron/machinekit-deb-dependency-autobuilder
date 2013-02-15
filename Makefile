@@ -34,7 +34,9 @@ ALLDIRS = $(patsubst %,%/.dir-exists,$(DIRS) $(CODENAMES))
 CODENAMES = $(UBUNTU_CODENAMES) $(DEBIAN_CODENAMES)
 BASE_CHROOT_TARBALLS = $(foreach C,$(CODENAMES),$(foreach A,$(ARCHES),\
   $(C)/base-$(A).tgz))
-
+ALLSTAMPS = $(foreach c,$(CODENAMES),\
+	$(foreach a,$(ARCHES),\
+	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
 
 ###################################################
 # Functions
@@ -65,9 +67,7 @@ endif
 # Misc rules
 
 .PHONY:  all
-all:  $(foreach c,$(CODENAME),\
-	$(foreach a,$(ARCHES),\
-	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
+all:  $(ALLSTAMPS)
 
 .dir-exists%:
 	mkdir -p $(@D) && touch $@
@@ -75,6 +75,8 @@ all:  $(foreach c,$(CODENAME),\
 test:
 	@echo BASE_CHROOT_TARBALLS:
 	@for i in $(BASE_CHROOT_TARBALLS); do echo "    $$i"; done
+	@echo ALLTAMPS:
+	@for i in $(ALLSTAMPS); do echo "    $$i"; done
 
 
 ###################################################
