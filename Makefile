@@ -22,6 +22,12 @@ PACKAGES += xenomai
 GITURL_XENOMAI = git@github.com:zultron/xenomai-src.git
 GITBRANCH_XENOMAI = v2.6.2.1-deb
 
+# Linux package
+PACKAGES += linux
+GITURL_LINUX = git://github.com/zultron/kernel-rt-deb.git
+GITBRANCH_LINUX = master
+
+
 ###################################################
 # Variables that should not change much
 # (or auto-generated)
@@ -135,4 +141,17 @@ src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
 	    --logfile $*/xenomai.build.log \
 	    $(call KEYRING_OPT,$(*D)) \
 	    src/xenomai_*.dsc
+	touch $@
+
+###################################################
+# Kernel build rules
+
+git/.stamp-linux: git/.dir-exists
+	# be sure the submodule has been checked out
+	if ! test -f git/linux/debian/.git; then \
+	    mkdir -p git/linux; \
+	    git submodule add -b $(GITBRANCH_LINUX) -- $(GITURL_LINUX) \
+		git/linux/debian; \
+	fi
+	git submodule update git/linux/debian
 	touch $@
