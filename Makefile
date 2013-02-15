@@ -109,3 +109,7 @@ stamps/xenomai-submodule: $(ALLDIRS)
 		git/xenomai
 	git submodule update git/xenomai
 	touch $@
+
+# create the source package
+stamps/xenomai-src.dsc: stamps/xenomai-submodule
+	cd src && dpkg-source -b ../git/xenomai
