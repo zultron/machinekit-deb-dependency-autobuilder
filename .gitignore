@@ -2,5 +2,6 @@
 /*/
 !/git/
 
-# ignore any directory creation stamps
+# ignore stamps
 .dir-exists*
+.stamp-*
