@@ -92,7 +92,7 @@ admin/ubuntu-keyring.gpg: admin/.dir-exists
 	  --mirror $(call MIRROR,$(*D)) \
 	  --aptcache $(TOPDIR)/$*/aptcache \
 	  $(call DEBOOTSTRAPOPTS,$(*D)) || \
-	    rm -f $@ && exit 1
+	    (rm -f $@ && exit 1)
 
 .PHONY:  clean_base_chroot_tarballs
 clean_base_chroot_tarballs:
