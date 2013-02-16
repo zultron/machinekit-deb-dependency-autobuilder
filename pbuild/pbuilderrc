@@ -48,6 +48,15 @@ PKGNAME_LOGFILE=yes
 # hook directory
 HOOKDIR="${TOPDIR}/pbuild"
 
+# set arch in debootstrap
+DEBOOTSTRAPOPTS=("${DEBOOTSTRAPOPTS[@]}" "--arch=${ARCH}")
+
+# set arch for create mode
+ARCHITECTURE=${ARCH}
+
+# unexport ARCH; messes with at least kernel pkgs
+export -n ARCH; unset ARCH
+
 
 if $(echo ${DEBIAN_SUITES[@]} | grep -q $DIST); then
     # Debian configuration
