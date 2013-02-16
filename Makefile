@@ -108,7 +108,7 @@ git/.stamp-xenomai: git/.dir-exists
 # create the source package
 src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
 	rm -f src/xenomai_*
-	cd src && dpkg-source -b $(TOPDIR)/git/xenomai
+	cd src && dpkg-source -i -I -b $(TOPDIR)/git/xenomai
 	touch $@
 
 # build the binary packages
@@ -137,7 +137,7 @@ git/.stamp-linux: src/$(LINUX_TARBALL)
 src/.stamp-linux: git/.stamp-linux git/linux/debian/changelog
 	# create source pkg
 	rm -f src/linux-source-*
-	cd src && dpkg-source -b $(TOPDIR)/git/linux
+	cd src && dpkg-source -i -I -b $(TOPDIR)/git/linux
 	touch $@
 
 # build the binary packages
