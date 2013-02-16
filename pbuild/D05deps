@@ -1,3 +1,0 @@
-#!/bin/sh -e
-(cd ${TOPDIR}/${DIST}/pkgs; apt-ftparchive packages . > Packages)
-apt-get update
