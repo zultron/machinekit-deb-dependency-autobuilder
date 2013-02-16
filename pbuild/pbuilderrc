@@ -15,7 +15,10 @@ DEBIAN_MIRROR="ftp.at.debian.org"
 # Ubuntu configuration
 UBUNTU_SUITES=("precise" "lucid")
 UBUNTU_MIRROR="ftp.ubuntu.com"
-UBUNTU_KEYRING=ubuntu-keyring.gpg
+
+# Keyring file
+KEYRING=keyring.gpg
+APTKEYRINGS=("${APTKEYRINGS[@]}" "$TOPDIR/admin/$KEYRING")
 
 # Distribution
 DISTRIBUTION=${DIST}
@@ -50,7 +53,7 @@ elif $(echo ${UBUNTU_SUITES[@]} | grep -q $DIST); then
     MIRRORSITE="http://$UBUNTU_MIRROR/ubuntu/"
     COMPONENTS="main restricted universe multiverse"
     DEBOOTSTRAPOPTS=("${DEBOOTSTRAPOPTS[@]}"
-	"--keyring=${TOPDIR}/admin/${UBUNTU_KEYRING}")
+	"--keyring=${TOPDIR}/admin/${KEYRING}")
 
 else
     echo "Unknown distribution: $DIST"

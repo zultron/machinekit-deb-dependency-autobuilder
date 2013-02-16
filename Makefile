@@ -7,9 +7,9 @@ ARCHES = i386 amd64
 # List of codenames to build for
 CODENAMES =  precise lucid squeeze
 
-# Ubuntu keys
-UBUNTU_KEYID = 40976EAF437D05B5
-UBUNTU_KEYRING = $(TOPDIR)/admin/ubuntu-keyring.gpg
+# Keyring:  Ubuntu and Zultron keys
+KEYIDS = 40976EAF437D05B5 12A8D0023B07D469
+KEYRING = $(TOPDIR)/admin/keyring.gpg
 KEYSERVER = hkp://keys.gnupg.net
 
 # Xenomai package
@@ -71,15 +71,15 @@ test:
 ###################################################
 # Base chroot tarball rules
 
-admin/ubuntu-keyring.gpg: admin/.dir-exists
-	gpg --no-default-keyring --keyring=$(UBUNTU_KEYRING) \
+admin/keyring.gpg: admin/.dir-exists Makefile
+	gpg --no-default-keyring --keyring=$(KEYRING) \
 		--keyserver=$(KEYSERVER) --recv-keys \
-		--trust-model always $(UBUNTU_KEYID)
+		--trust-model always $(KEYIDS)
 
 # base chroot tarballs are named e.g. lucid/i386/base.tgz
 # in this case, $(*D) = lucid; $(*F) = i386
 .PRECIOUS:  %/base.tgz
-%/base.tgz: admin/ubuntu-keyring.gpg %/aptcache/.dir-exists
+%/base.tgz: admin/keyring.gpg %/aptcache/.dir-exists
 	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) --create $(PBUILD_ARGS) || \
 	    (rm -f $@ && exit 1)
 
