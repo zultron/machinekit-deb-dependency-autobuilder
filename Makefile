@@ -5,7 +5,7 @@
 ARCHES = i386 amd64
 
 # List of codenames to build for
-CODENAMES =  precise lucid squeeze
+CODENAMES = precise lucid squeeze
 
 # Keyring:  Ubuntu and Zultron keys
 KEYIDS = 40976EAF437D05B5 12A8D0023B07D469
@@ -92,6 +92,7 @@ clean_base_chroot_tarballs:
 	    done \
 	done
 
+
 ###################################################
 # Xeno build rules
 
@@ -111,8 +112,7 @@ src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
 	touch $@
 
 # build the binary packages
-%/.stamp-xenomai: src/.stamp-xenomai %/base.tgz
-	test -d $(*D)/pkgs || mkdir -p $(*D)/pkgs
+%/.stamp-xenomai: src/.stamp-xenomai %/base.tgz %/pkgs/.dir-exists
 	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) --build $(PBUILD_ARGS) \
 	    src/xenomai_*.dsc || \
 	    (rm -f $@ && exit 1)
