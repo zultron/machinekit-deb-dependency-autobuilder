@@ -78,6 +78,7 @@ admin/ubuntu-keyring.gpg: admin/.dir-exists
 
 # base chroot tarballs are named e.g. lucid/i386/base.tgz
 # in this case, $(*D) = lucid; $(*F) = i386
+.PRECIOUS:  %/base.tgz
 %/base.tgz: admin/ubuntu-keyring.gpg %/aptcache/.dir-exists
 	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) --create $(PBUILD_ARGS) || \
 	    (rm -f $@ && exit 1)
