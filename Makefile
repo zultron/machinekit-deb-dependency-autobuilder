@@ -121,7 +121,7 @@ src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
 ###################################################
 # Kernel build rules
 
-git/.stamp-linux: git/.dir-exists
+git/linux/debian/changelog: git/.dir-exists
 	# be sure the submodule has been checked out
 	if ! test -f git/linux/debian/.git; then \
 	    mkdir -p git/linux; \
@@ -129,15 +129,27 @@ git/.stamp-linux: git/.dir-exists
 		git/linux/debian; \
 	fi
 	git submodule update git/linux/debian
+
+src/$(LINUX_TARBALL):
+	test -d src || mkdir -p src
+	cd src && wget $(LINUX_URL)/$(LINUX_TARBALL)
+
+git/.stamp-linux: src/$(LINUX_TARBALL)
+	# unpack tarball into git directory
+	tar xjCf git/linux src/$(LINUX_TARBALL) --strip-components=1
+
+
+src/.stamp-linux: git/.stamp-linux git/linux/debian/changelog
+	# create source pkg
+	rm -f src/linux-source-*
+	cd src && dpkg-source -b $(TOPDIR)/git/linux
 	touch $@
 
-src/$(LINUX_TARBALL): src/.dir-exists
-	cd src && wget $(LINUX_URL)/$(LINUX_TARBALL)
-	touch $@  # be sure timestamp is correct
-
-src/.stamp-linux: src/$(LINUX_TARBALL) git/.stamp-linux
-	# unpack tarball into git directory & create source pkg
-	tar xjCf git/linux src/$(LINUX_TARBALL) --strip-components=1
-	cd src && dpkg-source -b $(TOPDIR)/git/linux
+# build the binary packages
+%/.stamp-linux: src/.stamp-linux %/base.tgz %/.stamp-xenomai
+	test -d $(*D)/pkgs || mkdir -p $(*D)/pkgs
+	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) --build $(PBUILD_ARGS) \
+	    src/linux-source-*.dsc || \
+	    (rm -f $@ && exit 1)
 	touch $@
 
