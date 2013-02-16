@@ -1,6 +1,7 @@
 # ignore all directories except /git/
 /*/
 !/git/
+!/pbuild/
 
 # ignore unpacked linux tarball files
 /git/linux/

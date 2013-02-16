@@ -1,0 +1,73 @@
+#							-*-shell-script-*-
+# TOPDIR, ARCH and DIST should be passed in from outside
+test -z "$TOPDIR" && echo "error:  TOPDIR undefined" 1>&2 && exit 1
+test -z "$ARCH" && echo "error:  ARCH undefined" 1>&2 && exit 1
+test -z "$DIST" && echo "error:  DIST undefined" 1>&2 && exit 1
+
+# Other useful opts from cmdline:
+# DEBBUILDOPTS=-Tbinary-arch
+# DEBEMAIL='John Doe <jdoe@example.com>'
+
+# Debian configuration
+DEBIAN_SUITES=("squeeze")
+DEBIAN_MIRROR="ftp.at.debian.org"
+
+# Ubuntu configuration
+UBUNTU_SUITES=("precise" "lucid")
+UBUNTU_MIRROR="ftp.ubuntu.com"
+UBUNTU_KEYRING=ubuntu-keyring.gpg
+
+# Distribution
+DISTRIBUTION=${DIST}
+
+# Base tarball
+BASETGZ="${TOPDIR}/${DIST}/${ARCH}/base.tgz"
+
+# Where to build
+BUILDPLACE="${TOPDIR}/tmp"
+
+# Where to place finished pkgs
+BUILDRESULT="${TOPDIR}/${DIST}/pkgs"
+
+# cache for packages
+APTCACHE="${TOPDIR}/${DIST}/${ARCH}/aptcache"
+
+# ccache
+CCACHEDIR="${TOPDIR}/ccache"
+test -d ${CCACHEDIR} || mkdir -p ${CCACHEDIR}
+
+# always log builds
+PKGNAME_LOGFILE=yes
+
+
+if $(echo ${DEBIAN_SUITES[@]} | grep -q $DIST); then
+    # Debian configuration
+    MIRRORSITE="http://$DEBIAN_MIRROR/debian/"
+    COMPONENTS="main contrib non-free"
+
+elif $(echo ${UBUNTU_SUITES[@]} | grep -q $DIST); then
+    # Ubuntu configuration
+    MIRRORSITE="http://$UBUNTU_MIRROR/ubuntu/"
+    COMPONENTS="main restricted universe multiverse"
+    DEBOOTSTRAPOPTS=("${DEBOOTSTRAPOPTS[@]}"
+	"--keyring=${TOPDIR}/admin/${UBUNTU_KEYRING}")
+
+else
+    echo "Unknown distribution: $DIST"
+    exit 1
+fi
+
+
+# Include dependent packages in e.g. lucid/pkgs when building
+OTHERMIRROR="deb file://${TOPDIR}/${DIST}/pkgs ./"
+BINDMOUNTS="${TOPDIR}/${DIST}/pkgs"
+HOOKDIR="${TOPDIR}/pbuild"
+EXTRAPACKAGES="apt-utils"
+
+
+# Print diagnostics
+echo "script = $(basename $0)"
+for i in BASETGZ DISTRIBUTION APTCACHE MIRRORSITE COMPONENTS \
+    DEBOOTSTRAPOPTS[@] OTHERMIRROR BINDMOUNTS HOOKDIR EXTRAPACKAGES; do
+    eval echo "$i = \${$i}"
+done

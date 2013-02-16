@@ -4,13 +4,8 @@
 # Arches to build
 ARCHES = i386 amd64
 
-# Ubuntu codename data
-UBUNTU_CODENAMES = precise lucid
-UBUNTU_MIRROR = http://archive.ubuntu.com/ubuntu
-
-# Debian codename data
-DEBIAN_CODENAMES = squeeze
-DEBIAN_MIRROR = http://ftp.at.debian.org/debian/
+# List of codenames to build for
+CODENAMES =  precise lucid squeeze
 
 # Ubuntu keys
 UBUNTU_KEYID = 40976EAF437D05B5
@@ -39,29 +34,14 @@ TOPDIR = $(shell pwd)
 SUDO = sudo
 DIRS = admin tmp src git
 ALLDIRS = $(patsubst %,%/.dir-exists,$(DIRS) $(CODENAMES))
-CODENAMES = $(UBUNTU_CODENAMES) $(DEBIAN_CODENAMES)
 BASE_CHROOT_TARBALLS = $(foreach C,$(CODENAMES),$(foreach A,$(ARCHES),\
   $(C)/base-$(A).tgz))
 LINUX_TARBALL = linux-$(LINUX_VERSION).tar.bz2
 ALLSTAMPS = $(foreach c,$(CODENAMES),\
 	$(foreach a,$(ARCHES),\
 	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
-
-###################################################
-# Functions
-
-# Given codename, return mirror
-MIRROR = $(if $(findstring $(1),$(UBUNTU_CODENAMES)),$(UBUNTU_MIRROR),\
-	$(if $(findstring $(1),$(DEBIAN_CODENAMES)),$(DEBIAN_MIRROR)))
-
-# Given codename, return --keyring arg
-KEYRING_OPT = $(if $(findstring $(1),$(UBUNTU_CODENAMES)),\
-	--keyring $(TOPDIR)/admin/ubuntu-keyring.gpg)
-
-# Given codename, return --debootstrapopts --keyring= args to pbuilder
-DEBOOTSTRAPOPTS = $(if $(findstring $(1),$(UBUNTU_CODENAMES)),\
-	--debootstrapopts --keyring=$(TOPDIR)/admin/ubuntu-keyring.gpg)
-
+PBUILD = TOPDIR=$(TOPDIR) pbuilder
+PBUILD_ARGS = --configfile pbuild/pbuilderrc
 
 ###################################################
 # out-of-band checks
@@ -99,12 +79,7 @@ admin/ubuntu-keyring.gpg: admin/.dir-exists
 # base chroot tarballs are named e.g. lucid/i386/base.tgz
 # in this case, $(*D) = lucid; $(*F) = i386
 %/base.tgz: admin/ubuntu-keyring.gpg %/aptcache/.dir-exists
-	$(SUDO) pbuilder --create --basetgz $@ --buildplace tmp \
-	  --distribution $(*D) --architecture $(*F) \
-	  --logfile $*/create.log \
-	  --mirror $(call MIRROR,$(*D)) \
-	  --aptcache $(TOPDIR)/$*/aptcache \
-	  $(call DEBOOTSTRAPOPTS,$(*D)) || \
+	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) --create $(PBUILD_ARGS) || \
 	    (rm -f $@ && exit 1)
 
 .PHONY:  clean_base_chroot_tarballs
@@ -137,13 +112,9 @@ src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
 # build the binary packages
 %/.stamp-xenomai: src/.stamp-xenomai %/base.tgz
 	test -d $(*D)/pkgs || mkdir -p $(*D)/pkgs
-	$(SUDO) pbuilder --build --basetgz $*/base.tgz \
-	    --buildplace tmp --buildresult $(*D)/pkgs \
-	    --mirror $(call MIRROR,$(*D)) --distribution $(*D) \
-	    --architecture $(*F) --aptcache $*/aptcache \
-	    --logfile $*/xenomai.build.log \
-	    $(call KEYRING_OPT,$(*D)) \
-	    src/xenomai_*.dsc
+	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) --build $(PBUILD_ARGS) \
+	    src/xenomai_*.dsc || \
+	    (rm -f $@ && exit 1)
 	touch $@
 
 ###################################################
