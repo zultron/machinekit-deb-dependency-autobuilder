@@ -20,47 +20,6 @@ https://help.launchpad.net/Packaging/SourceBuilds
 
 
 
-# my command:
-sudo ARCH=amd64 http_proxy="http://proxy0.zultron.com:3128/" \
-     debootstrap --arch=i386 lucid /v/tmp/debroots/lucid-32 \
-     http://archive.ubuntu.com/ubuntu
-
-sudo ARCH=amd64 http_proxy="http://proxy0.zultron.com:3128/" \
-     debootstrap --arch=i386 squeeze /v/tmp/debroots/squeeze-32 \
-     http://ftp.us.debian.org/debian
-
-# chroot
-sudo chroot squeeze-32
-# install repo from here:
-# http://wiki.linuxcnc.org/cgi-bin/wiki.pl?XenomaiKernelPackages
-
-# fix locales in debian
-apt-get install locales-all
-
-# fix locales in ubuntu
-locale-gen en_US en_US.UTF-8 && dpkg-reconfigure locales
-
-# add 'universe' in ubuntu
-echo 'deb http://us.archive.ubuntu.com/ubuntu/ lucid universe' >> \
-     /etc/apt/sources.list
-
-# install development packages
-apt-get update
-apt-get install -y dpkg-dev
-apt-get install -y git-core module-assistant wget quilt libpci-dev
-
-# get sources
-mkdir /tmp/build && cd /tmp/build
-apt-get source xenomai
-
-# install build requirements
-apt-get build-dep xenomai
-
-# build & install xenomai
-cd xenomai-2.6.2.1
-dpkg-buildpackage -uc -us
-cd .. && dpkg -i *.deb
-
 # build & install kernel
 apt-get source linux-source-3.5.7-xenomai-2.6.2.1
 cd linux-source-3.5.7-xenomai-2.6.2.1-5
@@ -84,17 +43,3 @@ dpkg-source -x zultron-keyring_0.1-1.dsc
 cd zultron-keyring-0.1
 dpkg-buildpackage -uc -us && cd ..
 
-
-
-sudo aptitude install debootstrap schroot
-
-first, create a new chroot-environment (Ubuntu hardy, 64-bit):
-
-CHROOTDIR="/var/chroot/ubuntu-hardy-x86_64"
-sudo debootstrap --variant=buildd --arch amd64 hardy "${CHROOTDIR}" http://archive.ubuntu.com/ubuntu/
-sudo vim "${CHROOTDIR}/etc/apt/sources.list"
-sudo touch "${CHROOTDIR}/CHROOT"
-echo hardy64_chroot | sudo tee ${CHROOTDIR}/etc/debian_chroot
-for file in passwd shadow group gshadow hosts ; do sudo cp -av /etc/$file ${CHROOTDIR}/etc/ ; done
-
-sudo http_proxy="http://<your.proxy.address>:<port>/" debootstrap --variant=buildd --arch amd64 hardy "${CHROOTDIR}" http://archive.ubuntu.com/ubuntu/
