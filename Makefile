@@ -123,12 +123,7 @@ src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
 
 git/linux/debian/changelog: git/.dir-exists
 	# be sure the submodule has been checked out
-	if ! test -f git/linux/debian/.git; then \
-	    mkdir -p git/linux; \
-	    git submodule add -b $(GITBRANCH_LINUX) -- $(GITURL_LINUX) \
-		git/linux/debian; \
-	fi
-	git submodule update git/linux/debian
+	git submodule update --recursive --init git/linux/debian
 
 src/$(LINUX_TARBALL):
 	test -d src || mkdir -p src
