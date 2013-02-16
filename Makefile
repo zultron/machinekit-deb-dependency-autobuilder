@@ -141,7 +141,7 @@ src/.stamp-linux: git/.stamp-linux git/linux/debian/changelog
 	touch $@
 
 # build the binary packages
-%/.stamp-linux: src/.stamp-linux %/base.tgz %/.stamp-xenomai
+%/.stamp-linux: src/.stamp-linux %/base.tgz
 	test -d $(*D)/pkgs || mkdir -p $(*D)/pkgs
 	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) --build $(PBUILD_ARGS) \
 	    src/linux-source-*.dsc || \

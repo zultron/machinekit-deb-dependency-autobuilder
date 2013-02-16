@@ -4,6 +4,9 @@ test -z "$TOPDIR" && echo "error:  TOPDIR undefined" 1>&2 && exit 1
 test -z "$ARCH" && echo "error:  ARCH undefined" 1>&2 && exit 1
 test -z "$DIST" && echo "error:  DIST undefined" 1>&2 && exit 1
 
+# For dependent pkgs
+OTHERMIRROR="deb http://deb.machinekit.net/$DIST $DIST main"
+
 # Other useful opts from cmdline:
 # DEBBUILDOPTS=-Tbinary-arch
 # DEBEMAIL='John Doe <jdoe@example.com>'
@@ -30,7 +33,7 @@ BASETGZ="${TOPDIR}/${DIST}/${ARCH}/base.tgz"
 BUILDPLACE="${TOPDIR}/tmp"
 
 # Where to place finished pkgs
-BUILDRESULT="${TOPDIR}/${DIST}/pkgs"
+BUILDRESULT="${TOPDIR}/${DIST}/${ARCH}/pkgs"
 
 # cache for packages
 APTCACHE="${TOPDIR}/${DIST}/${ARCH}/aptcache"
@@ -61,16 +64,9 @@ else
 fi
 
 
-# Include dependent packages in e.g. lucid/pkgs when building
-OTHERMIRROR="deb file://${TOPDIR}/${DIST}/pkgs ./"
-BINDMOUNTS="${TOPDIR}/${DIST}/pkgs"
-HOOKDIR="${TOPDIR}/pbuild"
-EXTRAPACKAGES="apt-utils"
-
-
 # Print diagnostics
 echo "script = $(basename $0)"
 for i in BASETGZ DISTRIBUTION APTCACHE MIRRORSITE COMPONENTS \
-    DEBOOTSTRAPOPTS[@] OTHERMIRROR BINDMOUNTS HOOKDIR EXTRAPACKAGES; do
+    DEBOOTSTRAPOPTS[@] OTHERMIRROR; do
     eval echo "$i = \${$i}"
 done
