@@ -45,6 +45,9 @@ test -d ${CCACHEDIR} || mkdir -p ${CCACHEDIR}
 # always log builds
 PKGNAME_LOGFILE=yes
 
+# hook directory
+HOOKDIR="${TOPDIR}/pbuild"
+
 
 if $(echo ${DEBIAN_SUITES[@]} | grep -q $DIST); then
     # Debian configuration
