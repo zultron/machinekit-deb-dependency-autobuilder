@@ -23,6 +23,20 @@ TODO
 
 
 ---------------------------
+Links
+
+http://wiki.debian.org/Debootstrap
+
+https://wiki.ubuntu.com/PbuilderHowto
+
+http://wiki.debian.org/PbuilderTricks
+
+http://manpages.ubuntu.com/manpages/intrepid/man1/pbuilder-dist.1.html
+
+http://en.wikipedia.org/wiki/Debian_build_toolchain
+
+
+---------------------------
 Random notes follow
 
 multiple releases in a single ppa
