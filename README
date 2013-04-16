@@ -6,11 +6,18 @@ Targets:
 
 test:  list some variables and their values for debugging
 
+<codename>/<arch>/.stamp-linux:
+    Build the kernel packages (automatically builds the xenomai packages)
+
+<codename>/<arch>/.stamp-xenomai:
+    Build the xenomai packages (automatically builds the base.tgz chroot)
+
 <codename>/<arch>/base.tgz:  e.g. precise/base-i386.tgz
     Build the base chroot tarball with pbuilder --create
 
-<codename>/<arch>/.stamp-xenomai:
-    Build the xenomai packages
+Codename is one of squeeze, precise, lucid
+
+Arch is one of amd64, i386
 
 
 ---------------------------
