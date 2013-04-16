@@ -100,8 +100,7 @@ clean_base_chroot_tarballs:
 git/.stamp-xenomai: git/.dir-exists
 	# be sure the submodule has been checked out
 	test -f git/xenomai/.git || \
-	    git submodule add -b $(GITBRANCH_XENOMAI) -- $(GITURL_XENOMAI) \
-		git/xenomai
+           git submodule update --init -- git/xenomai
 	git submodule update git/xenomai
 	touch $@
 
