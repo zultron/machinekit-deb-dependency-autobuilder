@@ -4,9 +4,6 @@ test -z "$TOPDIR" && echo "error:  TOPDIR undefined" 1>&2 && exit 1
 test -z "$ARCH" && echo "error:  ARCH undefined" 1>&2 && exit 1
 test -z "$DIST" && echo "error:  DIST undefined" 1>&2 && exit 1
 
-# For dependent pkgs
-OTHERMIRROR="deb http://deb.machinekit.net/$DIST $DIST main"
-
 # Other useful opts from cmdline:
 # DEBBUILDOPTS=-Tbinary-arch
 # DEBEMAIL='John Doe <jdoe@example.com>'
