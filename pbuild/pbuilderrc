@@ -16,7 +16,7 @@ DEBIAN_SUITES=("squeeze")
 DEBIAN_MIRROR="ftp.at.debian.org"
 
 # Ubuntu configuration
-UBUNTU_SUITES=("precise" "lucid")
+UBUNTU_SUITES=("precise" "lucid" "hardy")
 UBUNTU_MIRROR="ftp.ubuntu.com"
 
 # Keyring file
@@ -49,7 +49,7 @@ PKGNAME_LOGFILE=yes
 HOOKDIR="${TOPDIR}/pbuild"
 
 # set arch in debootstrap
-DEBOOTSTRAPOPTS=("${DEBOOTSTRAPOPTS[@]}" "--arch=${ARCH}")
+DEBOOTSTRAPOPTS=("${DEBOOTSTRAPOPTS[@]}" "--arch=${ARCH}" "--include=gnupg")
 
 # set arch for create mode
 ARCHITECTURE=${ARCH}
