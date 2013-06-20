@@ -52,7 +52,12 @@ PKGNAME_LOGFILE=yes
 HOOKDIR="${TOPDIR}/pbuild"
 
 # set arch in debootstrap
-DEBOOTSTRAPOPTS=("${DEBOOTSTRAPOPTS[@]}" "--arch=${ARCH}" "--include=gnupg")
+DEBOOTSTRAPOPTS=(
+    "${DEBOOTSTRAPOPTS[@]}"
+    "--arch=${ARCH}"
+    "--include=gnupg"
+    "--keyring=${TOPDIR}/admin/${KEYRING}"
+)
 
 # set arch for create mode
 ARCHITECTURE=${ARCH}
@@ -70,8 +75,6 @@ elif $(echo ${UBUNTU_SUITES[@]} | grep -q $DIST); then
     # Ubuntu configuration
     MIRRORSITE="http://$UBUNTU_MIRROR/ubuntu/"
     COMPONENTS="main restricted universe multiverse"
-    DEBOOTSTRAPOPTS=("${DEBOOTSTRAPOPTS[@]}"
-	"--keyring=${TOPDIR}/admin/${KEYRING}")
 
 else
     echo "Unknown distribution: $DIST"
