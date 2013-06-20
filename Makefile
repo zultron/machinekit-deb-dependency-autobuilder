@@ -5,10 +5,10 @@
 ARCHES = i386 amd64
 
 # List of codenames to build for
-CODENAMES = precise lucid hardy squeeze
+CODENAMES = precise lucid hardy wheezy squeeze
 
-# Keyring:  Ubuntu, Zultron, Squeeze keys
-KEYIDS = 40976EAF437D05B5 12A8D0023B07D469 AED4B06F473041FA
+# Keyring:  Ubuntu, Squeeze, & Wheezy keys
+KEYIDS = 40976EAF437D05B5 AED4B06F473041FA 46925553
 KEYRING = $(TOPDIR)/admin/keyring.gpg
 KEYSERVER = hkp://keys.gnupg.net
 
