@@ -75,6 +75,7 @@ admin/keyring.gpg: admin/.dir-exists Makefile
 	gpg --no-default-keyring --keyring=$(KEYRING) \
 		--keyserver=$(KEYSERVER) --recv-keys \
 		--trust-model always $(KEYIDS)
+	test -f $@ && touch $@
 
 # base chroot tarballs are named e.g. lucid/i386/base.tgz
 # in this case, $(*D) = lucid; $(*F) = i386
