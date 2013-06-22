@@ -1,4 +1,4 @@
-A Makefile to automatically build Xenomai packages for many
+A Makefile to automatically build Xenomai kernel packages for many
 Debian/Ubuntu release and architecture combinations
 
 
@@ -15,18 +15,34 @@ test:  list some variables and their values for debugging
 <codename>/<arch>/base.tgz:  e.g. precise/base-i386.tgz
     Build the base chroot tarball with pbuilder --create
 
-Codename is one of squeeze, precise, lucid
+Codename is one of squeeze, precise, lucid, hardy
 
 Arch is one of amd64, i386
 
+Most simply, just run 'make' to build all packages for all
+<codename>/<arch> combos.
+
+---------------------------
+What it does
+
+For each <codename>/<arch> combo:
+- Downloads sources, checks out git repos, builds gpg keyring
+- Creates a base pbuilder chroot tarball
+- Builds the Xenomai runtime packages
+- Builds a local PPA with the Xenomai runtime packages, needed for the
+  kernel build
+- Updates the pbuilder chroot tarball with the new PPA
+- Builds the Xenomai kernel package
+
+Package results go into <codename>/<arch>/pkgs.
 
 ---------------------------
 TODO
 
 - build only binary packages
   - build arch-indep binary packages only once
-- build other packages
-  - figure out how to do so with prereqs installed
+- timestamps are used in many targets, but these should probably be
+  replaced with something more specific
 
 
 ---------------------------
@@ -54,13 +70,6 @@ https://help.launchpad.net/Packaging/SourceBuilds
 
 
 
-# build & install kernel
-apt-get source linux-source-3.5.7-xenomai-2.6.2.1
-cd linux-source-3.5.7-xenomai-2.6.2.1-5
-dpkg-buildpackage -uc -us -i -I
-cd .. && dpkg -i linux-image-3.5.7-xenomai-2.6.2.1_5_*.deb \
-   linux-headers-3.5.7-xenomai-2.6.2.1_5_*.deb
-
 # build add-on modules
 git clone git://github.com/zultron/kernel-modules-deb.git
 export MODULE_LOC=`pwd`/kernel-modules-deb
@@ -71,9 +80,3 @@ dpkg-buildpackage -Tmodules && cd ..
 git clone git://git.kiszka.org/smictrl.git && cd smictrl
 git clone git://github.com/zultron/smictrl-deb.git debian
 dpkg-buildpackage -uc -us && cd ..
-  
-# build zultron-keyring
-dpkg-source -x zultron-keyring_0.1-1.dsc
-cd zultron-keyring-0.1
-dpkg-buildpackage -uc -us && cd ..
-
