@@ -5,7 +5,10 @@ test -z "$ARCH" && echo "error:  ARCH undefined" 1>&2 && exit 1
 test -z "$DIST" && echo "error:  DIST undefined" 1>&2 && exit 1
 
 # For dependent pkgs
-OTHERMIRROR="deb http://deb.machinekit.net/$DIST $DIST main"
+if test -n "$INTERMEDIATE_REPO"; then
+    BINDMOUNTS="$TOPDIR/$INTERMEDIATE_REPO"
+    OTHERMIRROR="deb [arch=$ARCH] file://$TOPDIR/$INTERMEDIATE_REPO $DIST main"
+fi
 
 # Other useful opts from cmdline:
 # DEBBUILDOPTS=-Tbinary-arch
@@ -79,6 +82,6 @@ fi
 # Print diagnostics
 echo "script = $(basename $0)"
 for i in BASETGZ DISTRIBUTION APTCACHE MIRRORSITE COMPONENTS \
-    DEBOOTSTRAPOPTS[@] OTHERMIRROR; do
+    DEBOOTSTRAPOPTS[@] OTHERMIRROR BINDMOUNTS; do
     eval echo "$i = \${$i}"
 done

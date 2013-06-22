@@ -41,7 +41,7 @@ ALLSTAMPS = $(foreach c,$(CODENAMES),\
 	$(foreach a,$(ARCHES),\
 	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
 PBUILD = TOPDIR=$(TOPDIR) pbuilder
-PBUILD_ARGS = --configfile pbuild/pbuilderrc
+PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted
 
 ###################################################
 # out-of-band checks
@@ -81,17 +81,18 @@ admin/keyring.gpg: admin/.dir-exists Makefile
 # in this case, $(*D) = lucid; $(*F) = i386
 .PRECIOUS:  %/base.tgz
 %/base.tgz: admin/keyring.gpg %/aptcache/.dir-exists
-	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) --create $(PBUILD_ARGS) || \
+	$(SUDO) DIST=$(*D) ARCH=$(*F) \
+	    $(PBUILD) --create \
+		$(PBUILD_ARGS) || \
 	    (rm -f $@ && exit 1)
 
-.PHONY:  clean_base_chroot_tarballs
-clean_base_chroot_tarballs:
-	for codename in $(CODENAMES); do \
-	    for arch in $(ARCHES); do \
-		rm -f $$codename/base-$$arch.tgz \
-		rm -f $$codename/base-$$arch.create.log \
-	    done \
-	done
+# Update the base chroot to pick up the Xenomai runtime packages,
+# prerequisite to the Xenomai kernel package build
+%/.stamp-base.tgz-xenomai-updated: %/.stamp-xenomai-ppa
+	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
+	    $(PBUILD) --update --override-config \
+		$(PBUILD_ARGS) || \
+	    (rm -f $@ && exit 1)
 
 
 ###################################################
@@ -113,10 +114,30 @@ src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
 
 # build the binary packages
 %/.stamp-xenomai: src/.stamp-xenomai %/base.tgz %/pkgs/.dir-exists
-	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) --build $(PBUILD_ARGS) \
+	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
+		--build $(PBUILD_ARGS) \
 	    src/xenomai_*.dsc || \
 	    (rm -f $@ && exit 1)
 	touch $@
+
+
+###################################################
+# PPA build rules
+
+# generate an intermediate PPA including the xenomai runtime pkgs,
+# needed to build the kernel
+#
+# if one already exists, blow it away and start from scratch
+%/.stamp-xenomai-ppa:  %/.stamp-xenomai %/ppa/conf/.dir-exists
+	rm -rf $*/ppa/db $*/ppa/dists $*/ppa/pool
+	cat admin/ppa-distributions.tmpl | sed \
+		-e "s/@codename@/$(*D)/g" \
+		-e "s/@origin@/Xenomai-build-intermediate/g" \
+		-e "s/@arch@/$(*F)/g" \
+		> $*/ppa/conf/distributions
+	reprepro -C main -Vb $*/ppa includedeb $(*D) $*/pkgs/*.deb
+	touch $@
+
 
 ###################################################
 # Kernel build rules
@@ -140,11 +161,14 @@ src/.stamp-linux: git/.stamp-linux git/linux/debian/changelog
 	cd src && dpkg-source -i -I -b $(TOPDIR)/git/linux
 	touch $@
 
-# build the binary packages
-%/.stamp-linux: src/.stamp-linux %/base.tgz
+# build kernel packages, including the PPA with xenomai devel packages
+%/.stamp-linux: src/.stamp-linux %/base.tgz %/.stamp-xenomai-ppa \
+		%/.stamp-base.tgz-xenomai-updated
 	test -d $(*D)/pkgs || mkdir -p $(*D)/pkgs
-	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) --build $(PBUILD_ARGS) \
-	    src/linux-source-*.dsc || \
+	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
+	    $(PBUILD) --build \
+		$(PBUILD_ARGS) \
+	        src/linux-source-*.dsc || \
 	    (rm -f $@ && exit 1)
 	touch $@
 
