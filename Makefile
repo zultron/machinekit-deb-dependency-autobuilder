@@ -52,6 +52,8 @@ ALLSTAMPS = $(foreach c,$(CODENAMES),\
 	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
 PBUILD = TOPDIR=$(TOPDIR) pbuilder
 PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted $(DEBBUILDOPTS)
+# Build source pkgs for hardy with format 1.0
+SOURCE_PACKAGE_FORMAT_hardy = --format=1.0
 
 ###################################################
 # out-of-band checks
@@ -160,7 +162,8 @@ git/.stamp-xenomai: admin/.stamp-builddeps
 # create the source package
 %/.stamp-xenomai-src-deb: %/.stamp-builddeps git/.stamp-xenomai
 	@echo "===== Building Xenomai source package ====="
-	cd $(@D) && dpkg-source -i -I -b $(TOPDIR)/git/xenomai
+	cd $(@D) && dpkg-source -i -I $(SOURCE_PACKAGE_FORMAT_$(*D)) \
+		-b $(TOPDIR)/git/xenomai
 	touch $@
 
 # build the binary packages
