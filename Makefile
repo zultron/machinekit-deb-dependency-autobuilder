@@ -67,8 +67,9 @@ endif
 .PHONY:  all
 all:  $(ALLSTAMPS)
 
-.dir-exists%:
+%/.dir-exists:
 	mkdir -p $(@D) && touch $@
+.PRECIOUS:  %/.dir-exists
 
 test:
 	@echo BASE_CHROOT_TARBALLS:
