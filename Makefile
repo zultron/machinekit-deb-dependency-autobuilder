@@ -141,15 +141,18 @@ endif
 ###################################################
 # Base chroot tarball
 
-# base chroot tarballs are named e.g. lucid/i386/base.tgz
+# Base chroot tarballs are named e.g. lucid/i386/base.tgz
 # in this case, $(*D) = lucid; $(*F) = i386
-.PRECIOUS:  %/base.tgz
-%/base.tgz: %/.stamp-builddeps
+#
+# This needs a stamp, since base.tgz is later updated with the
+# newly-built Xenomai packages
+.PRECIOUS:  %/.stamp-base.tgz
+%/.stamp-base.tgz: %/.stamp-builddeps
 	@echo "===== Creating pbuilder chroot tarball ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) \
 	    $(PBUILD) --create \
-		$(PBUILD_ARGS) || \
-	    (rm -f $@ && exit 1)
+		$(PBUILD_ARGS)
+	touch $@
 
 
 ###################################################
@@ -157,13 +160,14 @@ endif
 
 # clone & update the xenomai submodule; FIXME: nice way to detect if
 # the branch has new commits?
-git/.stamp-xenomai: admin/.stamp-builddeps
+git/.stamp-xenomai:
 	@echo "===== Checking out Xenomai git repo ====="
 	# be sure the submodule has been checked out
 	test -f git/xenomai/.git || \
            git submodule update --init -- git/xenomai
 	git submodule update git/xenomai
 	touch $@
+.PRECIOUS: git/.stamp-xenomai
 
 # create the source package
 %/.stamp-xenomai-src-deb: %/.stamp-builddeps git/.stamp-xenomai
@@ -171,15 +175,16 @@ git/.stamp-xenomai: admin/.stamp-builddeps
 	cd $(@D) && dpkg-source -i -I $(SOURCE_PACKAGE_FORMAT_$(*D)) \
 		-b $(TOPDIR)/git/xenomai
 	touch $@
+.PRECIOUS: %/.stamp-xenomai-src-deb
 
 # build the binary packages
-%/.stamp-xenomai: %/.stamp-xenomai-src-deb %/base.tgz
+%/.stamp-xenomai: %/.stamp-xenomai-src-deb %/.stamp-base.tgz
 	@echo "===== Building Xenomai binary packages ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
-	        $(@D)/xenomai_*.dsc || \
-	    (rm -f $@ && exit 1)
+	        $(@D)/xenomai_*.dsc
 	touch $@
+.PRECIOUS: %/.stamp-xenomai
 
 
 ###################################################
@@ -210,23 +215,24 @@ git/.stamp-xenomai: admin/.stamp-builddeps
 	@echo "===== Updating pbuilder chroot with Xenomai PPA packages ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --update --override-config \
-		$(PBUILD_ARGS) || \
-	    (rm -f $@ && exit 1)
+		$(PBUILD_ARGS)
+	touch $@
 
 
 ###################################################
 # Kernel build rules
 
-git/linux/debian/changelog: admin/.stamp-builddeps
+git/linux/debian/changelog: git/.dir-exists
 	@echo "===== Checking out kernel Debian git repo ====="
 	# be sure the submodule has been checked out
 	git submodule update --recursive --init git/linux/debian
 
-src/$(LINUX_TARBALL):  admin/.stamp-builddeps
+src/$(LINUX_TARBALL):
 	@echo "===== Downloading vanilla Linux tarball ====="
+	test -d src || mkdir -p src
 	cd src && wget $(LINUX_URL)/$(LINUX_TARBALL)
 
-git/.stamp-linux: admin/.stamp-builddeps src/$(LINUX_TARBALL)
+git/.stamp-linux: git/.dir-exists src/$(LINUX_TARBALL)
 	@echo "===== Unpacking Linux tarball ====="
 	# unpack tarball into git directory
 	tar xjCf git/linux src/$(LINUX_TARBALL) --strip-components=1
@@ -240,8 +246,8 @@ src/.stamp-linux: git/.stamp-linux git/linux/debian/changelog
 	touch $@
 
 # build kernel packages, including the PPA with xenomai devel packages
-%/.stamp-linux: %/.stamp-builddeps src/.stamp-linux %/base.tgz \
-		%/.stamp-xenomai-ppa %/.stamp-base.tgz-xenomai-updated
+%/.stamp-linux: %/.stamp-builddeps src/.stamp-linux \
+		%/.stamp-base.tgz-xenomai-updated
 	@echo "===== Building Linux binary package ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --build \
