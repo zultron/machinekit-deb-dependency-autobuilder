@@ -70,9 +70,7 @@ all:  $(ALLSTAMPS)
 .PRECIOUS:  %/.dir-exists
 
 test:
-	@echo BASE_CHROOT_TARBALLS:
-	@for i in $(BASE_CHROOT_TARBALLS); do echo "    $$i"; done
-	@echo ALLTAMPS:
+	@echo ALLSTAMPS:
 	@for i in $(ALLSTAMPS); do echo "    $$i"; done
 
 
