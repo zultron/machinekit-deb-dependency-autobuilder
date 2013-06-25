@@ -38,6 +38,11 @@ LINUX_VERSION = 3.5.7
 # hacking this script
 #DEBUG = yes
 
+# Args to pass into dpkg-buildpackage
+ifneq ($(DEBBUILDOPTS),)
+DEBBUILDOPTS_ARG = --debbuildopts "$(DEBBUILDOPTS)"
+endif
+
 ###################################################
 # Variables that should not change much
 # (or auto-generated)
@@ -51,7 +56,8 @@ ALLSTAMPS = $(foreach c,$(CODENAMES),\
 	$(foreach a,$(ARCHES),\
 	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
 PBUILD = TOPDIR=$(TOPDIR) pbuilder
-PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted $(DEBBUILDOPTS)
+PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted \
+	$(DEBBUILDOPTS_ARG)
 # Build source pkgs for hardy with format 1.0
 SOURCE_PACKAGE_FORMAT_hardy = --format=1.0
 
