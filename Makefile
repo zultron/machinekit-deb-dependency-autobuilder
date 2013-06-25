@@ -34,6 +34,9 @@ GITBRANCH_LINUX = master
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
 LINUX_VERSION = 3.5.7
 
+# Uncomment to remove dependencies on Makefile and pbuilderrc while
+# hacking this script
+#DEBUG = yes
 
 ###################################################
 # Variables that should not change much
@@ -74,29 +77,69 @@ test:
 	@for i in $(ALLSTAMPS); do echo "    $$i"; done
 
 
-###################################################
-# Base chroot tarball rules
 
-admin/keyring.gpg: admin/.dir-exists Makefile
+###################################################
+# Basic build dependencies
+#
+# Generic target for non-<codename>/<arch>-specific targets
+admin/.stamp-builddeps: \
+		admin/.dir-exists \
+		git/.dir-exists \
+		src/.dir-exists
+	touch $@
+ifneq ($(DEBUG),yes)
+# While hacking, don't rebuild everything whenever a file is changed
+admin/.stamp-builddeps: \
+		Makefile \
+		pbuild/pbuilderrc \
+		admin/ppa-distributions.tmpl \
+		pbuild/C10shell \
+		.gitmodules \
+		admin/keyring.gpg
+endif
+.PRECIOUS:  admin/.stamp-builddeps
+
+# <codename>/<arch> target to ensure the necessary directory structure
+# exists and basic dependencies exist and haven't changed; used in
+# later targets to avoid complexity and repetition
+%/.stamp-builddeps: admin/.stamp-builddeps \
+		%/aptcache/.dir-exists \
+		%/pkgs/.dir-exists \
+		%/ppa/conf/.dir-exists
+	touch $@
+.PRECIOUS:  %/.stamp-builddeps
+
+###################################################
+# GPG keyring
+#
+# Download GPG keys for the various distros, needed by pbuilder
+#
+# Always touch the keyring so it isn't rebuilt over and over if the
+# mtime looks out of date
+
+admin/keyring.gpg: admin/.dir-exists
+	@echo "===== Creating GPG keyring ====="
 	gpg --no-default-keyring --keyring=$(KEYRING) \
 		--keyserver=$(KEYSERVER) --recv-keys \
-		--trust-model always $(KEYIDS)
+		--trust-model always \
+		$(KEYIDS)
 	test -f $@ && touch $@
+ifneq ($(DEBUG),yes)
+# While hacking, don't rebuild everything whenever a file is changed
+admin/keyring.gpg: Makefile
+endif
+
+
+###################################################
+# Base chroot tarball
 
 # base chroot tarballs are named e.g. lucid/i386/base.tgz
 # in this case, $(*D) = lucid; $(*F) = i386
 .PRECIOUS:  %/base.tgz
-%/base.tgz: admin/keyring.gpg %/aptcache/.dir-exists
+%/base.tgz: %/.stamp-builddeps
+	@echo "===== Creating pbuilder chroot tarball ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) \
 	    $(PBUILD) --create \
-		$(PBUILD_ARGS) || \
-	    (rm -f $@ && exit 1)
-
-# Update the base chroot to pick up the Xenomai runtime packages,
-# prerequisite to the Xenomai kernel package build
-%/.stamp-base.tgz-xenomai-updated: %/.stamp-xenomai-ppa
-	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
-	    $(PBUILD) --update --override-config \
 		$(PBUILD_ARGS) || \
 	    (rm -f $@ && exit 1)
 
@@ -104,8 +147,10 @@ admin/keyring.gpg: admin/.dir-exists Makefile
 ###################################################
 # Xeno build rules
 
-# clone & update the xenomai submodule
-git/.stamp-xenomai: git/.dir-exists
+# clone & update the xenomai submodule; FIXME: nice way to detect if
+# the branch has new commits?
+git/.stamp-xenomai: admin/.stamp-builddeps
+	@echo "===== Checking out Xenomai git repo ====="
 	# be sure the submodule has been checked out
 	test -f git/xenomai/.git || \
            git submodule update --init -- git/xenomai
@@ -113,16 +158,17 @@ git/.stamp-xenomai: git/.dir-exists
 	touch $@
 
 # create the source package
-src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
-	rm -f src/xenomai_*
-	cd src && dpkg-source -i -I -b $(TOPDIR)/git/xenomai
+%/.stamp-xenomai-src-deb: %/.stamp-builddeps git/.stamp-xenomai
+	@echo "===== Building Xenomai source package ====="
+	cd $(@D) && dpkg-source -i -I -b $(TOPDIR)/git/xenomai
 	touch $@
 
 # build the binary packages
-%/.stamp-xenomai: src/.stamp-xenomai %/base.tgz %/pkgs/.dir-exists
+%/.stamp-xenomai: %/.stamp-xenomai-src-deb %/base.tgz
+	@echo "===== Building Xenomai binary packages ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
-	    src/xenomai_*.dsc || \
+	        $(@D)/xenomai_*.dsc || \
 	    (rm -f $@ && exit 1)
 	touch $@
 
@@ -134,43 +180,60 @@ src/.stamp-xenomai: src/.dir-exists git/.stamp-xenomai
 # needed to build the kernel
 #
 # if one already exists, blow it away and start from scratch
-%/.stamp-xenomai-ppa:  %/.stamp-xenomai %/ppa/conf/.dir-exists
+%/.stamp-xenomai-ppa:  %/.stamp-builddeps %/.stamp-xenomai
+	@echo "===== Building Xenomai PPA ====="
 	rm -rf $*/ppa/db $*/ppa/dists $*/ppa/pool
 	cat admin/ppa-distributions.tmpl | sed \
 		-e "s/@codename@/$(*D)/g" \
 		-e "s/@origin@/Xenomai-build-intermediate/g" \
 		-e "s/@arch@/$(*F)/g" \
 		> $*/ppa/conf/distributions
-	reprepro -C main -Vb $*/ppa includedeb $(*D) $*/pkgs/*.deb
+	reprepro -C main -VVb $*/ppa includedeb $(*D) $*/pkgs/*.deb
 	touch $@
+
+
+###################################################
+# Update base.tgz with PPA pkgs
+
+# Update the base chroot to pick up the Xenomai runtime packages,
+# prerequisite to the Xenomai kernel package build
+%/.stamp-base.tgz-xenomai-updated: %/.stamp-xenomai-ppa
+	@echo "===== Updating pbuilder chroot with Xenomai PPA packages ====="
+	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
+	    $(PBUILD) --update --override-config \
+		$(PBUILD_ARGS) || \
+	    (rm -f $@ && exit 1)
 
 
 ###################################################
 # Kernel build rules
 
-git/linux/debian/changelog: git/.dir-exists
+git/linux/debian/changelog: admin/.stamp-builddeps
+	@echo "===== Checking out kernel Debian git repo ====="
 	# be sure the submodule has been checked out
 	git submodule update --recursive --init git/linux/debian
 
-src/$(LINUX_TARBALL):
-	test -d src || mkdir -p src
+src/$(LINUX_TARBALL):  admin/.stamp-builddeps
+	@echo "===== Downloading vanilla Linux tarball ====="
 	cd src && wget $(LINUX_URL)/$(LINUX_TARBALL)
 
-git/.stamp-linux: src/$(LINUX_TARBALL)
+git/.stamp-linux: admin/.stamp-builddeps src/$(LINUX_TARBALL)
+	@echo "===== Unpacking Linux tarball ====="
 	# unpack tarball into git directory
 	tar xjCf git/linux src/$(LINUX_TARBALL) --strip-components=1
 
 
 src/.stamp-linux: git/.stamp-linux git/linux/debian/changelog
+	@echo "===== Building Linux source package ====="
 	# create source pkg
 	rm -f src/linux-source-*
 	cd src && dpkg-source -i -I -b $(TOPDIR)/git/linux
 	touch $@
 
 # build kernel packages, including the PPA with xenomai devel packages
-%/.stamp-linux: src/.stamp-linux %/base.tgz %/.stamp-xenomai-ppa \
-		%/.stamp-base.tgz-xenomai-updated
-	test -d $(*D)/pkgs || mkdir -p $(*D)/pkgs
+%/.stamp-linux: %/.stamp-builddeps src/.stamp-linux %/base.tgz \
+		%/.stamp-xenomai-ppa %/.stamp-base.tgz-xenomai-updated
+	@echo "===== Building Linux binary package ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
