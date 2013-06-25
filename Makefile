@@ -48,7 +48,7 @@ ALLSTAMPS = $(foreach c,$(CODENAMES),\
 	$(foreach a,$(ARCHES),\
 	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
 PBUILD = TOPDIR=$(TOPDIR) pbuilder
-PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted
+PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted $(DEBBUILDOPTS)
 
 ###################################################
 # out-of-band checks
