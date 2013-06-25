@@ -8,7 +8,7 @@ ARCHES = i386 amd64
 CODENAMES = precise lucid hardy wheezy squeeze
 
 # Keyring:  Ubuntu, Squeeze, & Wheezy keys
-KEYIDS = 40976EAF437D05B5 AED4B06F473041FA 46925553
+KEYIDS = 40976EAF437D05B5 AED4B06F473041FA 8B48AD6246925553
 KEYRING = $(TOPDIR)/admin/keyring.gpg
 KEYSERVER = hkp://keys.gnupg.net
 
