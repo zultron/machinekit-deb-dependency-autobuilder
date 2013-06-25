@@ -22,16 +22,13 @@ CODENAMES = precise lucid wheezy squeeze
 
 # Keyring:  Ubuntu, Squeeze, & Wheezy keys
 KEYIDS = 40976EAF437D05B5 AED4B06F473041FA 8B48AD6246925553
-KEYRING = $(TOPDIR)/admin/keyring.gpg
 KEYSERVER = hkp://keys.gnupg.net
 
-# Xenomai package
-PACKAGES += xenomai
+# Xenomai git repo
 GITURL_XENOMAI = git://github.com/zultron/xenomai-src.git
 GITBRANCH_XENOMAI = v2.6.2.1-deb
 
-# Linux package
-PACKAGES += linux
+# Linux debian git repo and vanilla tarball
 GITURL_LINUX = git://github.com/zultron/kernel-rt-deb.git
 GITBRANCH_LINUX = master
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
@@ -42,14 +39,11 @@ LINUX_VERSION = 3.5.7
 # Variables that should not change much
 # (or auto-generated)
 
-# Other variables
 TOPDIR = $(shell pwd)
 SUDO = sudo
-DIRS = admin tmp src git
-ALLDIRS = $(patsubst %,%/.dir-exists,$(DIRS) $(CODENAMES))
-BASE_CHROOT_TARBALLS = $(foreach C,$(CODENAMES),$(foreach A,$(ARCHES),\
-  $(C)/base-$(A).tgz))
 LINUX_TARBALL = linux-$(LINUX_VERSION).tar.bz2
+KEYRING = $(TOPDIR)/admin/keyring.gpg
+PACKAGES = xenomai linux
 ALLSTAMPS = $(foreach c,$(CODENAMES),\
 	$(foreach a,$(ARCHES),\
 	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
