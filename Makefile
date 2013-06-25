@@ -14,7 +14,11 @@ endif
 ARCHES = i386 amd64
 
 # List of codenames to build for
-CODENAMES = precise lucid hardy wheezy squeeze
+#CODENAMES = precise lucid hardy wheezy squeeze
+#
+# FIXME disabling hardy; autoconf >= 2.62 required by xenomai, but
+# hardy has 2.61
+CODENAMES = precise lucid wheezy squeeze
 
 # Keyring:  Ubuntu, Squeeze, & Wheezy keys
 KEYIDS = 40976EAF437D05B5 AED4B06F473041FA 8B48AD6246925553
