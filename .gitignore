@@ -1,4 +1,4 @@
-# ignore all directories except /git/
+# ignore all directories except /git/ and /pbuild/
 /*/
 !/git/
 !/pbuild/
