@@ -100,7 +100,7 @@ ifneq ($(DEBUG),yes)
 admin/.stamp-builddeps: \
 		Makefile \
 		pbuild/pbuilderrc \
-		admin/ppa-distributions.tmpl \
+		pbuild/ppa-distributions.tmpl \
 		pbuild/C10shell \
 		.gitmodules \
 		admin/keyring.gpg
@@ -197,9 +197,8 @@ git/.stamp-xenomai:
 %/.stamp-xenomai-ppa:  %/.stamp-builddeps %/.stamp-xenomai
 	@echo "===== Building Xenomai PPA ====="
 	rm -rf $*/ppa/db $*/ppa/dists $*/ppa/pool
-	cat admin/ppa-distributions.tmpl | sed \
+	cat pbuild/ppa-distributions.tmpl | sed \
 		-e "s/@codename@/$(*D)/g" \
-		-e "s/@origin@/Xenomai-build-intermediate/g" \
 		-e "s/@arch@/$(*F)/g" \
 		> $*/ppa/conf/distributions
 	reprepro -C main -VVb $*/ppa includedeb $(*D) $*/pkgs/*.deb
