@@ -4,3 +4,6 @@
 [submodule "git/linux/debian"]
 	path = git/linux/debian
 	url = git://github.com/zultron/kernel-rt-deb.git
+[submodule "git/kmodule"]
+	path = git/kmodule
+	url = git://github.com/zultron/kernel-modules-deb.git
