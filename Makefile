@@ -24,19 +24,13 @@ CODENAMES = precise lucid wheezy squeeze
 KEYIDS = 40976EAF437D05B5 AED4B06F473041FA 8B48AD6246925553
 KEYSERVER = hkp://keys.gnupg.net
 
-# Xenomai git repo
-GITURL_XENOMAI = git://github.com/zultron/xenomai-src.git
-GITBRANCH_XENOMAI = v2.6.2.1-deb
-
-# Linux debian git repo and vanilla tarball
-GITURL_LINUX = git://github.com/zultron/kernel-rt-deb.git
-GITBRANCH_LINUX = master
+# Linux vanilla tarball
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
 LINUX_VERSION = 3.5.7
 
 # Uncomment to remove dependencies on Makefile and pbuilderrc while
 # hacking this script
-#DEBUG = yes
+DEBUG = yes
 
 # Args to pass into dpkg-buildpackage
 ifneq ($(DEBBUILDOPTS),)
@@ -51,7 +45,7 @@ TOPDIR = $(shell pwd)
 SUDO = sudo
 LINUX_TARBALL = linux-$(LINUX_VERSION).tar.bz2
 KEYRING = $(TOPDIR)/admin/keyring.gpg
-PACKAGES = xenomai linux
+PACKAGES = xenomai linux kmodule
 ALLSTAMPS = $(foreach c,$(CODENAMES),\
 	$(foreach a,$(ARCHES),\
 	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
@@ -188,14 +182,14 @@ git/.stamp-xenomai:
 
 
 ###################################################
-# PPA build rules
+# PPA update, Xenomai
 
-# generate an intermediate PPA including the xenomai runtime pkgs,
-# needed to build the kernel
+# generate an intermediate PPA including the xenomai runtime or kernel pkgs,
+# needed to build later packages
 #
 # if one already exists, blow it away and start from scratch
-%/.stamp-xenomai-ppa:  %/.stamp-builddeps %/.stamp-xenomai
-	@echo "===== Building Xenomai PPA ====="
+%/.stamp-xenomai-ppa %/.stamp-linux-ppa:  %/.stamp-builddeps %/.stamp-xenomai
+	@echo "===== Building PPA ====="
 	rm -rf $*/ppa/db $*/ppa/dists $*/ppa/pool
 	cat pbuild/ppa-distributions.tmpl | sed \
 		-e "s/@codename@/$(*D)/g" \
@@ -203,19 +197,24 @@ git/.stamp-xenomai:
 		> $*/ppa/conf/distributions
 	reprepro -C main -VVb $*/ppa includedeb $(*D) $*/pkgs/*.deb
 	touch $@
+%/.stamp-linux-ppa:  %/.stamp-linux
+.PRECIOUS: %/.stamp-xenomai-ppa %/.stamp-linux-ppa
 
 
 ###################################################
 # Update base.tgz with PPA pkgs
 
-# Update the base chroot to pick up the Xenomai runtime packages,
-# prerequisite to the Xenomai kernel package build
-%/.stamp-base.tgz-xenomai-updated: %/.stamp-xenomai-ppa
-	@echo "===== Updating pbuilder chroot with Xenomai PPA packages ====="
+# Update the base chroot to pick up the Xenomai runtime or kernel
+# packages, prerequisite to later package builds
+%/.stamp-base.tgz-xenomai-updated %/.stamp-base.tgz-linux-updated: \
+		%/.stamp-xenomai-ppa
+	@echo "===== Updating pbuilder chroot with PPA packages ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --update --override-config \
 		$(PBUILD_ARGS)
 	touch $@
+%/.stamp-base.tgz-linux-updated: %/.stamp-linux-ppa
+.PRECIOUS:  %/.stamp-base.tgz-xenomai-updated %/.stamp-base.tgz-linux-updated
 
 
 ###################################################
@@ -225,6 +224,7 @@ git/linux/debian/changelog: git/.dir-exists
 	@echo "===== Checking out kernel Debian git repo ====="
 	# be sure the submodule has been checked out
 	git submodule update --recursive --init git/linux/debian
+	touch $@
 
 src/$(LINUX_TARBALL):
 	@echo "===== Downloading vanilla Linux tarball ====="
@@ -235,9 +235,10 @@ git/.stamp-linux: git/.dir-exists src/$(LINUX_TARBALL)
 	@echo "===== Unpacking Linux tarball ====="
 	# unpack tarball into git directory
 	tar xjCf git/linux src/$(LINUX_TARBALL) --strip-components=1
+	touch $@
 
 
-src/.stamp-linux: git/.stamp-linux git/linux/debian/changelog
+src/.stamp-linux-src: git/.stamp-linux git/linux/debian/changelog
 	@echo "===== Building Linux source package ====="
 	# create source pkg
 	rm -f src/linux-source-*
@@ -245,7 +246,7 @@ src/.stamp-linux: git/.stamp-linux git/linux/debian/changelog
 	touch $@
 
 # build kernel packages, including the PPA with xenomai devel packages
-%/.stamp-linux: %/.stamp-builddeps src/.stamp-linux \
+%/.stamp-linux: %/.stamp-builddeps src/.stamp-linux-src \
 		%/.stamp-base.tgz-xenomai-updated
 	@echo "===== Building Linux binary package ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
@@ -254,4 +255,31 @@ src/.stamp-linux: git/.stamp-linux git/linux/debian/changelog
 	        src/linux-source-*.dsc || \
 	    (rm -f $@ && exit 1)
 	touch $@
+
+
+###################################################
+# Kernel module build rules
+
+git/.stamp-kmodule: git/.dir-exists
+	@echo "===== Checking out kernel module git repo ====="
+	# be sure the submodule has been checked out
+	git submodule update --recursive --init git/kmodule
+	test -f git/kmodule/README
+	# download sources for chroot environment
+	make -C git/kmodule sources
+	touch $@
+
+git/kmodule-srcs.tgz:  git/.stamp-kmodule src/.stamp-linux-src
+	@echo "===== Creating kmodule source tarball ====="
+	tar cCzf git/kmodule git/kmodule-srcs.tgz .
+
+%/.stamp-kmodule: %/.stamp-xenomai-ppa git/kmodule-srcs.tgz
+	@echo "===== Building kmodules in pbuilder chroot ====="
+	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
+	    PACKAGE_DIR=$*/pkgs \
+	    $(PBUILD) --execute --inputfile git/kmodule-srcs.tgz \
+		$(PBUILD_ARGS) -- \
+		pbuild/build-kmodules.sh $(TOPDIR)/$*/pkgs
+	touch $@
+
 

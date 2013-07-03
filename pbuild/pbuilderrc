@@ -10,6 +10,11 @@ if test -n "$INTERMEDIATE_REPO"; then
     OTHERMIRROR="deb [arch=$ARCH] file://$TOPDIR/$INTERMEDIATE_REPO $DIST main"
 fi
 
+# For building modules
+if test -n "$PACKAGE_DIR"; then
+    BINDMOUNTS="$BINDMOUNTS $TOPDIR/$PACKAGE_DIR"
+fi
+
 # Other useful opts from cmdline:
 # DEBBUILDOPTS=-Tbinary-arch
 # DEBEMAIL='John Doe <jdoe@example.com>'

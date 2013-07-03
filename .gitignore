@@ -6,6 +6,7 @@
 # ignore unpacked linux tarball files
 /git/linux/
 !/git/linux/debian
+/git/kmodule-srcs.tgz
 
 # ignore stamps
 .dir-exists*
