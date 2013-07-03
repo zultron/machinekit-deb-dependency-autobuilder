@@ -12,19 +12,19 @@ test:  list some variables and their values for debugging
 <codename>/<arch>/.stamp-xenomai:
     Build the xenomai packages (automatically builds the base.tgz chroot)
 
+<codename>/<arch>/.stamp-kmodule:
+    Build kernel module packages (automatically builds the kernel packages)
+    This builds the r8168 kernel modules
+
 <codename>/<arch>/base.tgz:  e.g. precise/base-i386.tgz
     Build the base chroot tarball with pbuilder --create
 
-Codename is one of squeeze, precise, lucid, hardy
+Codename is one of wheezy, squeeze, precise, lucid
 
 Arch is one of amd64, i386
 
 Most simply, just run 'make' to build all packages for all
 <codename>/<arch> combos.
-
-To pass in options to dpkg-buildpackage, use e.g.
-
-    make DEBBUILDOPTS=-j16
 
 ---------------------------
 What it does
@@ -37,6 +37,7 @@ For each <codename>/<arch> combo:
   kernel build
 - Updates the pbuilder chroot tarball with the new PPA
 - Builds the Xenomai kernel package
+- Builds the r8168 kernel module
 
 Package results go into <codename>/<arch>/pkgs.
 
@@ -47,6 +48,7 @@ TODO
   - build arch-indep binary packages only once
 - timestamps are used in many targets, but these should probably be
   replaced with something more specific
+- build smictrl packages
 
 
 ---------------------------
@@ -69,16 +71,6 @@ Random notes follow
 multiple releases in a single ppa
 http://bobthegnome.blogspot.com/2012/12/a-script-for-supporting-multiple-ubuntu.html
 
-free build infra?
-https://help.launchpad.net/Packaging/SourceBuilds
-
-
-
-# build add-on modules
-git clone git://github.com/zultron/kernel-modules-deb.git
-export MODULE_LOC=`pwd`/kernel-modules-deb
-cd -
-dpkg-buildpackage -Tmodules && cd ..
 
 # build smictrl
 git clone git://git.kiszka.org/smictrl.git && cd smictrl
