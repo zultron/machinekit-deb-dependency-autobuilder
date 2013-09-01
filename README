@@ -1,7 +1,15 @@
 A Makefile to automatically build Xenomai kernel packages for many
 Debian/Ubuntu release and architecture combinations
 
+---------------------------
+Prerequisites:
 
+The pbuilder and reprepro packages must be installed, in addition to
+the usual kernel development environment.
+
+    apt-get install pbuilder reprepro
+
+---------------------------
 Targets:
 
 test:  list some variables and their values for debugging
