@@ -34,6 +34,10 @@ Arch is one of amd64, i386
 Most simply, just run 'make' to build all packages for all
 <codename>/<arch> combos.
 
+To pass in options to dpkg-buildpackage, use e.g.
+
+    make DEBBUILDOPTS=-j16
+
 ---------------------------
 What it does
 
