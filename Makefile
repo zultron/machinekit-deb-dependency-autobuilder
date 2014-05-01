@@ -18,7 +18,7 @@ ARCHES = i386 amd64
 #
 # FIXME disabling hardy; autoconf >= 2.62 required by xenomai, but
 # hardy has 2.61
-CODENAMES = precise lucid wheezy squeeze
+CODENAMES = precise wheezy squeeze
 
 # Keyring:  Ubuntu, Squeeze, & Wheezy keys
 KEYIDS = 40976EAF437D05B5 AED4B06F473041FA 8B48AD6246925553
