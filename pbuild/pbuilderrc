@@ -60,7 +60,7 @@ HOOKDIR="${TOPDIR}/pbuild"
 DEBOOTSTRAPOPTS=(
     "${DEBOOTSTRAPOPTS[@]}"
     "--arch=${ARCH}"
-    "--include=gnupg"
+    "--include=gnupg,libfile-fcntllock-perl"
     "--keyring=${TOPDIR}/admin/${KEYRING}"
 )
 
