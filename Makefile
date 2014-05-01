@@ -273,7 +273,7 @@ git/kmodule-srcs.tgz:  git/.stamp-kmodule src/.stamp-linux-src
 	@echo "===== Creating kmodule source tarball ====="
 	tar cCzf git/kmodule git/kmodule-srcs.tgz .
 
-%/.stamp-kmodule: %/.stamp-xenomai-ppa git/kmodule-srcs.tgz
+%/.stamp-kmodule: %/.stamp-linux %/.stamp-linux-ppa git/kmodule-srcs.tgz
 	@echo "===== Building kmodules in pbuilder chroot ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    PACKAGE_DIR=$*/pkgs \
