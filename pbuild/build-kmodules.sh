@@ -21,10 +21,13 @@ apt-get install --yes quilt
 apt-get install --yes module-assistant
 apt-get install --yes debhelper
 
-# Install packages from local PPA
-# Packages are unsigned, so --force-yes
-apt-get install --force-yes --yes linux-patch-xenomai
-apt-get install --force-yes --yes linux-headers-xenomai
+# get linux-image-xenomai pkg name
+XENO_PKG=$(/bin/ls $PACKAGE_DIR/linux-image-* | grep -v .-dbg_)
+
+# Install packages from local pkg directory
+dpkg -i $PACKAGE_DIR/linux-headers-*
+dpkg -i $PACKAGE_DIR/linux-patch-xenomai_*
+dpkg -i $XENO_PKG
 
 # Set kernel package variables
 KSRC=`echo /usr/src/linux-headers-*`
