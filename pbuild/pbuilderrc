@@ -56,11 +56,17 @@ PKGNAME_LOGFILE=yes
 # hook directory
 HOOKDIR="${TOPDIR}/pbuild"
 
+# extra packages for buildroot
+EXTRA_PACKAGES="gnupg"
+if test $DIST = wheezy; then
+    EXTRA_PACKAGES="$EXTRAPACKAGES,libfile-fcntllock-perl"
+fi
+
 # set arch in debootstrap
 DEBOOTSTRAPOPTS=(
     "${DEBOOTSTRAPOPTS[@]}"
     "--arch=${ARCH}"
-    "--include=gnupg,libfile-fcntllock-perl"
+    "--include=$EXTRA_PACKAGES"
     "--keyring=${TOPDIR}/admin/${KEYRING}"
 )
 
