@@ -14,14 +14,13 @@ endif
 ARCHES = i386 amd64
 
 # List of codenames to build for
-#CODENAMES = precise lucid hardy wheezy squeeze
-#
-# FIXME disabling hardy; autoconf >= 2.62 required by xenomai, but
-# hardy has 2.61
 CODENAMES = precise wheezy squeeze lucid
 
-# Keyring:  Ubuntu, Squeeze, & Wheezy keys
-KEYIDS = 40976EAF437D05B5 AED4B06F473041FA 8B48AD6246925553
+# Debian package signature keys
+UBUNTU_KEYID = 40976EAF437D05B5
+SQUEEZE_KEYID = AED4B06F473041FA
+WHEEZY_KEYID = 8B48AD6246925553
+KEYIDS = $(UBUNTU_KEYID) $(SQUEEZE_KEYID) $(WHEEZY_KEYID)
 KEYSERVER = hkp://keys.gnupg.net
 
 # Linux vanilla tarball
@@ -43,9 +42,10 @@ endif
 
 TOPDIR = $(shell pwd)
 SUDO = sudo
-LINUX_TARBALL = linux-$(LINUX_VERSION).tar.bz2
+LINUX_TARBALL = linux-$(LINUX_VERSION).tar.xz
+LINUX_TARBALL_DEBIAN_ORIG = linux_$(LINUX_VERSION).orig.tar.xz
 KEYRING = $(TOPDIR)/admin/keyring.gpg
-PACKAGES = xenomai linux kmodule
+PACKAGES = xenomai linux linux-tools
 ALLSTAMPS = $(foreach c,$(CODENAMES),\
 	$(foreach a,$(ARCHES),\
 	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
@@ -70,6 +70,9 @@ endif
 .PHONY:  all
 all:  $(ALLSTAMPS)
 
+%/all: $(foreach p,$(PACKAGES),%/.stamp-$(p))
+	: # do nothing
+
 %/.dir-exists:
 	mkdir -p $(@D) && touch $@
 .PRECIOUS:  %/.dir-exists
@@ -87,6 +90,7 @@ test:
 admin/.stamp-builddeps: \
 		admin/.dir-exists \
 		git/.dir-exists \
+		dist/.dir-exists \
 		src/.dir-exists
 	touch $@
 ifneq ($(DEBUG),yes)
@@ -156,7 +160,7 @@ endif
 # the branch has new commits?
 git/.stamp-xenomai:
 	@echo "===== Checking out Xenomai git repo ====="
-	# be sure the submodule has been checked out
+#	# be sure the submodule has been checked out
 	test -f git/xenomai/.git || \
            git submodule update --init -- git/xenomai
 	git submodule update git/xenomai
@@ -220,29 +224,35 @@ git/.stamp-xenomai:
 ###################################################
 # Kernel build rules
 
-git/linux/debian/changelog: git/.dir-exists
+git/kernel-rt-deb2/changelog: git/.dir-exists
 	@echo "===== Checking out kernel Debian git repo ====="
-	# be sure the submodule has been checked out
-	git submodule update --recursive --init git/linux/debian
+#	# be sure the submodule has been checked out
+	git submodule update --recursive --init git/kernel-rt-deb2
 	touch $@
 
-src/$(LINUX_TARBALL):
+dist/$(LINUX_TARBALL):
 	@echo "===== Downloading vanilla Linux tarball ====="
 	test -d src || mkdir -p src
 	cd src && wget $(LINUX_URL)/$(LINUX_TARBALL)
 
-git/.stamp-linux: git/.dir-exists src/$(LINUX_TARBALL)
-	@echo "===== Unpacking Linux tarball ====="
-	# unpack tarball into git directory
-	tar xjCf git/linux src/$(LINUX_TARBALL) --strip-components=1
+src/.stamp-linux: src/.dir-exists dist/$(LINUX_TARBALL)
+	@echo "===== Unpacking Linux source package ====="
+	mkdir -p src/linux/build
+	ln -sf ../../dist/$(LINUX_TARBALL) \
+	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
+	git --git-dir="git/kernel-rt-deb2/.git" archive --prefix=debian/ HEAD \
+	    | tar xCf src/linux/build -
+	cd src/linux/build && debian/rules debian/control \
+	    || true # always fails
+	cd src/linux/build && debian/rules orig
+	cd src/linux/build && debian/rules clean
 	touch $@
 
 
-src/.stamp-linux-src: git/.stamp-linux git/linux/debian/changelog
+src/.stamp-linux-src: src/.stamp-linux git/kernel-rt-deb2/changelog
 	@echo "===== Building Linux source package ====="
-	# create source pkg
-	rm -f src/linux-source-*
-	cd src && dpkg-source -i -I -b $(TOPDIR)/git/linux
+#	# create source pkg
+	cd src/linux/build && dpkg-source -i -I -b .
 	touch $@
 
 # build kernel packages, including the PPA with xenomai devel packages
@@ -252,34 +262,49 @@ src/.stamp-linux-src: git/.stamp-linux git/linux/debian/changelog
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
-	        src/linux-source-*.dsc || \
+	        src/linux/linux_*.dsc || \
 	    (rm -f $@ && exit 1)
 	touch $@
 
 
 ###################################################
-# Kernel module build rules
+# linux-tools package build rules
+#
+# This is built in much the same way as the kernel
 
-git/.stamp-kmodule: git/.dir-exists
-	@echo "===== Checking out kernel module git repo ====="
-	# be sure the submodule has been checked out
-	git submodule update --recursive --init git/kmodule
-	test -f git/kmodule/README
-	# download sources for chroot environment
-	make -C git/kmodule sources
+git/linux-tools-deb/changelog: git/.dir-exists
+	@echo "===== Checking out linux-tools-deb git repo ====="
+#	# be sure the submodule has been checked out
+	git submodule update --recursive --init git/linux-tools-deb
 	touch $@
 
-git/kmodule-srcs.tgz:  git/.stamp-kmodule src/.stamp-linux-src
-	@echo "===== Creating kmodule source tarball ====="
-	tar cCzf git/kmodule git/kmodule-srcs.tgz .
+src/.stamp-linux-tools: src/.dir-exists dist/$(LINUX_TARBALL) \
+		 git/linux-tools-deb/changelog
+	@echo "===== Unpacking linux-tools source package ====="
+	mkdir -p src/linux-tools/build
+	git --git-dir="git/linux-tools-deb/.git" archive --prefix=debian/ HEAD \
+	    | tar xCf src/linux-tools/build -
+	cd src/linux-tools/build && debian/bin/genorig.py \
+	    ../../../dist/$(LINUX_TARBALL)
+	cd src/linux-tools/build && debian/rules debian/control \
+	    || true # always fails
+	cd src/linux-tools/build && debian/rules orig
+	cd src/linux-tools/build && debian/rules clean
+	touch $@
 
-%/.stamp-kmodule: %/.stamp-linux %/.stamp-linux-ppa git/kmodule-srcs.tgz
-	@echo "===== Building kmodules in pbuilder chroot ====="
+
+src/.stamp-linux-tools-src: src/.stamp-linux-tools
+	@echo "===== Building linux-tools source package ====="
+#	# create source pkg
+	cd src/linux-tools/build && dpkg-source -i -I -b .
+	touch $@
+
+%/.stamp-linux-tools: %/.stamp-builddeps src/.stamp-linux-tools-src
+	@echo "===== Building linux-tools binary package ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
-	    PACKAGE_DIR=$*/pkgs \
-	    $(PBUILD) --execute --inputfile git/kmodule-srcs.tgz \
-		$(PBUILD_ARGS) -- \
-		pbuild/build-kmodules.sh $(TOPDIR)/$*/pkgs
+	    $(PBUILD) --build \
+		$(PBUILD_ARGS) \
+	        src/linux-tools/linux-tools_*.dsc || \
+	    (rm -f $@ && exit 1)
 	touch $@
-
 

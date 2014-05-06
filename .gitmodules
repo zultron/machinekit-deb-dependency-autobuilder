@@ -1,9 +1,9 @@
 [submodule "git/xenomai"]
 	path = git/xenomai
-	url = git://github.com/zultron/xenomai-src.git
-[submodule "git/linux/debian"]
-	path = git/linux/debian
-	url = git://github.com/zultron/kernel-rt-deb.git
-[submodule "git/kmodule"]
-	path = git/kmodule
-	url = git://github.com/zultron/kernel-modules-deb.git
+	url = https://github.com/zultron/xenomai-src.git
+[submodule "git/kernel-rt-deb2"]
+	path = git/kernel-rt-deb2
+	url = https://github.com/zultron/kernel-rt-deb2.git
+[submodule "git/linux-tools-deb"]
+	path = git/linux-tools-deb
+	url = https://github.com/zultron/linux-tools-deb.git
