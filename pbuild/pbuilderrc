@@ -104,6 +104,6 @@ fi
 # Print diagnostics
 echo "script = $(basename $0)"
 for i in BASETGZ DISTRIBUTION APTCACHE MIRRORSITE COMPONENTS \
-    DEBOOTSTRAPOPTS[@] OTHERMIRROR BINDMOUNTS; do
+    DEBOOTSTRAPOPTS[@] OTHERMIRROR BINDMOUNTS INTERMEDIATE_REPO; do
     eval echo "$i = \${$i}"
 done
