@@ -10,4 +10,5 @@
 
 # ignore stamps
 .dir-exists*
+/stamps/
 .stamp-*
