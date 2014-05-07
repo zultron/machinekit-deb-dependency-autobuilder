@@ -4,3 +4,4 @@
 apt-get install -y --force-yes emacs23-nox less bash
 cd /tmp/buildd/*/debian/..
 /bin/bash < /dev/tty > /dev/tty 2> /dev/tty
+exit 1
