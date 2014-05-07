@@ -14,13 +14,21 @@ endif
 ARCHES = i386 amd64
 
 # List of codenames to build for
-CODENAMES = precise wheezy squeeze lucid
+#
+# Lucid isn't supported by new kernel packaging, which requires python
+# >= 2.7 (2.4 available), kernel-wedge >= 2.82 (2.29 available),
+# gcc-4.6 (4.4 available).
+#
+# Squeeze (Debian 6.0) is reportedly obsolete.
+#
+#CODENAMES = precise wheezy squeeze lucid jessie
+CODENAMES = precise wheezy jessie
 
 # Debian package signature keys
 UBUNTU_KEYID = 40976EAF437D05B5
-SQUEEZE_KEYID = AED4B06F473041FA
-WHEEZY_KEYID = 8B48AD6246925553
-KEYIDS = $(UBUNTU_KEYID) $(SQUEEZE_KEYID) $(WHEEZY_KEYID)
+#SQUEEZE_KEYID = AED4B06F473041FA
+DEBIAN_KEYID = 8B48AD6246925553
+KEYIDS = $(UBUNTU_KEYID) $(DEBIAN_KEYID)
 KEYSERVER = hkp://keys.gnupg.net
 
 # Linux vanilla tarball
@@ -52,8 +60,6 @@ ALLSTAMPS = $(foreach c,$(CODENAMES),\
 PBUILD = TOPDIR=$(TOPDIR) pbuilder
 PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted \
 	$(DEBBUILDOPTS_ARG)
-# Build source pkgs for hardy with format 1.0
-SOURCE_PACKAGE_FORMAT_hardy = --format=1.0
 
 ###################################################
 # out-of-band checks
@@ -179,13 +185,17 @@ stamps/3.1.xenomai-source-checkout: stamps/0.1.base-builddeps
 # 3.2. create the source package
 %/.stamp-xenomai-src-deb: %/.stamp-builddeps stamps/3.1.xenomai-source-checkout
 	@echo "===== Building Xenomai source package ====="
-	cd $(@D) && dpkg-source -i -I $(SOURCE_PACKAGE_FORMAT_$(*D)) \
+	rm -f $(@D)/xenomai_*.dsc $(@D)/xenomai_*.tar.gz
+	cd $(@D) && dpkg-source -i -I \
 		-b $(TOPDIR)/git/xenomai
 	touch $@
 .PRECIOUS: %/.stamp-xenomai-src-deb
 
 # 3.3. build the binary packages
-%/.stamp-xenomai: %/.stamp-xenomai-src-deb %/.stamp-base.tgz
+%/.stamp-xenomai: \
+		%/.stamp-xenomai-src-deb \
+		%/.stamp-base.tgz \
+		stamps/3.1.xenomai-source-checkout
 	@echo "===== Building Xenomai binary packages ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
