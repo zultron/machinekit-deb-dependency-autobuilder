@@ -32,6 +32,18 @@ To pass in options to dpkg-buildpackage, use e.g.
     make DEBBUILDOPTS=-j16
 
 ---------------------------
+Restricting build list:
+
+If only a subset of codenames or arches is needed, these can be
+restricted by editing the 'CODENAMES' and 'ARCHES' variables in the
+Makefile.
+
+For example, to build only Wheezy and Jessie amd64 kernels:
+
+    ARCHES = amd64               # i386 removed
+    CODENAMES = wheezy jessie    # precise removed
+
+---------------------------
 What it does
 
 For each <codename>/<arch> combo:

@@ -21,7 +21,6 @@ ARCHES = i386 amd64
 #
 # Squeeze (Debian 6.0) is reportedly obsolete.
 #
-#CODENAMES = precise wheezy squeeze lucid jessie
 CODENAMES = precise wheezy jessie
 
 # Debian package signature keys
@@ -98,7 +97,7 @@ test:
 #
 # if one already exists, blow it away and start from scratch
 define BUILD_PPA
-	@echo "===== Building $(@D) PPA: $(1) ====="
+	@echo "===== $(1). $(@D):  Building $(2) PPA ====="
 	rm -rf $*/ppa/db $*/ppa/dists $*/ppa/pool
 	cat pbuild/ppa-distributions.tmpl | sed \
 		-e "s/@codename@/$(*D)/g" \
@@ -110,7 +109,8 @@ endef
 
 # Update base.tgz with PPA pkgs
 define UPDATE_CHROOT
-	@echo "===== Updating $(@D) pbuilder chroot with PPA packages ====="
+	@echo "===== $(1). $(@D): " \
+	    "Updating pbuilder chroot with PPA packages ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --update --override-config \
 		$(PBUILD_ARGS)
@@ -127,8 +127,7 @@ stamps/0.1.base-builddeps: \
 		git/.dir-exists \
 		dist/.dir-exists \
 		src/.dir-exists \
-		stamps/.dir-exists \
-		$(foreach ca,$(ALL_CODENAMES_ARCHES),$(ca)/stamps/.dir-exists)
+		stamps/.dir-exists
 	touch $@
 ifneq ($(DEBUG),yes)
 # While hacking, don't rebuild everything whenever a file is changed
@@ -154,25 +153,21 @@ endif
 
 ###################################################
 # 1. GPG keyring
-#
-# Download GPG keys for the various distros, needed by pbuilder
+
+# 1.1 Download GPG keys for the various distros, needed by pbuilder
 #
 # Always touch the keyring so it isn't rebuilt over and over if the
 # mtime looks out of date
 
-admin/keyring.gpg: \
+stamps/1.1.keyring-downloaded: \
 		stamps/0.1.base-builddeps
-	@echo "===== Creating GPG keyring ====="
+	@echo "===== 1.1. All variants:  Creating GPG keyring ====="
 	gpg --no-default-keyring --keyring=$(KEYRING) \
 		--keyserver=$(KEYSERVER) --recv-keys \
 		--trust-model always \
 		$(KEYIDS)
-	test -f $@ && touch $@
-ifneq ($(DEBUG),yes)
-# While hacking, don't rebuild everything whenever a file is changed
-admin/keyring.gpg: Makefile
-endif
-
+	test -f $(KEYRING) && touch $@  # otherwise, fail
+.PRECIOUS:  stamps/1.1.keyring-downloaded
 
 ###################################################
 # 2. Base chroot tarball
@@ -182,8 +177,9 @@ endif
 #
 # 2.1.  Build chroot tarball
 %/.stamp.2.1.chroot-build: \
-		%/.stamp.0.2.builddeps
-	@echo "===== Creating $(@D) pbuilder chroot tarball ====="
+		%/.stamp.0.2.builddeps \
+		stamps/1.1.keyring-downloaded
+	@echo "===== 2.1. $(@D):  Creating pbuilder chroot tarball ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) \
 	    $(PBUILD) --create \
 		$(PBUILD_ARGS)
@@ -196,7 +192,7 @@ endif
 
 %/chroot: \
 		%/.stamp.2.1.chroot-build
-	@echo "===== Logging into $(@D) pbuilder chroot $(@D) ====="
+	@echo "===== Logging into $(@D) pbuilder chroot ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --login \
 		$(PBUILD_ARGS)
@@ -208,7 +204,7 @@ endif
 # if the branch has new commits?
 stamps/3.1.xenomai-source-checkout: \
 		stamps/0.1.base-builddeps
-	@echo "===== Checking out Xenomai git repo ====="
+	@echo "===== 3.1. All variants:  Checking out Xenomai git repo ====="
 #	# be sure the submodule has been checked out
 	test -f git/xenomai/.git || \
            git submodule update --init -- git/xenomai
@@ -220,7 +216,7 @@ stamps/3.1.xenomai-source-checkout: \
 %/.stamp.3.2.xenomai-source-package: \
 		%/.stamp.0.2.builddeps \
 		stamps/3.1.xenomai-source-checkout
-	@echo "===== Building $(@D) Xenomai source package ====="
+	@echo "===== 3.2. $(@D):  Building Xenomai source package ====="
 	rm -f $(@D)/xenomai_*.dsc $(@D)/xenomai_*.tar.gz
 	cd $(@D) && dpkg-source -i -I \
 		-b $(TOPDIR)/git/xenomai
@@ -232,7 +228,7 @@ stamps/3.1.xenomai-source-checkout: \
 		%/.stamp.2.1.chroot-build \
 		stamps/3.1.xenomai-source-checkout \
 		%/.stamp.3.2.xenomai-source-package
-	@echo "===== Building $(@D) Xenomai binary packages ====="
+	@echo "===== 3.3. $(@D):  Building Xenomai binary packages ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
 	        $(@D)/xenomai_*.dsc
@@ -248,13 +244,13 @@ stamps/3.1.xenomai-source-checkout: \
 %/.stamp.4.1.ppa-xenomai: \
 		%/.stamp.0.2.builddeps \
 		%/.stamp.3.3.xenomai-build
-	$(call BUILD_PPA,Xenomai intermediate)
+	$(call BUILD_PPA,4.1,Xenomai intermediate)
 .PRECIOUS: %/.stamp.4.1.ppa-xenomai
 
 # 4.2. Update chroot with Xenomai packages
 
 %/.stamp.4.2.chroot-update: %/.stamp.4.1.ppa-xenomai
-	$(call UPDATE_CHROOT)
+	$(call UPDATE_CHROOT,4.2)
 .PRECIOUS:  %/.stamp.4.2.chroot-update $(PPA_UPDATE_CHROOT_STAMPS)
 
 
@@ -264,7 +260,8 @@ stamps/3.1.xenomai-source-checkout: \
 # 5.1. Check out git submodule
 stamps/5.1.linux-kernel-package-checkout: \
 		stamps/0.1.base-builddeps
-	@echo "===== Checking out kernel Debian git repo ====="
+	@echo "===== 5.1. All variants: "\
+	    "Checking out kernel Debian git repo ====="
 #	# be sure the submodule has been checked out
 	git submodule update --recursive --init git/kernel-rt-deb2
 	touch $@
@@ -272,7 +269,8 @@ stamps/5.1.linux-kernel-package-checkout: \
 # 5.2. Download linux tarball
 stamps/5.2.linux-kernel-tarball-downloaded: \
 		stamps/0.1.base-builddeps
-	@echo "===== Downloading vanilla Linux tarball ====="
+	@echo "===== 5.2. All variants: " \
+	    "Downloading vanilla Linux tarball ====="
 	rm -f dist/$(LINUX_TARBALL)
 	wget $(LINUX_URL)/$(LINUX_TARBALL) -O dist/$(LINUX_TARBALL)
 	touch $@
@@ -281,7 +279,7 @@ stamps/5.2.linux-kernel-tarball-downloaded: \
 stamps/5.3.linux-kernel-unpacked: \
 		stamps/5.1.linux-kernel-package-checkout \
 		stamps/5.2.linux-kernel-tarball-downloaded
-	@echo "===== Unpacking Linux source package ====="
+	@echo "===== 5.3. All variants:  Unpacking Linux source package ====="
 	mkdir -p src/linux/build
 	ln -sf ../../dist/$(LINUX_TARBALL) \
 	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
@@ -297,7 +295,7 @@ stamps/5.3.linux-kernel-unpacked: \
 stamps/5.4.linux-kernel-source-package: \
 		stamps/5.1.linux-kernel-package-checkout \
 		stamps/5.3.linux-kernel-unpacked
-	@echo "===== Building Linux source package ====="
+	@echo "===== 5.4. All variants:  Building Linux source package ====="
 #	# create source pkg
 	cd src/linux/build && dpkg-source -i -I -b .
 	touch $@
@@ -309,7 +307,7 @@ stamps/5.4.linux-kernel-source-package: \
 		%/.stamp.0.2.builddeps \
 		%/.stamp.4.2.chroot-update \
 		stamps/5.4.linux-kernel-source-package
-	@echo "===== Building $(@D) Linux binary package ====="
+	@echo "===== 5.5. $(@D):  Building Linux binary package ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
@@ -326,7 +324,8 @@ stamps/5.4.linux-kernel-source-package: \
 # 6.1.  Update linux-tools git submodule
 stamps/6.1.linux-tools-package-checkout: \
 		stamps/0.1.base-builddeps
-	@echo "===== Checking out linux-tools-deb git repo ====="
+	@echo "===== 6.1. All variants: " \
+	    "Checking out linux-tools-deb git repo ====="
 #	# be sure the submodule has been checked out
 	git submodule update --recursive --init git/linux-tools-deb
 	touch $@
@@ -336,7 +335,8 @@ stamps/6.2.linux-tools-unpacked: \
 		stamps/0.1.base-builddeps \
 		stamps/5.2.linux-kernel-tarball-downloaded \
 		stamps/6.1.linux-tools-package-checkout
-	@echo "===== Unpacking linux-tools source package ====="
+	@echo "===== 6.2. All variants: " \
+	    "Unpacking linux-tools source package ====="
 	rm -rf src/linux-tools/*
 	mkdir -p src/linux-tools/build
 	git --git-dir="git/linux-tools-deb/.git" archive --prefix=debian/ HEAD \
@@ -352,7 +352,8 @@ stamps/6.2.linux-tools-unpacked: \
 # 6.3. Build linux-tools source package
 stamps/6.3.linux-tools-source-package: \
 		stamps/6.2.linux-tools-unpacked
-	@echo "===== Building linux-tools source package ====="
+	@echo "===== 6.3. All variants: " \
+	    "Building linux-tools source package ====="
 #	# create source pkg
 	cd src/linux-tools/build && dpkg-source -i -I -b .
 	touch $@
@@ -361,7 +362,7 @@ stamps/6.3.linux-tools-source-package: \
 %/.stamp.6.4.linux-tools-build: \
 		%/.stamp.0.2.builddeps \
 		stamps/6.3.linux-tools-source-package
-	@echo "===== Building $(@D) linux-tools binary package ====="
+	@echo "===== 6.4. $(@D):  Building linux-tools binary package ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
@@ -376,5 +377,5 @@ stamps/6.3.linux-tools-source-package: \
 %/.stamp.7.1.final-ppa: \
 		%/.stamp.5.5.linux-kernel-build \
 		%/.stamp.6.4.linux-tools-build
-	$(call BUILD_PPA,Final)
+	$(call BUILD_PPA,7.1,Final)
 
