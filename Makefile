@@ -54,9 +54,11 @@ LINUX_TARBALL = linux-$(LINUX_VERSION).tar.xz
 LINUX_TARBALL_DEBIAN_ORIG = linux_$(LINUX_VERSION).orig.tar.xz
 KEYRING = $(TOPDIR)/admin/keyring.gpg
 PACKAGES = xenomai linux linux-tools
+# ALLSTAMPS = $(foreach c,$(CODENAMES),\
+# 	$(foreach a,$(ARCHES),\
+# 	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
 ALLSTAMPS = $(foreach c,$(CODENAMES),\
-	$(foreach a,$(ARCHES),\
-	$(foreach p,$(PACKAGES),$(c)/$(a)/.stamp-$(p))))
+	$(foreach a,$(ARCHES),$(c)/$(a)/.stamp-final-ppa))
 PBUILD = TOPDIR=$(TOPDIR) pbuilder
 PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted \
 	$(DEBBUILDOPTS_ARG)
@@ -87,6 +89,29 @@ test:
 	@echo ALLSTAMPS:
 	@for i in $(ALLSTAMPS); do echo "    $$i"; done
 
+###################################################
+# PPA rules (reusable)
+
+# generate a PPA including all packages build thus far
+#
+# if one already exists, blow it away and start from scratch
+BUILD_PPA = \
+	@echo "===== Building PPA: $(1) ====="; \n\
+	rm -rf $*/ppa/db $*/ppa/dists $*/ppa/pool; \
+	cat pbuild/ppa-distributions.tmpl | sed \
+		-e "s/@codename@/$(*D)/g" \
+		-e "s/@arch@/$(*F)/g" \
+		> $*/ppa/conf/distributions; \
+	reprepro -C main -VVb $*/ppa includedeb $(*D) $*/pkgs/*.deb; \
+	touch $@
+
+# Update base.tgz with PPA pkgs
+UPDATE_CHROOT = \
+	@echo "===== Updating pbuilder chroot with PPA packages ====="; \
+	$$(SUDO) DIST=$$(*D) ARCH=$$(*F) INTERMEDIATE_REPO=$$*/ppa \
+	    $$(PBUILD) --update --override-config \
+		$$(PBUILD_ARGS); \
+	touch $$@
 
 
 ###################################################
@@ -205,43 +230,19 @@ stamps/3.1.xenomai-source-checkout: stamps/0.1.base-builddeps
 
 
 ###################################################
-# 4/7. PPA updates
+# 4. Xenomai PPA update
 
-# 4.1. Xenomai
-# 7.1. Linux
+# 4.1. Build intermediate Xenomai PPA
 #
-# generate an intermediate PPA including the xenomai runtime or kernel pkgs,
-# needed to build later packages
-#
-# if one already exists, blow it away and start from scratch
-%/.stamp-xenomai-ppa %/.stamp-linux-ppa:  %/.stamp-builddeps %/.stamp-xenomai
-	@echo "===== Building PPA ====="
-	rm -rf $*/ppa/db $*/ppa/dists $*/ppa/pool
-	cat pbuild/ppa-distributions.tmpl | sed \
-		-e "s/@codename@/$(*D)/g" \
-		-e "s/@arch@/$(*F)/g" \
-		> $*/ppa/conf/distributions
-	reprepro -C main -VVb $*/ppa includedeb $(*D) $*/pkgs/*.deb
-	touch $@
-%/.stamp-linux-ppa:  %/.stamp-linux
-.PRECIOUS: %/.stamp-xenomai-ppa %/.stamp-linux-ppa
+%/.stamp-xenomai-ppa:  %/.stamp-builddeps %/.stamp-xenomai
+	$(call BUILD_PPA,Xenomai intermediate)
+.PRECIOUS: %/.stamp-xenomai-ppa
 
+# 4.2. Update chroot with Xenomai packages
 
-# Update base.tgz with PPA pkgs:
-# 4.2. Xenomai
-# 7.2. Linux
-#
-# Update the base chroot to pick up the Xenomai runtime or kernel
-# packages, prerequisite to later package builds
-%/.stamp-base.tgz-xenomai-updated %/.stamp-base.tgz-linux-updated: \
-		%/.stamp-xenomai-ppa
-	@echo "===== Updating pbuilder chroot with PPA packages ====="
-	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
-	    $(PBUILD) --update --override-config \
-		$(PBUILD_ARGS)
-	touch $@
-%/.stamp-base.tgz-linux-updated: %/.stamp-linux-ppa
-.PRECIOUS:  %/.stamp-base.tgz-xenomai-updated %/.stamp-base.tgz-linux-updated
+%/.stamp-base.tgz-xenomai-updated: %/.stamp-xenomai-ppa
+	$(call UPDATE_CHROOT)
+.PRECIOUS:  %/.stamp-base.tgz-xenomai-updated $(PPA_UPDATE_CHROOT_STAMPS)
 
 
 ###################################################
@@ -350,4 +351,13 @@ stamps/6.3.linux-tools-source-package: stamps/6.2.linux-tools-unpacked
 	        src/linux-tools/linux-tools_*.dsc || \
 	    (rm -f $@ && exit 1)
 	touch $@
+
+###################################################
+# 7. Final PPA
+#
+# 7.1. Build final PPA with all packages
+#
+%/.stamp-final-ppa:  %/.stamp-linux %/.stamp-linux-tools
+	$(call BUILD_PPA,Final)
+.PRECIOUS: %/.stamp-final-ppa
 
