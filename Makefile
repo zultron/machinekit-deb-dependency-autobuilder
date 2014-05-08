@@ -287,7 +287,6 @@ ARCH_CLEAN_TARGETS += clean-xenomai-build
 #
 %/.stamp.4.1.ppa-xenomai: \
 		pbuild/ppa-distributions.tmpl \
-		%/.stamp.0.2.builddeps \
 		%/.stamp.3.3.xenomai-build
 	$(call BUILD_PPA,4.1,Xenomai intermediate)
 .PRECIOUS: %/.stamp.4.1.ppa-xenomai
@@ -399,7 +398,6 @@ CLEAN_TARGETS += clean-linux-kernel-source-package
 #
 # Use the PPA with xenomai devel packages
 %/.stamp.5.5.linux-kernel-build: \
-		%/.stamp.0.2.builddeps \
 		%/.stamp.4.2.chroot-update \
 		stamps/5.4.linux-kernel-source-package
 	@echo "===== 5.5. $(@D):  Building Linux binary package ====="
@@ -491,7 +489,6 @@ CLEAN_TARGETS += clean-linux-tools-source-package
 
 # 6.4. Build linux-tools binary packages
 %/.stamp.6.4.linux-tools-build: \
-		%/.stamp.0.2.builddeps \
 		stamps/6.3.linux-tools-source-package
 	@echo "===== 6.4. $(@D):  Building linux-tools binary package ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
