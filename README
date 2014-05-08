@@ -10,15 +10,38 @@ the usual kernel development environment.
     apt-get install pbuilder reprepro
 
 ---------------------------
+Restricting build list:
+
+NOTE: It is advised to trim the build list to save build time, even if
+explicitly supplying a <codename>/<arch> target.
+
+If only a subset of codenames or arches is needed, restrict them by
+trimming the 'CODENAMES' and 'ARCHES' variables in the Makefile.
+
+For example, to build only Wheezy and Jessie amd64 kernels:
+
+    ARCHES = amd64               # i386 removed
+    CODENAMES = wheezy jessie    # precise removed
+
+---------------------------
 Targets:
 
-test:  list some variables and their values for debugging
+all:  (Default target)  Build all <codename>/<arch> combos
+
+clean:  Clean up all targets that can be easily regenerated
+
+squeaky-clean:  Clean up all targets, including downloaded tarballs,
+    git submodules, apt and C caches; in general, avoid this!
 
 <codename>/<arch>/all:  e.g. wheezy/i386/all
     Build all packages and PPA for the specified distro and architecture
 
 <codename>/<arch>/chroot:  e.g. jessie/amd64/chroot
     Set up and log into a chroot
+
+<codename>/<arch>/clean:
+    Remove build artifacts specific to that codename/arch; leave
+    common artifacts
 
 Codename is one of wheezy, jessie, precise
 
@@ -30,18 +53,6 @@ Most simply, just run 'make' to build all packages for all
 To pass in options to dpkg-buildpackage, use e.g.
 
     make DEBBUILDOPTS=-j16
-
----------------------------
-Restricting build list:
-
-If only a subset of codenames or arches is needed, these can be
-restricted by editing the 'CODENAMES' and 'ARCHES' variables in the
-Makefile.
-
-For example, to build only Wheezy and Jessie amd64 kernels:
-
-    ARCHES = amd64               # i386 removed
-    CODENAMES = wheezy jessie    # precise removed
 
 ---------------------------
 What it does
@@ -64,8 +75,6 @@ PPAs go into <codename>/<arch>/ppa.
 ---------------------------
 TODO
 
-- timestamps are used in many targets, but these should probably be
-  replaced with something more specific
 - build smictrl packages
 
 
