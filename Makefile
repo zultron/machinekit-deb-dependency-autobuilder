@@ -154,6 +154,11 @@ stamps/0.1.base-builddeps: \
 endif
 .PRECIOUS:  stamps/0.1.base-builddeps
 
+clean-base-builddeps:
+	rm -f stamps/0.1.base-builddeps
+	find . -name .dir-exists -exec rm -f '{}' \;
+SQUEAKY_CLEAN_TARGETS += clean-base-builddeps
+
 
 ###################################################
 # 1. GPG keyring
@@ -163,7 +168,8 @@ endif
 # Always touch the keyring so it isn't rebuilt over and over if the
 # mtime looks out of date
 
-stamps/1.1.keyring-downloaded:
+stamps/1.1.keyring-downloaded: \
+		stamps/0.1.base-builddeps
 	@echo "===== 1.1. All variants:  Creating GPG keyring ====="
 	mkdir -p admin
 	gpg --no-default-keyring --keyring=$(KEYRING) \
@@ -233,7 +239,7 @@ stamps/3.1.xenomai-source-checkout: \
 clean-xenomai-source-checkout: \
 		clean-xenomai-source-package
 	@echo "cleaning up xenomai git submodule directory"
-	rm -rf git/xenomai
+	rm -rf git/xenomai; mkdir -p git/xenomai
 	rm -f stamps/3.1.xenomai-source-checkout
 SQUEAKY_CLEAN_TARGETS += clean-xenomai-source-checkout
 
@@ -249,7 +255,8 @@ stamps/3.2.xenomai-source-package: \
 clean-xenomai-source-package: \
 		$(call CA_EXPAND,%/clean-xenomai-build)
 	@echo "cleaning up xenomai source package"
-	rm -f src/xenomai_*.{dsc,tar.gz}
+	rm -f src/xenomai/xenomai_*.dsc
+	rm -f src/xenomai/xenomai_*.tar.gz
 	rm -f stamps/3.2.xenomai-source-package
 CLEAN_TARGETS += clean-xenomai-source-package
 
@@ -324,7 +331,7 @@ stamps/5.1.linux-kernel-package-checkout: \
 clean-linux-kernel-package-checkout: \
 		clean-linux-kernel-tarball-downloaded
 	@echo "cleaning up linux kernel packaging git submodule directory"
-	rm -rf git/kernel-rt-deb2
+	rm -rf git/kernel-rt-deb2; mkdir -p git/kernel-rt-deb2
 	rm -f stamps/5.1.linux-kernel-package-checkout
 SQUEAKY_CLEAN_TARGETS += clean-linux-kernel-package-checkout
 
@@ -371,7 +378,8 @@ stamps/5.3.linux-kernel-unpacked: \
 clean-linux-kernel-unpacked: \
 		clean-linux-kernel-source-package
 	@echo "cleaning up linux kernel source directory"
-	rm -rf src/linux/{build,orig}
+	rm -rf src/linux/build
+	rm -rf src/linux/orig
 	rm -f src/linux/linux_*.orig.tar.xz
 	rm -f stamps/5.3.linux-kernel-unpacked
 CLEAN_TARGETS += clean-linux-kernel-unpacked
@@ -438,7 +446,7 @@ stamps/6.1.linux-tools-package-checkout: \
 clean-linux-tools-package-checkout: \
 		clean-linux-tools-unpacked
 	@echo "cleaning up linux-tools git submodule directory"	
-	rm -rf git/linux-tools-deb
+	rm -rf git/linux-tools-deb; mkdir -p git/linux-tools-deb
 	rm -f stamps/6.1.linux-tools-package-checkout
 SQUEAKY_CLEAN_TARGETS += clean-linux-tools-package-checkout
 
@@ -464,7 +472,8 @@ stamps/6.2.linux-tools-unpacked: \
 clean-linux-tools-unpacked: \
 		clean-linux-tools-source-package
 	@echo "cleaning up linux-tools source directory"
-	rm -rf src/linux-tools/{build,orig}
+	rm -rf src/linux-tools/build
+	rm -rf src/linux-tools/orig
 	rm -f src/linux/linux-tools_*.orig.tar.xz
 	rm -f stamps/6.2.linux-tools-unpacked
 CLEAN_TARGETS += clean-linux-tools-unpacked
@@ -540,11 +549,13 @@ clean: $(CLEAN_TARGETS)
 
 %/squeaky-clean-caches:
 	@echo "Removing $* aptcache"
-	rm -r $*/aptcache
+	rm -rf $*/aptcache
 squeaky-clean-caches: \
 		$(call CA_EXPAND,%/squeaky-clean-caches)
 	@echo "Removing ccache"
-	rm -r ccache
+	rm -rf ccache
+	@echo "Removing unpacked chroots"
+	rm -rf tmp/*
 
 # Expand the list of ARCH_SQUEAKY_CLEAN_TARGETS
 SQUEAKY_CLEAN_TARGETS += $(foreach t,$(ARCH_SQUEAKY_CLEAN_TARGETS),\
