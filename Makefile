@@ -105,7 +105,7 @@ test:
 define BUILD_PPA
 	@echo "===== $(1). $(@D):  Building $(2) PPA ====="
 #	# Always start from scratch
-	rm -rf $*/ppa; mkdir -p $*/ppa/{db,dists,pool,conf}
+	rm -rf $*/ppa; mkdir -p $*/ppa/db $*/ppa/dists $*/ppa/pool $*/ppa/conf
 #	# Configure
 	cat pbuild/ppa-distributions.tmpl | sed \
 		-e "s/@codename@/$(*D)/g" \
@@ -256,7 +256,7 @@ CLEAN_TARGETS += clean-xenomai-source-package
 	@echo "===== 3.3. $(@D):  Building Xenomai binary packages ====="
 	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
-	        $(@D)/pkgs/xenomai_*.dsc
+	        src/xenomai/xenomai_*.dsc
 	touch $@
 .PRECIOUS: %/.stamp.3.3.xenomai-build
 
