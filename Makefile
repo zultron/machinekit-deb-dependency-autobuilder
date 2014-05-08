@@ -67,7 +67,7 @@ CA_EXPAND = $(patsubst %,$(1),$(ALL_CODENAMES_ARCHES))
 
 # Set this variable to the stamp name of the last target of each
 # codename/arch; used by the default target
-FINAL_STEP = .stamp.7.1.final-ppa
+FINAL_STEP = .stamp.7.1.ppa-final
 ALLSTAMPS := $(call CA_EXPAND,%/$(FINAL_STEP))
 
 ###################################################
@@ -237,7 +237,7 @@ stamps/3.2.xenomai-source-package: \
 		stamps/3.1.xenomai-source-checkout
 	@echo "===== 3.2. All variants:  Building Xenomai source package ====="
 	mkdir -p src/xenomai
-	cd src/xenomai && dpkg-source -i -I -b $(TOPDIR/git/xenomai
+	cd src/xenomai && dpkg-source -i -I -b $(TOPDIR)/git/xenomai
 	touch $@
 .PRECIOUS: stamps/3.2.xenomai-source-package
 
@@ -262,11 +262,15 @@ CLEAN_TARGETS += clean-xenomai-source-package
 
 %/clean-xenomai-build:
 	@echo "cleaning up $* xenomai binary-build"
-	rm -f $*/pkgs/xenomai_*.{build,changes,dsc}
+	rm -f $*/pkgs/xenomai_*.build
+	rm -f $*/pkgs/xenomai_*.changes
+	rm -f $*/pkgs/xenomai_*.dsc
 	rm -f $*/pkgs/xenomai_*.tar.gz
-	rm -f $*/pkgs/xenomai-{doc,runtime}_*.deb
+	rm -f $*/pkgs/xenomai-doc_*.deb
+	rm -f $*/pkgs/xenomai-runtime_*.deb
 	rm -f $*/pkgs/linux-patch-xenomai_*.deb
-	rm -f $*/pkgs/libxenomai{1,-dev}_*.deb
+	rm -f $*/pkgs/libxenomai1_*.deb
+	rm -f $*/pkgs/libxenomai-dev_*.deb
 	rm -f $*/.stamp.3.3.xenomai-build
 ARCH_CLEAN_TARGETS += clean-xenomai-build
 
@@ -284,8 +288,9 @@ ARCH_CLEAN_TARGETS += clean-xenomai-build
 .PRECIOUS: %/.stamp.4.1.ppa-xenomai
 
 %/clean-ppa-xenomai: \
-		%/clean-ppa
-	@echo "cleaning up %* PPA directory"
+		%/clean-ppa \
+		%/clean-chroot-update
+	@echo "cleaning up $* PPA directory"
 	rm -f $*/.stamp.4.1.ppa-xenomai
 ARCH_CLEAN_TARGETS += clean-ppa-xenomai
 
@@ -295,6 +300,10 @@ ARCH_CLEAN_TARGETS += clean-ppa-xenomai
 	$(call UPDATE_CHROOT,4.2)
 .PRECIOUS:  %/.stamp.4.2.chroot-update $(PPA_UPDATE_CHROOT_STAMPS)
 
+%/clean-chroot-update:
+	@echo "cleaning up $* chroot update stamps"
+	rm -f $*/.stamp.4.2.chroot-update
+ARCH_CLEAN_TARGETS += clean-chroot-update
 
 ###################################################
 # 5. Kernel build rules
@@ -393,8 +402,11 @@ CLEAN_TARGETS += clean-linux-kernel-source-package
 	rm -f $*/pkgs/linux-headers-*.deb
 	rm -f $*/pkgs/linux-image-*.deb
 	rm -f $*/pkgs/linux-libc-dev_*.deb
-	rm -f $*/pkgs/linux_*.{build,changes,dsc}
-	rm -f $*/pkgs/linux_*.{debian,orig}.tar.xz
+	rm -f $*/pkgs/linux_*.build
+	rm -f $*/pkgs/linux_*.changes
+	rm -f $*/pkgs/linux_*.dsc
+	rm -f $*/pkgs/linux_*.debian.tar.xz
+	rm -f $*/pkgs/linux_*.orig.tar.xz
 	rm -f $*/.stamp.5.5.linux-kernel-build
 ARCH_CLEAN_TARGETS += clean-linux-kernel-build
 
@@ -477,9 +489,13 @@ CLEAN_TARGETS += clean-linux-tools-source-package
 
 %/clean-linux-tools-build:
 	@echo "cleaning up $* linux-tools binary build"
-	rm -f $*/pkgs/linux-{tools,kbuild}-*.deb
-	rm -f $*/pkgs/linux-tools_*.{orig,debian}.tar.xz
-	rm -f $*/pkgs/linux-tools_*.{dsc,build,changes}
+	rm -f $*/pkgs/linux-tools-*.deb
+	rm -f $*/pkgs/linux-kbuild-*.deb
+	rm -f $*/pkgs/linux-tools_*.orig.tar.xz
+	rm -f $*/pkgs/linux-tools_*.debian.tar.xz
+	rm -f $*/pkgs/linux-tools_*.dsc
+	rm -f $*/pkgs/linux-tools_*.build
+	rm -f $*/pkgs/linux-tools_*.changes
 	rm -f $*/.stamp.6.4.linux-tools-build
 ARCH_CLEAN_TARGETS += clean-linux-tools-build
 
@@ -489,24 +505,41 @@ ARCH_CLEAN_TARGETS += clean-linux-tools-build
 #
 # 7.1. Build final PPA with all packages
 #
-%/.stamp.7.1.final-ppa: \
+%/.stamp.7.1.ppa-final: \
 		pbuild/ppa-distributions.tmpl \
 		%/.stamp.5.5.linux-kernel-build \
 		%/.stamp.6.4.linux-tools-build
 	$(call BUILD_PPA,7.1,Final)
 
+%/clean-ppa-final: \
+		%/clean-ppa
+	@echo "cleaning up $* final PPA directory"
+	rm -f $*/.stamp.7.1.ppa-final
+ARCH_CLEAN_TARGETS += clean-ppa-final
+
 
 ###################################################
 # Clean targets
 
+%/clean: $(foreach t,$(ARCH_CLEAN_TARGETS),%/$(t))
+	@echo "Cleaned up $* build artifacts"
+
 # Expand the list of ARCH_CLEAN_TARGETS
 CLEAN_TARGETS += $(foreach t,$(ARCH_CLEAN_TARGETS),$(call CA_EXPAND,%/$(t)))
 clean: $(CLEAN_TARGETS)
+
+%/squeaky-clean-caches:
+	@echo "Removing $* aptcache"
+	rm -r $*/aptcache
+squeaky-clean-caches: \
+		$(call CA_EXPAND,%/squeaky-clean-caches)
+	@echo "Removing ccache"
+	rm -r ccache
 
 # Expand the list of ARCH_SQUEAKY_CLEAN_TARGETS
 SQUEAKY_CLEAN_TARGETS += $(foreach t,$(ARCH_SQUEAKY_CLEAN_TARGETS),\
 	$(call CA_EXPAND,%/$(t)))
 squeaky-clean: \
 		$(CLEAN_TARGETS) \
-		$(SQUEAKY_CLEAN_TARGETS)
-
+		$(SQUEAKY_CLEAN_TARGETS) \
+		squeaky-clean-caches
