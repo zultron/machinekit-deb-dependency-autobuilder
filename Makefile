@@ -70,6 +70,11 @@ CA_EXPAND = $(patsubst %,$(1),$(ALL_CODENAMES_ARCHES))
 FINAL_STEP = .stamp.7.1.ppa-final
 ALLSTAMPS := $(call CA_EXPAND,%/$(FINAL_STEP))
 
+# A random chroot to build the linux source package in
+A_CODENAME = $(wordlist 1,1,$(CODENAMES))
+AN_ARCH = $(wordlist 1,1,$(ARCHES))
+A_CHROOT = $(A_CODENAME)/$(AN_ARCH)
+
 ###################################################
 # out-of-band checks
 
@@ -341,17 +346,25 @@ clean-linux-kernel-tarball-downloaded: \
 SQUEAKY_CLEAN_TARGETS += clean-linux-kernel-tarball-downloaded
 
 # 5.3. Prepare Linux source tree
+#
+# This has to be done in a chroot with the xenomai
 stamps/5.3.linux-kernel-unpacked: \
 		stamps/5.1.linux-kernel-package-checkout \
-		stamps/5.2.linux-kernel-tarball-downloaded
+		stamps/5.2.linux-kernel-tarball-downloaded \
+		$(A_CHROOT)/.stamp.4.2.chroot-update
 	@echo "===== 5.3. All variants:  Unpacking Linux source package ====="
-	mkdir -p src/linux/build
+	rm -rf src/linux/build; mkdir -p src/linux/build
 	ln -sf ../../dist/$(LINUX_TARBALL) \
 	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
 	git --git-dir="git/kernel-rt-deb2/.git" archive --prefix=debian/ HEAD \
 	    | tar xCf src/linux/build -
-	cd src/linux/build && debian/rules debian/control \
-	    || true # always fails
+#	# Configure the package in the chroot
+	chmod +x pbuild/linux-unpacked-chroot-script.sh
+	$(SUDO) DIST=$(A_CODENAME) ARCH=$(AN_ARCH) \
+	    INTERMEDIATE_REPO=$(A_CHROOT)/ppa \
+	    $(PBUILD) --execute --bindmounts ${TOPDIR}/src/linux \
+		$(PBUILD_ARGS) pbuild/linux-unpacked-chroot-script.sh
+#	# Build the source tree and clean up
 	cd src/linux/build && debian/rules orig
 	cd src/linux/build && debian/rules clean
 	touch $@

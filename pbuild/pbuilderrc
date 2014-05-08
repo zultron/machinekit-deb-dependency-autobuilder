@@ -6,7 +6,7 @@ test -z "$DIST" && echo "error:  DIST undefined" 1>&2 && exit 1
 
 # For dependent pkgs
 if test -n "$INTERMEDIATE_REPO"; then
-    BINDMOUNTS="$TOPDIR/$INTERMEDIATE_REPO"
+    BINDMOUNTS="$BINDMOUNTS $TOPDIR/$INTERMEDIATE_REPO"
     OTHERMIRROR="deb [arch=$ARCH] file://$TOPDIR/$INTERMEDIATE_REPO $DIST main"
 fi
 
