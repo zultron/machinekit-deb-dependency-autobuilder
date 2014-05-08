@@ -95,23 +95,25 @@ test:
 # generate a PPA including all packages build thus far
 #
 # if one already exists, blow it away and start from scratch
-BUILD_PPA = \
-	@echo "===== Building PPA: $(1) ====="; \n\
-	rm -rf $*/ppa/db $*/ppa/dists $*/ppa/pool; \
+define BUILD_PPA
+	@echo "===== Building PPA: $(1) ====="
+	rm -rf $*/ppa/db $*/ppa/dists $*/ppa/pool
 	cat pbuild/ppa-distributions.tmpl | sed \
 		-e "s/@codename@/$(*D)/g" \
 		-e "s/@arch@/$(*F)/g" \
-		> $*/ppa/conf/distributions; \
-	reprepro -C main -VVb $*/ppa includedeb $(*D) $*/pkgs/*.deb; \
+		> $*/ppa/conf/distributions
+	reprepro -C main -VVb $*/ppa includedeb $(*D) $*/pkgs/*.deb
 	touch $@
+endef
 
 # Update base.tgz with PPA pkgs
-UPDATE_CHROOT = \
+define UPDATE_CHROOT
 	@echo "===== Updating pbuilder chroot with PPA packages ====="; \
-	$$(SUDO) DIST=$$(*D) ARCH=$$(*F) INTERMEDIATE_REPO=$$*/ppa \
-	    $$(PBUILD) --update --override-config \
-		$$(PBUILD_ARGS); \
-	touch $$@
+	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
+	    $(PBUILD) --update --override-config \
+		$(PBUILD_ARGS); \
+	touch $@
+endef
 
 
 ###################################################
@@ -357,7 +359,8 @@ stamps/6.3.linux-tools-source-package: stamps/6.2.linux-tools-unpacked
 #
 # 7.1. Build final PPA with all packages
 #
-%/.stamp-final-ppa:  %/.stamp-linux %/.stamp-linux-tools
+%/.stamp-final-ppa: %/.stamp-linux %/.stamp-linux-tools
 	$(call BUILD_PPA,Final)
 .PRECIOUS: %/.stamp-final-ppa
+
 
