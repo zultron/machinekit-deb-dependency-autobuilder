@@ -15,23 +15,12 @@ Targets:
 test:  list some variables and their values for debugging
 
 <codename>/<arch>/all:  e.g. wheezy/i386/all
-    Build all packages for the specified distro and architecture
+    Build all packages and PPA for the specified distro and architecture
 
-<codename>/<arch>/.stamp-linux:
-    Build the kernel packages (automatically builds the xenomai packages)
+<codename>/<arch>/chroot:  e.g. jessie/amd64/chroot
+    Set up and log into a chroot
 
-<codename>/<arch>/.stamp-xenomai:
-    Build the xenomai packages (automatically builds the base.tgz chroot)
-
-<codename>/<arch>/.stamp-linux-tools: 
-    Build the linux-tools-<version> package, including the
-    linux-kbuild-<version> package, needed to build kernel modules
-    against the kernel package with the matching version
-
-<codename>/<arch>/base.tgz:  e.g. precise/base-i386.tgz
-    Build the base chroot tarball with pbuilder --create
-
-Codename is one of wheezy, squeeze, precise, lucid
+Codename is one of wheezy, jessie, precise
 
 Arch is one of amd64, i386
 
@@ -53,15 +42,16 @@ For each <codename>/<arch> combo:
   kernel build
 - Updates the pbuilder chroot tarball with the new PPA
 - Builds the Xenomai kernel package
-- Builds the r8168 kernel module
+- Builds the linux-tools package
+- Updates the local PPA with all packages
 
 Package results go into <codename>/<arch>/pkgs.
+
+PPAs go into <codename>/<arch>/ppa.
 
 ---------------------------
 TODO
 
-- build only binary packages
-  - build arch-indep binary packages only once
 - timestamps are used in many targets, but these should probably be
   replaced with something more specific
 - build smictrl packages
