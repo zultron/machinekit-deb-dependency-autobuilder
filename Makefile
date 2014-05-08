@@ -127,6 +127,7 @@ stamps/0.1.base-builddeps: \
 		git/.dir-exists \
 		dist/.dir-exists \
 		src/.dir-exists \
+		stamps/.dir-exists \
 		$(foreach ca,$(ALL_CODENAMES_ARCHES),$(ca)/stamps/.dir-exists)
 	touch $@
 ifneq ($(DEBUG),yes)
