@@ -309,7 +309,7 @@ ARCH_CLEAN_TARGETS += clean-ppa-xenomai
 
 %/.stamp.4.2.chroot-update: %/.stamp.4.1.ppa-xenomai
 	$(call UPDATE_CHROOT,4.2)
-.PRECIOUS:  %/.stamp.4.2.chroot-update $(PPA_UPDATE_CHROOT_STAMPS)
+.PRECIOUS:  %/.stamp.4.2.chroot-update
 
 %/clean-chroot-update:
 	@echo "cleaning up $* chroot update stamps"
@@ -415,6 +415,7 @@ CLEAN_TARGETS += clean-linux-kernel-source-package
 	        src/linux/linux_*.dsc || \
 	    (rm -f $@ && exit 1)
 	touch $@
+.PRECIOUS: %/.stamp.5.5.linux-kernel-build
 
 %/clean-linux-kernel-build:
 	@echo "cleaning up $* linux kernel binary build"
@@ -505,6 +506,7 @@ CLEAN_TARGETS += clean-linux-tools-source-package
 		$(PBUILD_ARGS) \
 	        src/linux-tools/linux-tools_*.dsc
 	touch $@
+.PRECIOUS: %/.stamp.6.4.linux-tools-build
 
 %/clean-linux-tools-build:
 	@echo "cleaning up $* linux-tools binary build"
