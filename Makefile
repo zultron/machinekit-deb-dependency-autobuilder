@@ -36,7 +36,7 @@ LINUX_VERSION = 3.5.7
 
 # Uncomment to remove dependencies on Makefile and pbuilderrc while
 # hacking this script
-DEBUG = yes
+#DEBUG = yes
 
 ###################################################
 # Variables that should not change much
