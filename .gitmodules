@@ -7,3 +7,9 @@
 [submodule "git/linux-tools-deb"]
 	path = git/linux-tools-deb
 	url = https://github.com/zultron/linux-tools-deb.git
+[submodule "git/rtai"]
+	path = git/rtai
+	url = https://github.com/zultron/RTAI.git
+[submodule "git/rtai-deb"]
+	path = git/rtai-deb
+	url = https://github.com/zultron/rtai-deb.git

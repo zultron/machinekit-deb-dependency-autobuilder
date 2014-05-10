@@ -1,5 +1,6 @@
-A Makefile and pbuilderrc to automatically build Xenomai kernel
-packages for many Debian/Ubuntu release and architecture combinations
+A Makefile and pbuilderrc to automatically build Xenomai and RTAI
+kernel packages for many Debian/Ubuntu release and architecture
+combinations
 
 ---------------------------
 Prerequisites:
@@ -60,11 +61,12 @@ What it does
 For each <codename>/<arch> combo:
 - Downloads sources, checks out git repos, builds gpg keyring
 - Creates a base pbuilder chroot tarball
-- Builds the Xenomai runtime packages
-- Builds a local PPA with the Xenomai runtime packages, needed for the
+- Builds the Xenomai and RTAI packages
+- Builds a local PPA with the Xenomai and RTAI packages needed for the
   kernel build
 - Updates the pbuilder chroot tarball with the new PPA
-- Builds the Xenomai kernel package
+- Builds the Xenomai and RTAI kernel packages
+  - The RTAI package builds RTAI modules, included in the kernel
 - Builds the linux-tools package
 - Updates the local PPA with all packages
 

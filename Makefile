@@ -36,6 +36,7 @@ LINUX_VERSION = 3.5.7
 
 # Uncomment the following to disable building a feature set
 BUILD_XENOMAI = yes
+BUILD_RTAI = yes
 
 # Uncomment to remove dependencies on Makefile and pbuilderrc while
 # hacking this script
@@ -81,6 +82,9 @@ A_CHROOT = $(A_CODENAME)/$(AN_ARCH)
 # A handy list of unconfigured feature sets
 ifneq ($(BUILD_XENOMAI),yes)
 UNCONFIGURED_FEATURE_SETS += xenomai
+endif
+ifneq ($(BUILD_RTAI),yes)
+UNCONFIGURED_FEATURE_SETS += rtai
 endif
 
 ###################################################
@@ -312,12 +316,129 @@ ARCH_CLEAN_TARGETS += clean-xenomai-build
 
 
 ###################################################
+# 8. RTAI build rules
+
+# 8.1. clone & update the rtai submodule
+stamps/8.1.rtai-source-checkout: \
+		stamps/0.1.base-builddeps
+	@echo "===== 8.1. All variants:  Checking out RTAI git repo ====="
+	$(REASON)
+	mkdir -p git/rtai
+#	# be sure the submodule has been checked out
+	test -f git/rtai/.git || \
+           git submodule update --init -- git/rtai
+	git submodule update git/rtai
+	touch $@
+.PRECIOUS: stamps/8.1.rtai-source-checkout
+
+clean-rtai-source-checkout: \
+		clean-rtai-source-package
+	@echo "cleaning up RTAI git submodule directory"
+	rm -rf git/rtai; mkdir -p git/rtai
+	rm -f stamps/8.1.rtai-source-checkout
+SQUEAKY_CLEAN_TARGETS += clean-rtai-source-checkout
+
+# 8.2. clone & update the rtai-deb submodule
+stamps/8.2.rtai-deb-source-checkout: \
+		stamps/0.1.base-builddeps
+	@echo "===== 8.2. All variants: " \
+	    "Checking out RTAI Debian git repo ====="
+	$(REASON)
+	mkdir -p git/rtai-deb
+#	# be sure the submodule has been checked out
+	test -f git/rtai-deb/.git || \
+           git submodule update --init -- git/rtai-deb
+	git submodule update git/rtai-deb
+	touch $@
+.PRECIOUS: stamps/8.2.rtai-deb-source-checkout
+
+clean-rtai-deb-source-checkout: \
+		clean-rtai-source-package
+	@echo "cleaning up RTAI Debian git submodule directory"
+	rm -rf git/rtai-deb; mkdir -p git/rtai-deb
+	rm -f stamps/8.2.rtai-deb-source-checkout
+SQUEAKY_CLEAN_TARGETS += clean-rtai-deb-source-checkout
+
+# 8.3. Build RTAI orig source tarball
+stamps/8.3.rtai-source-tarball: \
+		stamps/8.1.rtai-source-checkout
+	@echo "===== 8.3. All variants:  Building RTAI source tarball ====="
+	$(REASON)
+	mkdir -p src/rtai
+	rm -f src/rtai/rtai_*.orig.tar.gz
+	RTAI_VER=`sed -n '1 s/rtai *(\([0-9.][0-9.]*\).*/\1/p' \
+		git/rtai-deb/changelog` && \
+	git --git-dir="git/rtai/.git" archive HEAD | \
+	    gzip > src/rtai/rtai_$${RTAI_VER}.orig.tar.gz
+	touch $@
+.PRECIOUS: stamps/8.3.rtai-source-tarball
+
+clean-rtai-source-tarball: \
+		clean-rtai-source-package
+	@echo "cleaning up unpacked rtai source"
+	rm -f src/rtai/rtai_*.dsc
+	rm -f src/rtai/rtai_*.tar.gz
+	rm -f stamps/8.3.rtai-source-tarball
+CLEAN_TARGETS += clean-rtai-source-tarball
+
+# 8.4. Build RTAI source package
+stamps/8.4.rtai-source-package: \
+		stamps/8.2.rtai-deb-source-checkout \
+		stamps/8.3.rtai-source-tarball
+	@echo "===== 8.4. All variants:  Build RTAI source package ====="
+	$(REASON)
+	rm -rf src/rtai/build; mkdir -p src/rtai/build
+	rm -f src/rtai/rtai_*.dsc
+	rm -f src/rtai/rtai_*.debian.tar.gz
+	tar xzCf src/rtai/build src/rtai/rtai_*.orig.tar.gz
+	git --git-dir="git/rtai-deb/.git" archive --prefix=debian/ HEAD | \
+	    tar xCf src/rtai/build -
+	cd src/rtai && dpkg-source -i -I -b build
+	touch $@
+.PRECIOUS: stamps/8.4.rtai-source-package
+
+clean-rtai-source-package: \
+		$(call CA_EXPAND,%/clean-rtai-build)
+	rm -rf src/rtai/build
+	rm -f stamps/8.4.rtai-source-package
+CLEAN_TARGETS += clean-rtai-source-tarball
+
+# 8.5. Build the RTAI binary packages
+%/.stamp.8.5.rtai-build: \
+		%/.stamp.2.1.chroot-build \
+		stamps/8.4.rtai-source-package
+	@echo "===== 8.5. $(@D):  Building RTAI binary packages ====="
+	$(REASON)
+	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
+		--build $(PBUILD_ARGS) \
+	        src/rtai/rtai_*.dsc
+	touch $@
+.PRECIOUS: %/.stamp.8.5.rtai-build
+
+%/clean-rtai-build:
+	@echo "cleaning up $* rtai binary-build"
+	rm -f $*/pkgs/xenomai_*.build
+	rm -f $*/pkgs/xenomai_*.changes
+	rm -f $*/pkgs/xenomai_*.dsc
+	rm -f $*/pkgs/xenomai_*.tar.gz
+	rm -f $*/pkgs/xenomai-doc_*.deb
+	rm -f $*/pkgs/xenomai-runtime_*.deb
+	rm -f $*/pkgs/linux-patch-xenomai_*.deb
+	rm -f $*/pkgs/libxenomai1_*.deb
+	rm -f $*/pkgs/libxenomai-dev_*.deb
+	rm -f $*/.stamp.3.3.xenomai-build
+ARCH_CLEAN_TARGETS += clean-xenomai-build
+
+###################################################
 # 4. Intermediate PPA update
 
 # 4.1. Build intermediate PPA with featureset packages
 #
 ifeq ($(BUILD_XENOMAI),yes)
 PPA_INTERMEDIATE_DEPS += %/.stamp.3.3.xenomai-build
+endif
+ifeq ($(BUILD_RTAI),yes)
+PPA_INTERMEDIATE_DEPS += %/.stamp.8.5.rtai-build
 endif
 %/.stamp.4.1.ppa-intermediate: \
 		pbuild/ppa-distributions.tmpl \
