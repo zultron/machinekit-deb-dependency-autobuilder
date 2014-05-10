@@ -1,11 +1,11 @@
-A Makefile to automatically build Xenomai kernel packages for many
-Debian/Ubuntu release and architecture combinations
+A Makefile and pbuilderrc to automatically build Xenomai kernel
+packages for many Debian/Ubuntu release and architecture combinations
 
 ---------------------------
 Prerequisites:
 
-The pbuilder and reprepro packages must be installed, in addition to
-the usual kernel development environment.
+The pbuilder, reprepro and quilt packages must be installed, in
+addition to the usual kernel development environment.
 
     apt-get install pbuilder reprepro
 

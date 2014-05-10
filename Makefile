@@ -34,6 +34,9 @@ KEYSERVER = hkp://keys.gnupg.net
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
 LINUX_VERSION = 3.5.7
 
+# Uncomment the following to disable building a feature set
+BUILD_XENOMAI = yes
+
 # Uncomment to remove dependencies on Makefile and pbuilderrc while
 # hacking this script
 #DEBUG = yes
@@ -75,6 +78,11 @@ A_CODENAME = $(wordlist 1,1,$(CODENAMES))
 AN_ARCH = $(wordlist 1,1,$(ARCHES))
 A_CHROOT = $(A_CODENAME)/$(AN_ARCH)
 
+# A handy list of unconfigured feature sets
+ifneq ($(BUILD_XENOMAI),yes)
+UNCONFIGURED_FEATURE_SETS += xenomai
+endif
+
 ###################################################
 # out-of-band checks
 
@@ -83,6 +91,15 @@ ifeq ($(shell /bin/ls /usr/sbin/pbuilder 2>/dev/null),)
   $(error /usr/sbin/pbuilder does not exist)
 endif
 
+
+###################################################
+# Debugging
+
+REASON = @if test -f $@; then \
+ echo "   == re-making '$@' for dependency '$?' ==";\
+ else \
+   echo "   == making non-existent '$@' for dependency '$?' =="; \
+ fi
 
 ###################################################
 # Misc rules
@@ -171,6 +188,7 @@ SQUEAKY_CLEAN_TARGETS += clean-base-builddeps
 stamps/1.1.keyring-downloaded: \
 		stamps/0.1.base-builddeps
 	@echo "===== 1.1. All variants:  Creating GPG keyring ====="
+	$(REASON)
 	mkdir -p admin
 	gpg --no-default-keyring --keyring=$(KEYRING) \
 		--keyserver=$(KEYSERVER) --recv-keys \
@@ -195,8 +213,9 @@ SQUEAKY_CLEAN_TARGETS += clean-keyring
 %/.stamp.2.1.chroot-build: \
 		stamps/1.1.keyring-downloaded
 	@echo "===== 2.1. $(@D):  Creating pbuilder chroot tarball ====="
+	$(REASON)
 #	# make all the codename/i386 directories needed right here
-	mkdir -p $(@D)/{pkgs,aptcache}
+	mkdir -p $(@D)/pkgs $(@D)/aptcache
 #	# create the base.tgz chroot tarball
 	$(SUDO) DIST=$(*D) ARCH=$(*F) \
 	    $(PBUILD) --create \
@@ -216,8 +235,10 @@ ARCH_SQUEAKY_CLEAN_TARGETS += clean-chroot
 %/chroot: \
 		%/.stamp.2.1.chroot-build
 	@echo "===== Logging into $(@D) pbuilder chroot ====="
+	$(REASON)
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --login \
+		--bindmounts $(TOPDIR) \
 		$(PBUILD_ARGS)
 
 ###################################################
@@ -228,6 +249,7 @@ ARCH_SQUEAKY_CLEAN_TARGETS += clean-chroot
 stamps/3.1.xenomai-source-checkout: \
 		stamps/0.1.base-builddeps
 	@echo "===== 3.1. All variants:  Checking out Xenomai git repo ====="
+	$(REASON)
 	mkdir -p git/xenomai
 #	# be sure the submodule has been checked out
 	test -f git/xenomai/.git || \
@@ -247,6 +269,7 @@ SQUEAKY_CLEAN_TARGETS += clean-xenomai-source-checkout
 stamps/3.2.xenomai-source-package: \
 		stamps/3.1.xenomai-source-checkout
 	@echo "===== 3.2. All variants:  Building Xenomai source package ====="
+	$(REASON)
 	mkdir -p src/xenomai
 	cd src/xenomai && dpkg-source -i -I -b $(TOPDIR)/git/xenomai
 	touch $@
@@ -266,6 +289,7 @@ CLEAN_TARGETS += clean-xenomai-source-package
 		stamps/3.1.xenomai-source-checkout \
 		stamps/3.2.xenomai-source-package
 	@echo "===== 3.3. $(@D):  Building Xenomai binary packages ====="
+	$(REASON)
 	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
 	        src/xenomai/xenomai_*.dsc
@@ -288,26 +312,29 @@ ARCH_CLEAN_TARGETS += clean-xenomai-build
 
 
 ###################################################
-# 4. Xenomai PPA update
+# 4. Intermediate PPA update
 
-# 4.1. Build intermediate Xenomai PPA
+# 4.1. Build intermediate PPA with featureset packages
 #
-%/.stamp.4.1.ppa-xenomai: \
+ifeq ($(BUILD_XENOMAI),yes)
+PPA_INTERMEDIATE_DEPS += %/.stamp.3.3.xenomai-build
+endif
+%/.stamp.4.1.ppa-intermediate: \
 		pbuild/ppa-distributions.tmpl \
-		%/.stamp.3.3.xenomai-build
-	$(call BUILD_PPA,4.1,Xenomai intermediate)
-.PRECIOUS: %/.stamp.4.1.ppa-xenomai
+		$(PPA_INTERMEDIATE_DEPS)
+	$(call BUILD_PPA,4.1,intermediate)
+.PRECIOUS: %/.stamp.4.1.ppa-intermediate
 
-%/clean-ppa-xenomai: \
+%/clean-ppa-intermediate: \
 		%/clean-ppa \
 		%/clean-chroot-update
 	@echo "cleaning up $* PPA directory"
-	rm -f $*/.stamp.4.1.ppa-xenomai
-ARCH_CLEAN_TARGETS += clean-ppa-xenomai
+	rm -f $*/.stamp.4.1.ppa-intermediate
+ARCH_CLEAN_TARGETS += clean-ppa-intermediate
 
-# 4.2. Update chroot with Xenomai packages
+# 4.2. Update chroot with featureset packages
 
-%/.stamp.4.2.chroot-update: %/.stamp.4.1.ppa-xenomai
+%/.stamp.4.2.chroot-update: %/.stamp.4.1.ppa-intermediate
 	$(call UPDATE_CHROOT,4.2)
 .PRECIOUS:  %/.stamp.4.2.chroot-update
 
@@ -324,6 +351,7 @@ stamps/5.1.linux-kernel-package-checkout: \
 		stamps/0.1.base-builddeps
 	@echo "===== 5.1. All variants: "\
 	    "Checking out kernel Debian git repo ====="
+	$(REASON)
 #	# be sure the submodule has been checked out
 	git submodule update --recursive --init git/kernel-rt-deb2
 	touch $@
@@ -340,55 +368,63 @@ stamps/5.2.linux-kernel-tarball-downloaded: \
 		stamps/0.1.base-builddeps
 	@echo "===== 5.2. All variants: " \
 	    "Downloading vanilla Linux tarball ====="
+	$(REASON)
 	rm -f dist/$(LINUX_TARBALL)
 	wget $(LINUX_URL)/$(LINUX_TARBALL) -O dist/$(LINUX_TARBALL)
 	touch $@
 
 clean-linux-kernel-tarball-downloaded: \
-		clean-linux-kernel-unpacked
+		clean-linux-kernel-package-configured
 	@echo "cleaning up linux kernel tarball"
 	rm -f dist/$(LINUX_TARBALL)
 	rm -f stamps/5.2.linux-kernel-tarball-downloaded
 SQUEAKY_CLEAN_TARGETS += clean-linux-kernel-tarball-downloaded
 
-# 5.3. Prepare Linux source tree
+# 5.3. Unpack and configure Linux package source tree
 #
-# This has to be done in a chroot with the xenomai
-stamps/5.3.linux-kernel-unpacked: \
+# This has to be done in a chroot with the featureset packages
+stamps/5.3.linux-kernel-package-configured: \
 		stamps/5.1.linux-kernel-package-checkout \
 		stamps/5.2.linux-kernel-tarball-downloaded \
 		$(A_CHROOT)/.stamp.4.2.chroot-update
-	@echo "===== 5.3. All variants:  Unpacking Linux source package ====="
+	@echo "===== 5.3. All variants:  Unpacking and configuring" \
+	    " Linux source package ====="
+	$(REASON)
+#	# Starting clean, copy debian packaging and symlink source tarball
 	rm -rf src/linux/build; mkdir -p src/linux/build
 	ln -sf ../../dist/$(LINUX_TARBALL) \
 	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
 	git --git-dir="git/kernel-rt-deb2/.git" archive --prefix=debian/ HEAD \
 	    | tar xCf src/linux/build -
-#	# Configure the package in the chroot
+#	# Configure the package in a chroot
 	chmod +x pbuild/linux-unpacked-chroot-script.sh
 	$(SUDO) DIST=$(A_CODENAME) ARCH=$(AN_ARCH) \
 	    INTERMEDIATE_REPO=$(A_CHROOT)/ppa \
-	    $(PBUILD) --execute --bindmounts ${TOPDIR}/src/linux \
-		$(PBUILD_ARGS) pbuild/linux-unpacked-chroot-script.sh
+	    $(PBUILD) \
+		--execute --bindmounts ${TOPDIR}/src/linux \
+		$(PBUILD_ARGS) \
+		pbuild/linux-unpacked-chroot-script.sh \
+		$(UNCONFIGURED_FEATURE_SETS)
 #	# Build the source tree and clean up
 	cd src/linux/build && debian/rules orig
 	cd src/linux/build && debian/rules clean
 	touch $@
 
-clean-linux-kernel-unpacked: \
+clean-linux-kernel-package-configured: \
 		clean-linux-kernel-source-package
 	@echo "cleaning up linux kernel source directory"
 	rm -rf src/linux/build
 	rm -rf src/linux/orig
 	rm -f src/linux/linux_*.orig.tar.xz
-	rm -f stamps/5.3.linux-kernel-unpacked
-CLEAN_TARGETS += clean-linux-kernel-unpacked
+	rm -f stamps/5.3.linux-kernel-package-configured
+CLEAN_TARGETS += clean-linux-kernel-package-configured
 
 # 5.4. Build Linux kernel source package
 stamps/5.4.linux-kernel-source-package: \
 		stamps/5.1.linux-kernel-package-checkout \
-		stamps/5.3.linux-kernel-unpacked
+		stamps/5.3.linux-kernel-package-configured
 	@echo "===== 5.4. All variants:  Building Linux source package ====="
+	$(REASON)
 #	# create source pkg
 	cd src/linux/build && dpkg-source -i -I -b .
 	touch $@
@@ -404,11 +440,12 @@ CLEAN_TARGETS += clean-linux-kernel-source-package
 
 # 5.5. Build kernel packages
 #
-# Use the PPA with xenomai devel packages
+# Use the PPA with featureset devel packages
 %/.stamp.5.5.linux-kernel-build: \
 		%/.stamp.4.2.chroot-update \
 		stamps/5.4.linux-kernel-source-package
 	@echo "===== 5.5. $(@D):  Building Linux binary package ====="
+	$(REASON)
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
@@ -440,6 +477,7 @@ stamps/6.1.linux-tools-package-checkout: \
 		stamps/0.1.base-builddeps
 	@echo "===== 6.1. All variants: " \
 	    "Checking out linux-tools-deb git repo ====="
+	$(REASON)
 #	# be sure the submodule has been checked out
 	git submodule update --recursive --init git/linux-tools-deb
 	touch $@
@@ -458,6 +496,7 @@ stamps/6.2.linux-tools-unpacked: \
 		stamps/6.1.linux-tools-package-checkout
 	@echo "===== 6.2. All variants: " \
 	    "Unpacking linux-tools source directory ====="
+	$(REASON)
 	rm -rf src/linux-tools/*
 	mkdir -p src/linux-tools/build
 	git --git-dir="git/linux-tools-deb/.git" archive --prefix=debian/ HEAD \
@@ -484,6 +523,7 @@ stamps/6.3.linux-tools-source-package: \
 		stamps/6.2.linux-tools-unpacked
 	@echo "===== 6.3. All variants: " \
 	    "Building linux-tools source package ====="
+	$(REASON)
 #	# create source pkg
 	cd src/linux-tools/build && dpkg-source -i -I -b .
 	touch $@
@@ -501,6 +541,7 @@ CLEAN_TARGETS += clean-linux-tools-source-package
 %/.stamp.6.4.linux-tools-build: \
 		stamps/6.3.linux-tools-source-package
 	@echo "===== 6.4. $(@D):  Building linux-tools binary package ====="
+	$(REASON)
 	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
