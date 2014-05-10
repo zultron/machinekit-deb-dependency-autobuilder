@@ -20,13 +20,15 @@ cd ${TOPDIR}/src/linux/build
 
 # Install packages containing the i-pipe patches
 XENOMAI_PKGS=xenomai-kernel-source
+RTAI_PKGS=rtai-source
 
 for featureset in $UNCONFIGURED_FEATURE_SETS; do
     case $featureset in
 	xenomai) XENOMAI_PKGS="" ;;
+	rtai) RTAI_PKGS="" ;;
     esac
 done
-apt-get install -y --force-yes $XENOMAI_PKGS
+apt-get install -y --force-yes $XENOMAI_PKGS $RTAI_PKGS
 
 # Unconfigure any requested featuresets
 unconfigure_featureset() {

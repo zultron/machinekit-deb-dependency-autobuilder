@@ -6,6 +6,8 @@
 !/git/linux-tools-deb
 !/git/xenomai
 !/git/rcn-linux-arm
+!/git/rtai
+!/git/rtai-deb
 !/pbuild/
 
 # ignore stamps
