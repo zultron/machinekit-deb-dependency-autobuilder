@@ -1,6 +1,10 @@
 # ignore all directories except /git/ and /pbuild/
 /*/
 !/git/
+/git/*
+!/git/kernel-rt-deb2
+!/git/linux-tools-deb
+!/git/xenomai
 !/pbuild/
 
 # ignore stamps
