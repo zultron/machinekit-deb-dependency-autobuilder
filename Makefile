@@ -271,6 +271,7 @@ stamps/3.2.xenomai-source-package: \
 	@echo "===== 3.2. All variants:  Building Xenomai source package ====="
 	$(REASON)
 	mkdir -p src/xenomai
+	rm -f src/xenomai/xenomai_*.dsc src/xenomai/xenomai_*.tar.gz
 	cd src/xenomai && dpkg-source -i -I -b $(TOPDIR)/git/xenomai
 	touch $@
 .PRECIOUS: stamps/3.2.xenomai-source-package
