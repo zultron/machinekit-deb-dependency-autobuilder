@@ -32,7 +32,7 @@ KEYSERVER = hkp://keys.gnupg.net
 
 # Linux vanilla tarball
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
-LINUX_VERSION = 3.5.7
+LINUX_VERSION = 3.8.13
 
 # Uncomment the following to disable building a feature set
 BUILD_XENOMAI = yes
@@ -391,9 +391,9 @@ stamps/5.3.linux-kernel-package-configured: \
 	@echo "===== 5.3. All variants:  Unpacking and configuring" \
 	    " Linux source package ====="
 	$(REASON)
-#	# Starting clean, copy debian packaging and symlink source tarball
+#	# Starting clean, copy debian packaging and hardlink source tarball
 	rm -rf src/linux/build; mkdir -p src/linux/build
-	ln -sf ../../dist/$(LINUX_TARBALL) \
+	ln -f dist/$(LINUX_TARBALL) \
 	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
 	git --git-dir="git/kernel-rt-deb2/.git" archive --prefix=debian/ HEAD \
 	    | tar xCf src/linux/build -

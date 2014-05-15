@@ -14,7 +14,7 @@ UNCONFIGURED_FEATURE_SETS="$*"
 cd ${TOPDIR}/src/linux/build
 
 # Install packages containing the i-pipe patches
-XENOMAI_PKGS=linux-patch-xenomai
+XENOMAI_PKGS=xenomai-kernel-source
 
 for featureset in $UNCONFIGURED_FEATURE_SETS; do
     case $featureset in
