@@ -10,6 +10,11 @@
 # earlier in the make run, to be installed, so this is best done in a
 # chroot.
 
+shell() {
+    /bin/bash -i
+}
+trap shell ERR
+
 UNCONFIGURED_FEATURE_SETS="$*"
 cd ${TOPDIR}/src/linux/build
 
@@ -43,4 +48,4 @@ done
 # Install python, needed by genconfig.py
 apt-get install -y --force-yes python
 
-debian/rules debian/control || true # always fails
+debian/rules debian/control NOFAIL=true
