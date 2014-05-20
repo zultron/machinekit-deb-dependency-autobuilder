@@ -10,18 +10,21 @@ endif
 ###################################################
 # Variables that may change
 
-# Arches to build
-ARCHES = i386 amd64
-
-# List of codenames to build for
+# List of codename/arch combos to build
 #
 # Lucid isn't supported by new kernel packaging, which requires python
 # >= 2.7 (2.4 available), kernel-wedge >= 2.82 (2.29 available),
 # gcc-4.6 (4.4 available).
 #
 # Squeeze (Debian 6.0) is reportedly obsolete.
-#
-CODENAMES = precise wheezy jessie
+ALL_CODENAMES_ARCHES = \
+	wheezy/amd64 \
+	wheezy/i386 \
+	wheezy/armhf \
+	precise/amd64 \
+	precise/i386 \
+	jessie/amd64 \
+	jessie/i386
 
 # Debian package signature keys
 UBUNTU_KEYID = 40976EAF437D05B5
@@ -62,11 +65,12 @@ PBUILD = TOPDIR=$(TOPDIR) pbuilder
 PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted \
 	$(DEBBUILDOPTS_ARG)
 
-# List of all codename/arch combos
-ALL_CODENAMES_ARCHES = $(foreach c,$(CODENAMES),\
-	$(foreach a,$(ARCHES),$(c)/$(a)))
-# ...and a handy way to expand 'pattern-%'
+# A handy way to expand 'pattern-%' with all codename/arch combos
 CA_EXPAND = $(patsubst %,$(1),$(ALL_CODENAMES_ARCHES))
+
+# A handy way to separate codename or arch from a codename/arch combo
+codename = $(patsubst %/,%,$(dir $(1)))
+arch = $(notdir $(1))
 
 # Set this variable to the stamp name of the last target of each
 # codename/arch; used by the default target
@@ -74,9 +78,7 @@ FINAL_STEP = .stamp.7.1.ppa-final
 ALLSTAMPS := $(call CA_EXPAND,%/$(FINAL_STEP))
 
 # A random chroot to build the linux source package in
-A_CODENAME = $(wordlist 1,1,$(CODENAMES))
-AN_ARCH = $(wordlist 1,1,$(ARCHES))
-A_CHROOT = $(A_CODENAME)/$(AN_ARCH)
+A_CHROOT = $(wordlist 1,1,$(ALL_CODENAMES_ARCHES))
 
 # A handy list of unconfigured feature sets
 ifneq ($(BUILD_XENOMAI),yes)
@@ -399,7 +401,9 @@ stamps/5.3.linux-kernel-package-configured: \
 	    | tar xCf src/linux/build -
 #	# Configure the package in a chroot
 	chmod +x pbuild/linux-unpacked-chroot-script.sh
-	$(SUDO) DIST=$(A_CODENAME) ARCH=$(AN_ARCH) \
+	$(SUDO) \
+	    DIST=$(call codename,$(A_CHROOT)) \
+	    ARCH=$(call arch,$(A_CHROOT)) \
 	    INTERMEDIATE_REPO=$(A_CHROOT)/ppa \
 	    $(PBUILD) \
 		--execute --bindmounts ${TOPDIR}/src/linux \
