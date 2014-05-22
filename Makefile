@@ -26,6 +26,17 @@ ALL_CODENAMES_ARCHES = \
 	jessie/amd64 \
 	jessie/i386
 
+# Define this to have a deterministic chroot for step 5.3
+#A_CHROOT = wheezy/amd64
+
+# List of all featuresets
+FEATURESETS = \
+    xenomai.x86\
+    xenomai.beaglebone
+
+# Explicitly define featureset list to enable; default all
+#FEATURESETS_ENABLED = xenomai.beaglebone
+
 # Debian package signature keys
 UBUNTU_KEYID = 40976EAF437D05B5
 #SQUEEZE_KEYID = AED4B06F473041FA
@@ -36,9 +47,6 @@ KEYSERVER = hkp://keys.gnupg.net
 # Linux vanilla tarball
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
 LINUX_VERSION = 3.8.13
-
-# Uncomment the following to disable building a feature set
-BUILD_XENOMAI = yes
 
 # Uncomment to remove dependencies on Makefile and pbuilderrc while
 # hacking this script
@@ -78,12 +86,12 @@ FINAL_STEP = .stamp.7.1.ppa-final
 ALLSTAMPS := $(call CA_EXPAND,%/$(FINAL_STEP))
 
 # A random chroot to build the linux source package in
-A_CHROOT = $(wordlist 1,1,$(ALL_CODENAMES_ARCHES))
+A_CHROOT ?= $(wordlist 1,1,$(ALL_CODENAMES_ARCHES))
 
-# A handy list of unconfigured feature sets
-ifneq ($(BUILD_XENOMAI),yes)
-UNCONFIGURED_FEATURE_SETS += xenomai
-endif
+# All featuresets enabled by default
+FEATURESETS_ENABLED ?= $(FEATURESETS)
+# Disabled featuresets
+FEATURESETS_DISABLED = $(filter-out $(FEATURESETS_ENABLED),$(FEATURESETS))
 
 ###################################################
 # out-of-band checks
@@ -313,15 +321,16 @@ CLEAN_TARGETS += clean-xenomai-source-package
 	rm -f $*/.stamp.3.3.xenomai-build
 ARCH_CLEAN_TARGETS += clean-xenomai-build
 
+# Hook into rest of build
+ifneq ($(filter xenomai.%,$(FEATURESETS_ENABLED)),)
+PPA_INTERMEDIATE_DEPS += %/.stamp.3.3.xenomai-build
+endif
 
 ###################################################
 # 4. Intermediate PPA update
 
 # 4.1. Build intermediate PPA with featureset packages
 #
-ifeq ($(BUILD_XENOMAI),yes)
-PPA_INTERMEDIATE_DEPS += %/.stamp.3.3.xenomai-build
-endif
 %/.stamp.4.1.ppa-intermediate: \
 		pbuild/ppa-distributions.tmpl \
 		$(PPA_INTERMEDIATE_DEPS)
@@ -409,7 +418,7 @@ stamps/5.3.linux-kernel-package-configured: \
 		--execute --bindmounts ${TOPDIR}/src/linux \
 		$(PBUILD_ARGS) \
 		pbuild/linux-unpacked-chroot-script.sh \
-		$(UNCONFIGURED_FEATURE_SETS)
+		$(FEATURESETS_DISABLED)
 #	# Build the source tree and clean up
 	cd src/linux/build && debian/rules orig
 	cd src/linux/build && debian/rules clean

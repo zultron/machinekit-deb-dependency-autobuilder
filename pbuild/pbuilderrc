@@ -59,7 +59,15 @@ HOOKDIR="${TOPDIR}/pbuild"
 # extra packages for buildroot
 EXTRA_PACKAGES="gnupg"
 if test $DIST = wheezy; then
-    EXTRA_PACKAGES="$EXTRAPACKAGES,libfile-fcntllock-perl"
+    EXTRA_PACKAGES="$EXTRA_PACKAGES,libfile-fcntllock-perl"
+fi
+if test $ARCH = armhf; then
+    EXTRA_PACKAGES="$EXTRA_PACKAGES,uboot-mkimage"
+fi
+
+# armhf needs qemu
+if test $ARCH = armhf; then
+    DEBOOTSTRAP=qemu-debootstrap
 fi
 
 # set arch in debootstrap
