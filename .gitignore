@@ -5,6 +5,7 @@
 !/git/kernel-rt-deb2
 !/git/linux-tools-deb
 !/git/xenomai
+!/git/rcn-linux-arm
 !/pbuild/
 
 # ignore stamps
