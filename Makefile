@@ -27,13 +27,13 @@ ALL_CODENAMES_ARCHES = \
 	jessie/i386
 
 # Define this to have a deterministic chroot for step 5.3
-#A_CHROOT = wheezy/amd64
+A_CHROOT = wheezy/amd64
 
 # List of all featuresets
 FEATURESETS = \
     xenomai.x86 \
     xenomai.beaglebone \
-#    rtai
+    rtai
 
 # Explicitly define featureset list to enable; default all
 #FEATURESETS_ENABLED = xenomai.beaglebone
@@ -51,7 +51,7 @@ LINUX_VERSION = 3.8.13
 
 # Uncomment to remove dependencies on Makefile and pbuilderrc while
 # hacking this script
-#DEBUG = yes
+DEBUG = yes
 
 ###################################################
 # Variables that should not change much
