@@ -421,7 +421,9 @@ CLEAN_TARGETS += clean-rtai-source-tarball
 		stamps/8.4.rtai-source-package
 	@echo "===== 8.5. $(@D):  Building RTAI binary packages ====="
 	$(REASON)
-	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
+#	# ARM arch is broken
+	test $(*F) = armhf || \
+	    $(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
 	        src/rtai/rtai_*.dsc
 	touch $@
