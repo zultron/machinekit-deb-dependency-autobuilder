@@ -422,7 +422,8 @@ CLEAN_TARGETS += clean-rtai-source-tarball
 	@echo "===== 8.5. $(@D):  Building RTAI binary packages ====="
 	$(REASON)
 #	# ARM arch is broken
-	test $(*F) = armhf || \
+#	# jessie is broken (no libcomedi)
+	test $(*F) = armhf -o $(*D) = jessie || \
 	    $(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
 	        src/rtai/rtai_*.dsc
