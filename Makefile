@@ -1,11 +1,3 @@
-# see http://www.cmcrossroads.com/ask-mr-make/6535-tracing-rule-execution-in-gnu-make
-# to trace make execution of make in more detail:
-#     make VV=1
-ifeq ("$(origin VV)", "command line")
-    OLD_SHELL := $(SHELL)
-    SHELL = $(warning Building $@$(if $<, (from $<))$(if $?, ($? newer)))$(OLD_SHELL)
-endif
-
 
 ###################################################
 # Variables that may change
@@ -18,16 +10,16 @@ endif
 #
 # Squeeze (Debian 6.0) is reportedly obsolete.
 ALL_CODENAMES_ARCHES = \
-	wheezy/amd64 \
-	wheezy/i386 \
-	wheezy/armhf \
-	precise/amd64 \
-	precise/i386 \
-	jessie/amd64 \
-	jessie/i386
+	wheezy-amd64 \
+	wheezy-i386 \
+	wheezy-armhf \
+	precise-amd64 \
+	precise-i386 \
+	jessie-amd64 \
+	jessie-i386
 
 # Define this to have a deterministic chroot for step 5.3
-A_CHROOT = wheezy/amd64
+A_CHROOT = wheezy-amd64
 
 # List of all featuresets
 FEATURESETS = \
@@ -40,7 +32,6 @@ FEATURESETS = \
 
 # Debian package signature keys
 UBUNTU_KEYID = 40976EAF437D05B5
-#SQUEEZE_KEYID = AED4B06F473041FA
 DEBIAN_KEYID = 8B48AD6246925553
 KEYIDS = $(UBUNTU_KEYID) $(DEBIAN_KEYID)
 KEYSERVER = hkp://keys.gnupg.net
