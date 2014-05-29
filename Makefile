@@ -11,7 +11,7 @@
 # Squeeze (Debian 6.0) is reportedly obsolete.
 ALL_CODENAMES_ARCHES = \
 	wheezy-amd64 \
-	# wheezy-i386 \
+	wheezy-i386 \
 	# wheezy-armhf \
 	# jessie-amd64 \
 	# jessie-i386
@@ -27,10 +27,10 @@ A_CHROOT = wheezy-amd64
 FEATURESETS = \
     xenomai.x86 \
     xenomai.beaglebone \
-    rtai
+#    rtai
 
 # Explicitly define featureset list to enable; default all
-#FEATURESETS_ENABLED = xenomai.beaglebone
+FEATURESETS_ENABLED = xenomai.beaglebone xenomai.x86
 
 # Debian package signature keys
 UBUNTU_KEYID = 40976EAF437D05B5
@@ -41,6 +41,11 @@ KEYSERVER = hkp://keys.gnupg.net
 # Linux vanilla tarball
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
 LINUX_VERSION = 3.8.13
+
+# Xenomai package
+XENOMAI_PKG_RELEASE = 1mk
+XENOMAI_URL = http://download.gna.org/xenomai/stable
+XENOMAI_VERSION = 2.6.3
 
 # Your "Firstname Lastname <email@address>"; leave out to use git config
 #MAINTAINER = John Doe <jdoe@example.com>
@@ -54,19 +59,21 @@ DEBUG = yes
 # (or auto-generated)
 
 # Misc paths, filenames, executables
-TOPDIR = $(shell pwd)
-SUDO = sudo
-LINUX_TARBALL = linux-$(LINUX_VERSION).tar.xz
-LINUX_TARBALL_DEBIAN_ORIG = linux_$(LINUX_VERSION).orig.tar.xz
-KEYRING = $(TOPDIR)/admin/keyring.gpg
+TOPDIR := $(shell pwd)
+SUDO := sudo
+LINUX_TARBALL := linux-$(LINUX_VERSION).tar.xz
+LINUX_TARBALL_DEBIAN_ORIG := linux_$(LINUX_VERSION).orig.tar.xz
+XENOMAI_TARBALL := xenomai-$(XENOMAI_VERSION).tar.bz2
+XENOMAI_TARBALL_DEBIAN_ORIG := xenomai_$(XENOMAI_VERSION).orig.tar.bz2
+XENOMAI_PKG_VERSION = $(XENOMAI_VERSION)-$(XENOMAI_PKG_RELEASE)~$(CODENAME)1
+
+KEYRING := $(TOPDIR)/admin/keyring.gpg
 
 # Pass any 'DEBBUILDOPTS=foo' arg into dpkg-buildpackage
-ifneq ($(DEBBUILDOPTS),)
-DEBBUILDOPTS_ARG = --debbuildopts "$(DEBBUILDOPTS)"
-endif
+DEBBUILDOPTS_ARG = $(if $(DEBBUILDOPTS),--debbuildopts "$(DEBBUILDOPTS)")
 
 # pbuilder command line
-PBUILD = TOPDIR=$(TOPDIR) pbuilder
+PBUILD = TOPDIR=$(TOPDIR) DIST=$(CODENAME) ARCH=$(ARCH) pbuilder
 PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted \
 	$(DEBBUILDOPTS_ARG)
 
@@ -85,24 +92,30 @@ arch = $(notdir $(1))
 FINAL_STEP = .stamp.7.1.ppa-final
 ALLSTAMPS := $(call CA_EXPAND,%/$(FINAL_STEP))
 
-# A random chroot to build the linux source package in
-A_CHROOT ?= $(wordlist 1,1,$(ALL_CODENAMES_ARCHES))
-
 # All featuresets enabled by default
 FEATURESETS_ENABLED ?= $(FEATURESETS)
 # Disabled featuresets
 FEATURESETS_DISABLED = $(filter-out $(FEATURESETS_ENABLED),$(FEATURESETS))
 
-# Set $(CODENAME) and $(ARCH) for all stamps/x.y-%-foo targets
+# Set $(CODENAME) and $(ARCH) for all stamps/x.y.%.foo targets
 define setca
 ARCH_$(1) = $(shell echo $(1) | sed 's/.*-//')
 CODENAME_$(1) = $(shell echo $(1) | sed 's/-.*//')
 endef
 $(foreach ca,$(ALL_CODENAMES_ARCHES),$(eval $(call setca,$(ca))))
 stamps/% clean-%: ARCH = $(ARCH_$*)
-stamps/% clean-%: CODENAME = $(CODENAME_$*)
-stamps/% clean-%: CA = $(ARCH)-$(CODENAME)
+stamps/% clean-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$(CA))
+stamps/% clean-%: CA = $(*)
 
+# List of codenames
+uniq = $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
+CODENAMES = $(call uniq,$(foreach ca,$(ALL_CODENAMES_ARCHES),$(CODENAME_$(ca))))
+C_EXPAND = $(patsubst %,$(1),$(CODENAMES))
+
+# A random chroot to build the linux source package in
+A_CHROOT ?= $(wordlist 1,1,$(ALL_CODENAMES_ARCHES))
+AN_ARCH = $(ARCH_$(A_CHROOT))
+A_CODENAME = $(CODENAME_$(A_CHROOT))
 
 ###################################################
 # out-of-band checks
@@ -159,13 +172,13 @@ endef
 define UPDATE_CHROOT
 	@echo "===== $(1). $(CA): " \
 	    "Updating pbuilder chroot with PPA packages ====="
-	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) INTERMEDIATE_REPO=$*/ppa \
+	$(SUDO) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --update --override-config \
 		$(PBUILD_ARGS)
 	touch $@
 endef
 
-clean-%-ppa:
+clean.%.ppa:
 	rm -rf $*/ppa
 
 ###################################################
@@ -173,7 +186,7 @@ clean-%-ppa:
 #
 # 0.1 Generic target for non-<codename>/<arch>-specific targets
 stamps/0.1.base-builddeps:
-	mkdir -p admin git dist src stamps pkgs aptcache chroots
+	mkdir -p admin git dist src stamps pkgs aptcache chroots logs
 	touch $@
 ifneq ($(DEBUG),yes)
 # While hacking, don't rebuild everything whenever a file is changed
@@ -218,20 +231,19 @@ SQUEAKY_CLEAN_TARGETS += clean-keyring
 # 2. Base chroot tarball
 
 # 2.1.  Build chroot tarball
-stamps/2.1-%-chroot-build: \
+stamps/2.1.%.chroot-build: \
 		stamps/1.1.keyring-downloaded
 	@echo "===== 2.1. $(CA):  Creating pbuilder chroot tarball ====="
 	$(REASON)
 #	# make all the codename/i386 directories needed right here
-	mkdir -p pkgs cache/aptcache/$(CA)
+	mkdir -p pkgs aptcache
 #	# create the base.tgz chroot tarball
-	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) \
-	    $(PBUILD) --create \
+	$(SUDO) $(PBUILD) --create \
 		$(PBUILD_ARGS)
 	touch $@
-.PRECIOUS:  $(call CA_EXPAND,stamps/2.1-%-chroot-build)
+.PRECIOUS:  $(call CA_EXPAND,stamps/2.1.%.chroot-build)
 
-clean-%-chroot:
+clean.%.chroot:
 	@echo "cleaning $(CA) chroot tarball"
 	rm -f chroots/base-$(CA).tgz
 	rm -f stamps/2.1-$(CA)-chroot-build
@@ -241,10 +253,10 @@ ARCH_SQUEAKY_CLEAN_TARGETS += clean-chroot
 # Log into chroot
 
 %-chroot: \
-		stamps/2.1-%-chroot-build
+		stamps/2.1.%.chroot-build
 	@echo "===== Logging into $(*) pbuilder chroot ====="
 	$(REASON)
-	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) INTERMEDIATE_REPO=ppa \
+	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) --login \
 		--bindmounts $(TOPDIR) \
 		$(PBUILD_ARGS)
@@ -254,58 +266,69 @@ ARCH_SQUEAKY_CLEAN_TARGETS += clean-chroot
 
 # 3.0.1. clone & update the xenomai submodule; FIXME: nice way to detect
 # if the branch has new commits?
-stamps/3.0.1.xenomai-source-checkout: \
+stamps/3.0.1.xenomai-tarball-download: \
 		stamps/0.1.base-builddeps
-	@echo "===== 3.0.1. All variants:  Checking out Xenomai git repo ====="
+	@echo "===== 3.0.1. All variants:  Downloading Xenomai tarball ====="
 	$(REASON)
-	mkdir -p git/xenomai
-#	# be sure the submodule has been checked out
-	test -f git/xenomai/.git || \
-           git submodule update --init -- git/xenomai
-	git submodule update git/xenomai
+	mkdir -p dist
+	wget $(XENOMAI_URL)/$(XENOMAI_TARBALL) -O dist/$(XENOMAI_TARBALL)
+	mkdir -p src/xenomai
+	ln -f dist/$(XENOMAI_TARBALL) \
+	    src/xenomai/$(XENOMAI_TARBALL_DEBIAN_ORIG)
 	touch $@
-.PRECIOUS: stamps/3.0.1.xenomai-source-checkout
+.PRECIOUS: stamps/3.0.1.xenomai-tarball-download
 
-clean-xenomai-source-checkout: \
+clean-xenomai-tarball-download: \
 		clean-xenomai-source-package
-	@echo "cleaning up xenomai git submodule directory"
-	rm -rf git/xenomai; mkdir -p git/xenomai
-	rm -f stamps/3.0.1.xenomai-source-checkout
-SQUEAKY_CLEAN_TARGETS += clean-xenomai-source-checkout
+	@echo "cleaning up xenomai tarball"
+	rm -f dist/$(XENOMAI_TARBALL)
+	rm -f stamps/3.0.1.xenomai-tarball-download
+SQUEAKY_CLEAN_TARGETS += clean-xenomai-tarball-download
 
 # 3.0.2. create the source package
-stamps/3.0.2.xenomai-source-package: \
-		stamps/3.0.1.xenomai-source-checkout
-	@echo "===== 3.0.2. All variants:  Building Xenomai source package ====="
+stamps/3.0.2.%.xenomai-build-source: \
+		stamps/3.0.1.xenomai-tarball-download
+	@echo "===== 3.0.2. $(CODENAME)-all: " \
+	    "Building Xenomai source package ====="
 	$(REASON)
-	mkdir -p src/xenomai
-	rm -f src/xenomai/xenomai_*.dsc src/xenomai/xenomai_*.tar.gz
-	cd src/xenomai && dpkg-source -i -I -b $(TOPDIR)/git/xenomai
+	rm -rf src/xenomai/$(CODENAME); mkdir -p src/xenomai/$(CODENAME)
+	tar xC src/xenomai/$(CODENAME) \
+	    -f src/xenomai/$(XENOMAI_TARBALL_DEBIAN_ORIG) \
+	    --strip-components=1
+	cd src/xenomai/$(CODENAME) && \
+	    $(TOPDIR)/pbuild/tweak-xenomai-pkg.sh \
+	    $(CODENAME) $(XENOMAI_PKG_VERSION) "$(MAINTAINER)"
+	cd pkgs && dpkg-source -i -I \
+	    -b $(TOPDIR)/src/xenomai/$(CODENAME)
 	touch $@
-.PRECIOUS: stamps/3.0.2.xenomai-source-package
+.PRECIOUS: $(call CA_EXPAND,stamps/3.0.2.%.xenomai-build-source)
 
-clean-xenomai-source-package: \
+clean.%.xenomai-build-source: \
 		$(call CA_EXPAND,%/clean-xenomai-build)
-	@echo "cleaning up xenomai source package"
+	@echo "cleaning up xenomai source package for $(CODENAME)"
 	rm -f src/xenomai/xenomai_*.dsc
 	rm -f src/xenomai/xenomai_*.tar.gz
-	rm -f stamps/3.0.2.xenomai-source-package
-CLEAN_TARGETS += clean-xenomai-source-package
+	rm -f stamps/3.0.2-$(CODENAME)-xenomai-source-package
+ARCH_CLEAN_TARGETS += xenomai-build-source
 
 # 3.0.3. build the binary packages
-stamps/3.0.3-%-xenomai-build: \
-		stamps/2.1-%-chroot-build \
-		stamps/3.0.1.xenomai-source-checkout \
-		stamps/3.0.2.xenomai-source-package
-	@echo "===== 3.0.3. $(CA):  Building Xenomai binary packages ====="
+#   Only build binary-indep packages once
+stamps/3.0.3.%-$(AN_ARCH).xenomai-build-binary: BUILDINDEP = --debbuildopts -A
+stamps/3.0.3.%.xenomai-build-binary: \
+		stamps/2.1.%.chroot-build \
+		$(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source)
+	@echo "===== 3.0.3. $(CA): " \
+	    "Building Xenomai binary packages ====="
 	$(REASON)
-	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) $(PBUILD) \
-		--build $(PBUILD_ARGS) \
-	        src/xenomai/xenomai_*.dsc
+	$(SUDO) $(PBUILD) \
+	    --build \
+	    $(PBUILD_ARGS) \
+	    --debbuildopts -B $(BUILDINDEP) \
+	    pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc
 	touch $@
-.PRECIOUS: $(call CA_EXPAND,stamps/3.0.3-%-xenomai-build)
+.PRECIOUS: $(call CA_EXPAND,stamps/3.0.3.%.xenomai-build-binary)
 
-clean-%-xenomai-build:
+clean.%.xenomai-build:
 	@echo "cleaning up $(CA) xenomai binary-build"
 	rm -f $*/pkgs/xenomai_*_$(ARCH).build
 	rm -f $*/pkgs/xenomai_*_$(ARCH).changes
@@ -316,12 +339,12 @@ clean-%-xenomai-build:
 	rm -f $*/pkgs/linux-patch-xenomai_*.deb
 	rm -f $*/pkgs/libxenomai1_*.deb
 	rm -f $*/pkgs/libxenomai-dev_*.deb
-	rm -f stamps/3.0.3-%-xenomai-build
-ARCH_CLEAN_TARGETS += clean-xenomai-build
+	rm -f stamps/3.0.3-$*-xenomai-build
+ARCH_CLEAN_TARGETS += xenomai-build
 
 # Hook into rest of build
 ifneq ($(filter xenomai.%,$(FEATURESETS_ENABLED)),)
-PPA_INTERMEDIATE_DEPS += $(call CA_EXPAND,stamps/3.0.3-%-xenomai-build)
+PPA_INTERMEDIATE_DEPS += $(call CA_EXPAND,stamps/3.0.3.%.xenomai-build)
 endif
 
 ###################################################
@@ -441,7 +464,7 @@ CLEAN_TARGETS += clean-rtai-source-tarball
 	# rm -f $*/pkgs/libxenomai-dev_*.deb
 	# rm -f $*/.stamp.3.3.xenomai-build
 	exit 1
-ARCH_CLEAN_TARGETS += clean-xenomai-build
+ARCH_CLEAN_TARGETS += xenomai-build
 
 # Hook into rest of build
 ifneq ($(filter rtai,$(FEATURESETS_ENABLED)),)
@@ -453,29 +476,29 @@ endif
 
 # 4.1. Build intermediate PPA with featureset packages
 #
-%/.stamp.4.1.ppa-intermediate: \
+stamps/4.1.%.ppa-intermediate: \
 		pbuild/ppa-distributions.tmpl \
 		$(PPA_INTERMEDIATE_DEPS)
 	$(call BUILD_PPA,4.1,intermediate)
-.PRECIOUS: %/.stamp.4.1.ppa-intermediate
+.PRECIOUS: $(call CA_EXPAND,stamps/4.1.%.ppa-intermediate)
 
-%/clean-ppa-intermediate: \
-		%/clean-ppa \
-		%/clean-chroot-update
+clean.%.ppa-intermediate: \
+		clean.%.ppa \
+		clean.%.chroot-update
 	@echo "cleaning up $* PPA directory"
-	rm -f $*/.stamp.4.1.ppa-intermediate
-ARCH_CLEAN_TARGETS += clean-ppa-intermediate
+	rm -f stamps/4.1-$*-ppa-intermediate
+ARCH_CLEAN_TARGETS += ppa-intermediate
 
 # 4.2. Update chroot with featureset packages
 
-%/.stamp.4.2.chroot-update: %/.stamp.4.1.ppa-intermediate
+stamps/4.2.%.chroot-update: stamps/4.1.%.ppa-intermediate
 	$(call UPDATE_CHROOT,4.2)
-.PRECIOUS:  %/.stamp.4.2.chroot-update
+.PRECIOUS: $(call CA_EXPAND,stamps/4.2.%.chroot-update)
 
-%/clean-chroot-update:
-	@echo "cleaning up $(CA) chroot update stamps"
-	rm -f $*/.stamp.4.2.chroot-update
-ARCH_CLEAN_TARGETS += clean-chroot-update
+clean.%.chroot-update:
+	@echo "cleaning up $(CA) chroot update stamps (not cleaning chroot)"
+	rm -f stamps/4.2.%.chroot-update
+ARCH_CLEAN_TARGETS += chroot-update
 
 ###################################################
 # 5. Kernel build rules
@@ -601,7 +624,7 @@ CLEAN_TARGETS += clean-linux-kernel-source-package
 	rm -f $*/pkgs/linux_*.debian.tar.xz
 	rm -f $*/pkgs/linux_*.orig.tar.xz
 	rm -f $*/.stamp.5.5.linux-kernel-build
-ARCH_CLEAN_TARGETS += clean-linux-kernel-build
+ARCH_CLEAN_TARGETS += linux-kernel-build
 
 ###################################################
 # 6. linux-tools package build rules
@@ -695,7 +718,7 @@ CLEAN_TARGETS += clean-linux-tools-source-package
 	rm -f $*/pkgs/linux-tools_*.build
 	rm -f $*/pkgs/linux-tools_*.changes
 	rm -f $*/.stamp.6.4.linux-tools-build
-ARCH_CLEAN_TARGETS += clean-linux-tools-build
+ARCH_CLEAN_TARGETS += linux-tools-build
 
 
 ###################################################
@@ -713,7 +736,7 @@ ARCH_CLEAN_TARGETS += clean-linux-tools-build
 		%/clean-ppa
 	@echo "cleaning up $(CA) final PPA directory"
 	rm -f $*/.stamp.7.1.ppa-final
-ARCH_CLEAN_TARGETS += clean-ppa-final
+ARCH_CLEAN_TARGETS += ppa-final
 
 
 ###################################################
@@ -723,7 +746,8 @@ ARCH_CLEAN_TARGETS += clean-ppa-final
 	@echo "Cleaned up $(CA) build artifacts"
 
 # Expand the list of ARCH_CLEAN_TARGETS
-CLEAN_TARGETS += $(foreach t,$(ARCH_CLEAN_TARGETS),$(call CA_EXPAND,%/$(t)))
+CLEAN_TARGETS += $(foreach t,$(ARCH_CLEAN_TARGETS),\
+	$(call CA_EXPAND,clean.%.$(t)))
 clean: $(CLEAN_TARGETS)
 
 %/squeaky-clean-caches:

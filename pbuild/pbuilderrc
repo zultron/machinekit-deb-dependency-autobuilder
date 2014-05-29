@@ -52,6 +52,7 @@ test -d ${CCACHEDIR} || mkdir -p ${CCACHEDIR}
 
 # always log builds
 PKGNAME_LOGFILE=yes
+PKGNAME_LOGFILE_EXTENTION=-${ARCH}.build
 
 # hook directory
 HOOKDIR="${TOPDIR}/pbuild"
