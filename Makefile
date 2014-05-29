@@ -13,10 +13,12 @@ ALL_CODENAMES_ARCHES = \
 	wheezy-amd64 \
 	# wheezy-i386 \
 	# wheezy-armhf \
-	# precise-amd64 \
-	# precise-i386 \
 	# jessie-amd64 \
 	# jessie-i386
+# Precise doesn't have gcc 4.7; using gcc 4.6 might be the cause of
+# the kernel module problems I've been finding
+	# precise-amd64 \
+	# precise-i386 \
 
 # Define this to have a deterministic chroot for step 5.3
 A_CHROOT = wheezy-amd64
