@@ -11,12 +11,12 @@
 # Squeeze (Debian 6.0) is reportedly obsolete.
 ALL_CODENAMES_ARCHES = \
 	wheezy-amd64 \
-	wheezy-i386 \
-	wheezy-armhf \
-	precise-amd64 \
-	precise-i386 \
-	jessie-amd64 \
-	jessie-i386
+	# wheezy-i386 \
+	# wheezy-armhf \
+	# precise-amd64 \
+	# precise-i386 \
+	# jessie-amd64 \
+	# jessie-i386
 
 # Define this to have a deterministic chroot for step 5.3
 A_CHROOT = wheezy-amd64
@@ -39,6 +39,9 @@ KEYSERVER = hkp://keys.gnupg.net
 # Linux vanilla tarball
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
 LINUX_VERSION = 3.8.13
+
+# Your "Firstname Lastname <email@address>"; leave out to use git config
+#MAINTAINER = John Doe <jdoe@example.com>
 
 # Uncomment to remove dependencies on Makefile and pbuilderrc while
 # hacking this script
@@ -68,6 +71,9 @@ PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted \
 # A handy way to expand 'pattern-%' with all codename/arch combos
 CA_EXPAND = $(patsubst %,$(1),$(ALL_CODENAMES_ARCHES))
 
+# Auto generate Maintainer: field if not set above
+MAINTAINER ?= $(shell git config user.name) <$(shell git config user.email)>
+
 # A handy way to separate codename or arch from a codename/arch combo
 codename = $(patsubst %/,%,$(dir $(1)))
 arch = $(notdir $(1))
@@ -84,6 +90,17 @@ A_CHROOT ?= $(wordlist 1,1,$(ALL_CODENAMES_ARCHES))
 FEATURESETS_ENABLED ?= $(FEATURESETS)
 # Disabled featuresets
 FEATURESETS_DISABLED = $(filter-out $(FEATURESETS_ENABLED),$(FEATURESETS))
+
+# Set $(CODENAME) and $(ARCH) for all stamps/x.y-%-foo targets
+define setca
+ARCH_$(1) = $(shell echo $(1) | sed 's/.*-//')
+CODENAME_$(1) = $(shell echo $(1) | sed 's/-.*//')
+endef
+$(foreach ca,$(ALL_CODENAMES_ARCHES),$(eval $(call setca,$(ca))))
+stamps/% clean-%: ARCH = $(ARCH_$*)
+stamps/% clean-%: CODENAME = $(CODENAME_$*)
+stamps/% clean-%: CA = $(ARCH)-$(CODENAME)
+
 
 ###################################################
 # out-of-band checks
@@ -112,10 +129,6 @@ all:  $(ALLSTAMPS)
 %/all: %/$(FINAL_STEP)
 	: # do nothing
 
-%/.dir-exists:
-	mkdir -p $(@D) && touch $@
-.PRECIOUS:  %/.dir-exists
-
 test:
 	@echo ALLSTAMPS:
 	@for i in $(ALLSTAMPS); do echo "    $$i"; done
@@ -127,42 +140,38 @@ test:
 #
 # if one already exists, blow it away and start from scratch
 define BUILD_PPA
-	@echo "===== $(1). $(@D):  Building $(2) PPA ====="
+	@echo "===== $(1). $(CA):  Building $(2) PPA ====="
 #	# Always start from scratch
 	rm -rf $*/ppa; mkdir -p $*/ppa/db $*/ppa/dists $*/ppa/pool $*/ppa/conf
 #	# Configure
 	cat pbuild/ppa-distributions.tmpl | sed \
-		-e "s/@codename@/$(*D)/g" \
-		-e "s/@arch@/$(*F)/g" \
+		-e "s/@codename@/$(CODENAME)/g" \
+		-e "s/@arch@/$(ARCH)/g" \
 		> $*/ppa/conf/distributions
 #	# Build
-	reprepro -C main -VVb $*/ppa includedeb $(*D) $*/pkgs/*.deb
+	reprepro -C main -VVb $*/ppa includedeb $(CODENAME) $*/pkgs/*.deb
 	touch $@
 endef
 
 # Update base.tgz with PPA pkgs
 define UPDATE_CHROOT
-	@echo "===== $(1). $(@D): " \
+	@echo "===== $(1). $(CA): " \
 	    "Updating pbuilder chroot with PPA packages ====="
-	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
+	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --update --override-config \
 		$(PBUILD_ARGS)
 	touch $@
 endef
 
-%/clean-ppa:
+clean-%-ppa:
 	rm -rf $*/ppa
 
 ###################################################
 # 0. Basic build dependencies
 #
 # 0.1 Generic target for non-<codename>/<arch>-specific targets
-stamps/0.1.base-builddeps: \
-		admin/.dir-exists \
-		git/.dir-exists \
-		dist/.dir-exists \
-		src/.dir-exists \
-		stamps/.dir-exists
+stamps/0.1.base-builddeps:
+	mkdir -p admin git dist src stamps pkgs aptcache chroots
 	touch $@
 ifneq ($(DEBUG),yes)
 # While hacking, don't rebuild everything whenever a file is changed
@@ -175,7 +184,6 @@ endif
 
 clean-base-builddeps:
 	rm -f stamps/0.1.base-builddeps
-	find . -name .dir-exists -exec rm -f '{}' \;
 SQUEAKY_CLEAN_TARGETS += clean-base-builddeps
 
 
@@ -191,7 +199,6 @@ stamps/1.1.keyring-downloaded: \
 		stamps/0.1.base-builddeps
 	@echo "===== 1.1. All variants:  Creating GPG keyring ====="
 	$(REASON)
-	mkdir -p admin
 	gpg --no-default-keyring --keyring=$(KEYRING) \
 		--keyserver=$(KEYSERVER) --recv-keys \
 		--trust-model always \
@@ -208,37 +215,34 @@ SQUEAKY_CLEAN_TARGETS += clean-keyring
 ###################################################
 # 2. Base chroot tarball
 
-# Base chroot tarballs are named e.g. lucid/i386/base.tgz
-# in this case, $(*D) = lucid; $(*F) = i386
-#
 # 2.1.  Build chroot tarball
-%/.stamp.2.1.chroot-build: \
+stamps/2.1-%-chroot-build: \
 		stamps/1.1.keyring-downloaded
-	@echo "===== 2.1. $(@D):  Creating pbuilder chroot tarball ====="
+	@echo "===== 2.1. $(CA):  Creating pbuilder chroot tarball ====="
 	$(REASON)
 #	# make all the codename/i386 directories needed right here
-	mkdir -p $(@D)/pkgs $(@D)/aptcache
+	mkdir -p pkgs cache/aptcache/$(CA)
 #	# create the base.tgz chroot tarball
-	$(SUDO) DIST=$(*D) ARCH=$(*F) \
+	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) \
 	    $(PBUILD) --create \
 		$(PBUILD_ARGS)
 	touch $@
-.PRECIOUS:  %/.stamp.2.1.chroot-build
+.PRECIOUS:  $(call CA_EXPAND,stamps/2.1-%-chroot-build)
 
-%/clean-chroot:
-	@echo "cleaning $* chroot tarball"
-	rm -f $*/base.tgz
-	rm -f $*/.stamp.2.1.chroot-build
+clean-%-chroot:
+	@echo "cleaning $(CA) chroot tarball"
+	rm -f chroots/base-$(CA).tgz
+	rm -f stamps/2.1-$(CA)-chroot-build
 ARCH_SQUEAKY_CLEAN_TARGETS += clean-chroot
 
 ###################################################
 # Log into chroot
 
-%/chroot: \
-		%/.stamp.2.1.chroot-build
-	@echo "===== Logging into $(@D) pbuilder chroot ====="
+%-chroot: \
+		stamps/2.1-%-chroot-build
+	@echo "===== Logging into $(*) pbuilder chroot ====="
 	$(REASON)
-	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
+	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) --login \
 		--bindmounts $(TOPDIR) \
 		$(PBUILD_ARGS)
@@ -287,22 +291,22 @@ clean-xenomai-source-package: \
 CLEAN_TARGETS += clean-xenomai-source-package
 
 # 3.3. build the binary packages
-%/.stamp.3.3.xenomai-build: \
-		%/.stamp.2.1.chroot-build \
+stamps/3.3-%-xenomai-build: \
+		stamps/2.1-%-chroot-build \
 		stamps/3.1.xenomai-source-checkout \
 		stamps/3.2.xenomai-source-package
-	@echo "===== 3.3. $(@D):  Building Xenomai binary packages ====="
+	@echo "===== 3.3. $(CA):  Building Xenomai binary packages ====="
 	$(REASON)
-	$(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
+	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
 	        src/xenomai/xenomai_*.dsc
 	touch $@
-.PRECIOUS: %/.stamp.3.3.xenomai-build
+.PRECIOUS: $(call CA_EXPAND,stamps/3.3-%-xenomai-build)
 
-%/clean-xenomai-build:
-	@echo "cleaning up $* xenomai binary-build"
-	rm -f $*/pkgs/xenomai_*.build
-	rm -f $*/pkgs/xenomai_*.changes
+clean-%-xenomai-build:
+	@echo "cleaning up $(CA) xenomai binary-build"
+	rm -f $*/pkgs/xenomai_*_$(ARCH).build
+	rm -f $*/pkgs/xenomai_*_$(ARCH).changes
 	rm -f $*/pkgs/xenomai_*.dsc
 	rm -f $*/pkgs/xenomai_*.tar.gz
 	rm -f $*/pkgs/xenomai-doc_*.deb
@@ -310,7 +314,7 @@ CLEAN_TARGETS += clean-xenomai-source-package
 	rm -f $*/pkgs/linux-patch-xenomai_*.deb
 	rm -f $*/pkgs/libxenomai1_*.deb
 	rm -f $*/pkgs/libxenomai-dev_*.deb
-	rm -f $*/.stamp.3.3.xenomai-build
+	rm -f stamps/3.3-%-xenomai-build
 ARCH_CLEAN_TARGETS += clean-xenomai-build
 
 # Hook into rest of build
@@ -410,12 +414,12 @@ CLEAN_TARGETS += clean-rtai-source-tarball
 %/.stamp.8.5.rtai-build: \
 		%/.stamp.2.1.chroot-build \
 		stamps/8.4.rtai-source-package
-	@echo "===== 8.5. $(@D):  Building RTAI binary packages ====="
+	@echo "===== 8.5. $(CA):  Building RTAI binary packages ====="
 	$(REASON)
 #	# ARM arch is broken
 #	# jessie is broken (no libcomedi)
-	test $(*F) = armhf -o $(*D) = jessie || \
-	    $(SUDO) DIST=$(*D) ARCH=$(*F) $(PBUILD) \
+	test $(ARCH) = armhf -o $(CODENAME) = jessie || \
+	    $(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
 	        src/rtai/rtai_*.dsc
 	touch $@
@@ -465,7 +469,7 @@ ARCH_CLEAN_TARGETS += clean-ppa-intermediate
 .PRECIOUS:  %/.stamp.4.2.chroot-update
 
 %/clean-chroot-update:
-	@echo "cleaning up $* chroot update stamps"
+	@echo "cleaning up $(CA) chroot update stamps"
 	rm -f $*/.stamp.4.2.chroot-update
 ARCH_CLEAN_TARGETS += clean-chroot-update
 
@@ -572,9 +576,9 @@ CLEAN_TARGETS += clean-linux-kernel-source-package
 %/.stamp.5.5.linux-kernel-build: \
 		%/.stamp.4.2.chroot-update \
 		stamps/5.4.linux-kernel-source-package
-	@echo "===== 5.5. $(@D):  Building Linux binary package ====="
+	@echo "===== 5.5. $(CA):  Building Linux binary package ====="
 	$(REASON)
-	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
+	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
 	        src/linux/linux_*.dsc || \
@@ -668,9 +672,9 @@ CLEAN_TARGETS += clean-linux-tools-source-package
 # 6.4. Build linux-tools binary packages
 %/.stamp.6.4.linux-tools-build: \
 		stamps/6.3.linux-tools-source-package
-	@echo "===== 6.4. $(@D):  Building linux-tools binary package ====="
+	@echo "===== 6.4. $(CA):  Building linux-tools binary package ====="
 	$(REASON)
-	$(SUDO) DIST=$(*D) ARCH=$(*F) INTERMEDIATE_REPO=$*/ppa \
+	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) INTERMEDIATE_REPO=$*/ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
 	        src/linux-tools/linux-tools_*.dsc
@@ -703,7 +707,7 @@ ARCH_CLEAN_TARGETS += clean-linux-tools-build
 
 %/clean-ppa-final: \
 		%/clean-ppa
-	@echo "cleaning up $* final PPA directory"
+	@echo "cleaning up $(CA) final PPA directory"
 	rm -f $*/.stamp.7.1.ppa-final
 ARCH_CLEAN_TARGETS += clean-ppa-final
 
@@ -712,21 +716,21 @@ ARCH_CLEAN_TARGETS += clean-ppa-final
 # Clean targets
 
 %/clean: $(foreach t,$(ARCH_CLEAN_TARGETS),%/$(t))
-	@echo "Cleaned up $* build artifacts"
+	@echo "Cleaned up $(CA) build artifacts"
 
 # Expand the list of ARCH_CLEAN_TARGETS
 CLEAN_TARGETS += $(foreach t,$(ARCH_CLEAN_TARGETS),$(call CA_EXPAND,%/$(t)))
 clean: $(CLEAN_TARGETS)
 
 %/squeaky-clean-caches:
-	@echo "Removing $* aptcache"
-	rm -rf $*/aptcache
+	@echo "Removing $(CA) aptcache"
+	rm -rf aptcache; mkdir -p aptcache
 squeaky-clean-caches: \
 		$(call CA_EXPAND,%/squeaky-clean-caches)
 	@echo "Removing ccache"
-	rm -rf ccache
+	rm -rf ccache; mkdir -p ccache
 	@echo "Removing unpacked chroots"
-	rm -rf tmp/*
+	rm -rf build; mkdir -p build
 
 # Expand the list of ARCH_SQUEAKY_CLEAN_TARGETS
 SQUEAKY_CLEAN_TARGETS += $(foreach t,$(ARCH_SQUEAKY_CLEAN_TARGETS),\

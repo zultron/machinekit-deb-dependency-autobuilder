@@ -35,16 +35,16 @@ APTKEYRINGS=("${APTKEYRINGS[@]}" "$TOPDIR/admin/$KEYRING")
 DISTRIBUTION=${DIST}
 
 # Base tarball
-BASETGZ="${TOPDIR}/${DIST}/${ARCH}/base.tgz"
+BASETGZ="${TOPDIR}/chroots/base-${DIST}-${ARCH}.tgz"
 
 # Where to build
-BUILDPLACE="${TOPDIR}/tmp"
+BUILDPLACE="${TOPDIR}/build"
 
 # Where to place finished pkgs
-BUILDRESULT="${TOPDIR}/${DIST}/${ARCH}/pkgs"
+BUILDRESULT="${TOPDIR}/pkgs"
 
 # cache for packages
-APTCACHE="${TOPDIR}/${DIST}/${ARCH}/aptcache"
+APTCACHE="${TOPDIR}/aptcache"
 
 # ccache
 CCACHEDIR="${TOPDIR}/ccache"
