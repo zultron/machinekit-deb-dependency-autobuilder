@@ -12,9 +12,9 @@
 ALL_CODENAMES_ARCHES = \
 	wheezy-amd64 \
 	wheezy-i386 \
+	wheezy-armhf \
 	jessie-amd64 \
 	jessie-i386
-	# wheezy-armhf \
 # Precise doesn't have gcc 4.7; using gcc 4.6 might be the cause of
 # the kernel module problems I've been finding
 	# precise-amd64 \
@@ -65,6 +65,7 @@ SUDO := sudo
 LINUX_TARBALL := linux-$(LINUX_VERSION).tar.xz
 LINUX_TARBALL_DEBIAN_ORIG := linux_$(LINUX_VERSION).orig.tar.xz
 LINUX_PKG_VERSION = $(LINUX_VERSION)-$(LINUX_PKG_RELEASE)~$(CODENAME)1
+LINUX_TOOLS_TARBALL_DEBIAN_ORIG := linux-tools_$(LINUX_VERSION).orig.tar.xz
 XENOMAI_TARBALL := xenomai-$(XENOMAI_VERSION).tar.bz2
 XENOMAI_TARBALL_DEBIAN_ORIG := xenomai_$(XENOMAI_VERSION).orig.tar.bz2
 XENOMAI_PKG_VERSION = $(XENOMAI_VERSION)-$(XENOMAI_PKG_RELEASE)~$(CODENAME)1
@@ -114,6 +115,7 @@ uniq = $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
 CODENAMES = $(call uniq,$(foreach ca,$(ALL_CODENAMES_ARCHES),$(CODENAME_$(ca))))
 ARCHES = $(call uniq,$(foreach ca,$(ALL_CODENAMES_ARCHES),$(ARCH_$(ca))))
 C_EXPAND = $(patsubst %,$(1),$(CODENAMES))
+A_EXPAND = $(patsubst %,$(1),$(ARCHES))
 
 # A random chroot to build the linux source package in
 A_CHROOT ?= $(wordlist 1,1,$(ALL_CODENAMES_ARCHES))
@@ -572,7 +574,7 @@ stamps/5.3.linux-kernel-package-configured: \
 		$(FEATURESETS_DISABLED)
 #	# Hardlink linux tarball with Debian-format path name
 	ln -f dist/$(LINUX_TARBALL) \
-	    pkgs/$(LINUX_TARBALL_DEBIAN_ORIG); \
+	    pkgs/$(LINUX_TARBALL_DEBIAN_ORIG)
 	ln -f dist/$(LINUX_TARBALL) \
 	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
 #	# Make copy of changelog for later munging
@@ -602,13 +604,11 @@ stamps/5.4.%.linux-kernel-source-package: \
 #	# Restore original changelog
 	cp --preserve=all src/linux/changelog src/linux/build/debian
 #	# Add changelog entry
-	cp --preserve=all src/linux/changelog src/linux/build/debian
 	cd src/linux/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(LINUX_PKG_VERSION) "$(MAINTAINER)"
 #	# Create source pkg
-	cd src/linux/build && dpkg-source -i -I \
-	    -b .
+	cd src/linux/build && dpkg-source -i -I -b .
 	mv src/linux/linux_$(LINUX_PKG_VERSION).debian.tar.xz \
 	    src/linux/linux_$(LINUX_PKG_VERSION).dsc pkgs
 	touch $@
@@ -690,8 +690,15 @@ stamps/6.2.linux-tools-unpacked: \
 	    ../../../dist/$(LINUX_TARBALL)
 	cd src/linux-tools/build && debian/rules debian/control \
 	    || true # always fails
+#	# Make copy of changelog for later munging
+	cp --preserve=all src/linux-tools/build/debian/changelog \
+	    src/linux-tools
+#	# Build the source tree and clean up
 	cd src/linux-tools/build && debian/rules orig
 	cd src/linux-tools/build && debian/rules clean
+#	# Hardlink linux-tools tarball with Debian-format path name
+	ln -f src/linux-tools/orig/$(LINUX_TOOLS_TARBALL_DEBIAN_ORIG) \
+	    pkgs/$(LINUX_TOOLS_TARBALL_DEBIAN_ORIG)
 	touch $@
 
 clean-linux-tools-unpacked: \
@@ -704,14 +711,24 @@ clean-linux-tools-unpacked: \
 CLEAN_TARGETS += clean-linux-tools-unpacked
 
 # 6.3. Build linux-tools source package
-stamps/6.3.linux-tools-source-package: \
+stamps/6.3.%.linux-tools-source-package: \
 		stamps/6.2.linux-tools-unpacked
-	@echo "===== 6.3. All variants: " \
+	@echo "===== 6.3. $(CODENAME)-all: " \
 	    "Building linux-tools source package ====="
 	$(REASON)
+#	# Restore original changelog
+	cp --preserve=all src/linux-tools/changelog \
+	    src/linux-tools/build/debian
+#	# Add changelog entry
+	cd src/linux-tools/build && \
+	    $(TOPDIR)/pbuild/tweak-pkg.sh \
+	    $(CODENAME) $(LINUX_PKG_VERSION) "$(MAINTAINER)"
 #	# create source pkg
 	cd src/linux-tools/build && dpkg-source -i -I -b .
+	mv src/linux-tools/linux-tools_$(LINUX_PKG_VERSION).debian.tar.xz \
+	    src/linux-tools/linux-tools_$(LINUX_PKG_VERSION).dsc pkgs
 	touch $@
+.PRECIOUS: $(call C_EXPAND,stamps/6.3.%.linux-tools-source-package)
 
 clean-linux-tools-source-package: \
 		$(call CA_EXPAND,%/clean-linux-tools-build)
@@ -723,16 +740,16 @@ clean-linux-tools-source-package: \
 CLEAN_TARGETS += clean-linux-tools-source-package
 
 # 6.4. Build linux-tools binary packages
-%/.stamp.6.4.linux-tools-build: \
-		stamps/6.3.linux-tools-source-package
+stamps/6.4.%.linux-tools-build: \
+		$(call C_EXPAND,stamps/6.3.%.linux-tools-source-package)
 	@echo "===== 6.4. $(CA):  Building linux-tools binary package ====="
 	$(REASON)
 	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
-	        src/linux-tools/linux-tools_*.dsc
+	        pkgs/linux-tools_$(LINUX_PKG_VERSION).dsc
 	touch $@
-.PRECIOUS: %/.stamp.6.4.linux-tools-build
+.PRECIOUS: $(call CA_EXPAND,stamps/6.4.%.linux-tools-build)
 
 %/clean-linux-tools-build:
 	@echo "cleaning up $* linux-tools binary build"
@@ -750,13 +767,17 @@ ARCH_CLEAN_TARGETS += linux-tools-build
 ###################################################
 # 7. Final PPA
 #
-# 7.1. Build final PPA with all packages
+# 7.1. Build final PPA with all packages for a codename
 #
-%/.stamp.7.1.ppa-final: \
+stamps/7.1.%.ppa-final: \
 		pbuild/ppa-distributions.tmpl \
-		%/.stamp.5.5.linux-kernel-build \
-		%/.stamp.6.4.linux-tools-build
+		$(call CA_EXPAND,stamps/5.5.%.linux-kernel-build) \
+		$(call CA_EXPAND,stamps/6.4.%.linux-tools-build)
 	$(call BUILD_PPA,7.1,Final)
+
+stamps/7.2.ppa-final: \
+		$(call C_EXPAND,stamps/7.1.%.ppa-final)
+	touch $@
 
 %/clean-ppa-final: \
 		%/clean-ppa
