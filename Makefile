@@ -39,13 +39,14 @@ KEYIDS = $(UBUNTU_KEYID) $(DEBIAN_KEYID)
 KEYSERVER = hkp://keys.gnupg.net
 
 # Linux vanilla tarball
-LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
+LINUX_PKG_RELEASE = 1mk
 LINUX_VERSION = 3.8.13
+LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
 
 # Xenomai package
 XENOMAI_PKG_RELEASE = 1mk
-XENOMAI_URL = http://download.gna.org/xenomai/stable
 XENOMAI_VERSION = 2.6.3
+XENOMAI_URL = http://download.gna.org/xenomai/stable
 
 # Your "Firstname Lastname <email@address>"; leave out to use git config
 #MAINTAINER = John Doe <jdoe@example.com>
@@ -63,6 +64,7 @@ TOPDIR := $(shell pwd)
 SUDO := sudo
 LINUX_TARBALL := linux-$(LINUX_VERSION).tar.xz
 LINUX_TARBALL_DEBIAN_ORIG := linux_$(LINUX_VERSION).orig.tar.xz
+LINUX_PKG_VERSION = $(LINUX_VERSION)-$(LINUX_PKG_RELEASE)~$(CODENAME)1
 XENOMAI_TARBALL := xenomai-$(XENOMAI_VERSION).tar.bz2
 XENOMAI_TARBALL_DEBIAN_ORIG := xenomai_$(XENOMAI_VERSION).orig.tar.bz2
 XENOMAI_PKG_VERSION = $(XENOMAI_VERSION)-$(XENOMAI_PKG_RELEASE)~$(CODENAME)1
@@ -176,7 +178,7 @@ endef
 define UPDATE_CHROOT
 	@echo "===== $(1). $(CA): " \
 	    "Updating pbuilder chroot with PPA packages ====="
-	$(SUDO) INTERMEDIATE_REPO=$*/ppa \
+	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) --update --override-config \
 		$(PBUILD_ARGS)
 	touch $@
@@ -300,7 +302,7 @@ stamps/3.0.2.%.xenomai-build-source: \
 	    -f src/xenomai/$(XENOMAI_TARBALL_DEBIAN_ORIG) \
 	    --strip-components=1
 	cd src/xenomai/$(CODENAME) && \
-	    $(TOPDIR)/pbuild/tweak-xenomai-pkg.sh \
+	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(XENOMAI_PKG_VERSION) "$(MAINTAINER)"
 	cd pkgs && dpkg-source -i -I \
 	    -b $(TOPDIR)/src/xenomai/$(CODENAME)
@@ -449,7 +451,7 @@ CLEAN_TARGETS += clean-rtai-source-tarball
 #	# ARM arch is broken
 #	# jessie is broken (no libcomedi)
 	test $(ARCH) = armhf -o $(CODENAME) = jessie || \
-	    $(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) $(PBUILD) \
+	    $(SUDO) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
 	        src/rtai/rtai_*.dsc
 	touch $@
@@ -487,16 +489,18 @@ stamps/4.1.%.ppa-intermediate: \
 	$(call BUILD_PPA,4.1,intermediate)
 .PRECIOUS: $(call C_EXPAND,stamps/4.1.%.ppa-intermediate)
 
-clean-ppa-intermediate: \
+clean-%-ppa-intermediate: \
 		clean.ppa \
 		clean.%.chroot-update
 	@echo "cleaning up PPA directory"
 	rm -f stamps/4.1.ppa-intermediate
-CLEAN_TARGETS += clean-ppa-intermediate
+CODENAME_CLEAN_TARGETS += ppa-intermediate
 
 # 4.2. Update chroot with featureset packages
 
-stamps/4.2.%.chroot-update: stamps/4.1.%.ppa-intermediate
+stamps/4.2.%.chroot-update: \
+		$(call C_EXPAND,stamps/4.1.%.ppa-intermediate)
+#		# stamps/4.1.$(CODENAME).ppa-intermediatefoo
 	$(call UPDATE_CHROOT,4.2)
 .PRECIOUS: $(call CA_EXPAND,stamps/4.2.%.chroot-update)
 
@@ -545,34 +549,39 @@ SQUEAKY_CLEAN_TARGETS += clean-linux-kernel-tarball-downloaded
 # 5.3. Unpack and configure Linux package source tree
 #
 # This has to be done in a chroot with the featureset packages
+stamps/5.3.linux-kernel-package-configured: CODENAME = $(A_CODENAME)
+stamps/5.3.linux-kernel-package-configured: ARCH = $(AN_ARCH)
 stamps/5.3.linux-kernel-package-configured: \
 		stamps/5.1.linux-kernel-package-checkout \
 		stamps/5.2.linux-kernel-tarball-downloaded \
-		$(A_CHROOT)/.stamp.4.2.chroot-update
-	@echo "===== 5.3. All variants:  Unpacking and configuring" \
+		stamps/4.2.$(A_CHROOT).chroot-update
+	@echo "===== 5.3. All:  Unpacking and configuring" \
 	    " Linux source package ====="
 	$(REASON)
 #	# Starting clean, copy debian packaging and hardlink source tarball
 	rm -rf src/linux/build; mkdir -p src/linux/build
-	ln -f dist/$(LINUX_TARBALL) \
-	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
 	git --git-dir="git/kernel-rt-deb2/.git" archive --prefix=debian/ HEAD \
 	    | tar xCf src/linux/build -
 #	# Configure the package in a chroot
 	chmod +x pbuild/linux-unpacked-chroot-script.sh
-	$(SUDO) \
-	    DIST=$(call codename,$(A_CHROOT)) \
-	    ARCH=$(call arch,$(A_CHROOT)) \
-	    INTERMEDIATE_REPO=$(A_CHROOT)/ppa \
+	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) \
 		--execute --bindmounts ${TOPDIR}/src/linux \
 		$(PBUILD_ARGS) \
 		pbuild/linux-unpacked-chroot-script.sh \
 		$(FEATURESETS_DISABLED)
+#	# Hardlink linux tarball with Debian-format path name
+	ln -f dist/$(LINUX_TARBALL) \
+	    pkgs/$(LINUX_TARBALL_DEBIAN_ORIG); \
+	ln -f dist/$(LINUX_TARBALL) \
+	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
+#	# Make copy of changelog for later munging
+	cp --preserve=all src/linux/build/debian/changelog src/linux
 #	# Build the source tree and clean up
 	cd src/linux/build && debian/rules orig
 	cd src/linux/build && debian/rules clean
 	touch $@
+.PRECIOUS: stamps/5.3.linux-kernel-package-configured
 
 clean-linux-kernel-package-configured: \
 		clean-linux-kernel-source-package
@@ -584,14 +593,26 @@ clean-linux-kernel-package-configured: \
 CLEAN_TARGETS += clean-linux-kernel-package-configured
 
 # 5.4. Build Linux kernel source package
-stamps/5.4.linux-kernel-source-package: \
+stamps/5.4.%.linux-kernel-source-package: \
 		stamps/5.1.linux-kernel-package-checkout \
 		stamps/5.3.linux-kernel-package-configured
-	@echo "===== 5.4. All variants:  Building Linux source package ====="
+	@echo "===== 5.4. $(CODENAME)-all: " \
+	    "Building Linux source package ====="
 	$(REASON)
-#	# create source pkg
-	cd src/linux/build && dpkg-source -i -I -b .
+#	# Restore original changelog
+	cp --preserve=all src/linux/changelog src/linux/build/debian
+#	# Add changelog entry
+	cp --preserve=all src/linux/changelog src/linux/build/debian
+	cd src/linux/build && \
+	    $(TOPDIR)/pbuild/tweak-pkg.sh \
+	    $(CODENAME) $(LINUX_PKG_VERSION) "$(MAINTAINER)"
+#	# Create source pkg
+	cd src/linux/build && dpkg-source -i -I \
+	    -b .
+	mv src/linux/linux_$(LINUX_PKG_VERSION).debian.tar.xz \
+	    src/linux/linux_$(LINUX_PKG_VERSION).dsc pkgs
 	touch $@
+.PRECIOUS: $(call C_EXPAND,stamps/5.4.%.linux-kernel-source-package)
 
 clean-linux-kernel-source-package: \
 		$(call CA_EXPAND,%/clean-linux-kernel-build)
@@ -605,18 +626,18 @@ CLEAN_TARGETS += clean-linux-kernel-source-package
 # 5.5. Build kernel packages
 #
 # Use the PPA with featureset devel packages
-%/.stamp.5.5.linux-kernel-build: \
-		%/.stamp.4.2.chroot-update \
-		stamps/5.4.linux-kernel-source-package
+stamps/5.5.%.linux-kernel-build: \
+		stamps/4.2.%.chroot-update \
+		$(call C_EXPAND,stamps/5.4.%.linux-kernel-source-package)
 	@echo "===== 5.5. $(CA):  Building Linux binary package ====="
 	$(REASON)
-	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) INTERMEDIATE_REPO=$*/ppa \
+	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
-	        src/linux/linux_*.dsc || \
+	        pkgs/linux_$(LINUX_PKG_VERSION).dsc || \
 	    (rm -f $@ && exit 1)
 	touch $@
-.PRECIOUS: %/.stamp.5.5.linux-kernel-build
+.PRECIOUS: $(call CA_EXPAND,stamps/5.5.%.linux-kernel-build)
 
 %/clean-linux-kernel-build:
 	@echo "cleaning up $* linux kernel binary build"
@@ -706,7 +727,7 @@ CLEAN_TARGETS += clean-linux-tools-source-package
 		stamps/6.3.linux-tools-source-package
 	@echo "===== 6.4. $(CA):  Building linux-tools binary package ====="
 	$(REASON)
-	$(SUDO) DIST=$(CODENAME) ARCH=$(ARCH) INTERMEDIATE_REPO=$*/ppa \
+	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
 	        src/linux-tools/linux-tools_*.dsc
