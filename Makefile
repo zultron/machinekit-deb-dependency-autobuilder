@@ -12,9 +12,9 @@
 ALL_CODENAMES_ARCHES = \
 	wheezy-amd64 \
 	wheezy-i386 \
+	jessie-amd64 \
+	jessie-i386
 	# wheezy-armhf \
-	# jessie-amd64 \
-	# jessie-i386
 # Precise doesn't have gcc 4.7; using gcc 4.6 might be the cause of
 # the kernel module problems I've been finding
 	# precise-amd64 \
@@ -110,6 +110,7 @@ stamps/% clean-%: CA = $(*)
 # List of codenames
 uniq = $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
 CODENAMES = $(call uniq,$(foreach ca,$(ALL_CODENAMES_ARCHES),$(CODENAME_$(ca))))
+ARCHES = $(call uniq,$(foreach ca,$(ALL_CODENAMES_ARCHES),$(ARCH_$(ca))))
 C_EXPAND = $(patsubst %,$(1),$(CODENAMES))
 
 # A random chroot to build the linux source package in
@@ -155,16 +156,19 @@ test:
 #
 # if one already exists, blow it away and start from scratch
 define BUILD_PPA
-	@echo "===== $(1). $(CA):  Building $(2) PPA ====="
+	@echo "===== $(1). $(CODENAME):  Building $(2) PPA ====="
 #	# Always start from scratch
-	rm -rf $*/ppa; mkdir -p $*/ppa/db $*/ppa/dists $*/ppa/pool $*/ppa/conf
+	rm -rf ppa/conf-$(CODENAME) ppa/db-$(CODENAME)
+	mkdir -p ppa/conf-$(CODENAME) ppa/db-$(CODENAME) ppa/dists ppa/pool
 #	# Configure
 	cat pbuild/ppa-distributions.tmpl | sed \
 		-e "s/@codename@/$(CODENAME)/g" \
-		-e "s/@arch@/$(ARCH)/g" \
-		> $*/ppa/conf/distributions
+		-e "s/@arch@/$(ARCHES)/g" \
+		> ppa/conf-$(CODENAME)/distributions
 #	# Build
-	reprepro -C main -VVb $*/ppa includedeb $(CODENAME) $*/pkgs/*.deb
+	reprepro -C main -VV \
+	    -b ppa --confdir +b/conf-$(CODENAME) --dbdir +b/db-$(CODENAME) \
+	    includedeb $(CODENAME) pkgs/*~$(CODENAME)1*.deb
 	touch $@
 endef
 
@@ -178,8 +182,8 @@ define UPDATE_CHROOT
 	touch $@
 endef
 
-clean.%.ppa:
-	rm -rf $*/ppa
+clean.ppa:
+	rm -rf ppa
 
 ###################################################
 # 0. Basic build dependencies
@@ -301,7 +305,7 @@ stamps/3.0.2.%.xenomai-build-source: \
 	cd pkgs && dpkg-source -i -I \
 	    -b $(TOPDIR)/src/xenomai/$(CODENAME)
 	touch $@
-.PRECIOUS: $(call CA_EXPAND,stamps/3.0.2.%.xenomai-build-source)
+.PRECIOUS: $(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source)
 
 clean.%.xenomai-build-source: \
 		$(call CA_EXPAND,%/clean-xenomai-build)
@@ -313,7 +317,8 @@ ARCH_CLEAN_TARGETS += xenomai-build-source
 
 # 3.0.3. build the binary packages
 #   Only build binary-indep packages once
-stamps/3.0.3.%-$(AN_ARCH).xenomai-build-binary: BUILDINDEP = --debbuildopts -A
+stamps/3.0.3.%.xenomai-build-binary: \
+	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-A)
 stamps/3.0.3.%.xenomai-build-binary: \
 		stamps/2.1.%.chroot-build \
 		$(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source)
@@ -323,7 +328,7 @@ stamps/3.0.3.%.xenomai-build-binary: \
 	$(SUDO) $(PBUILD) \
 	    --build \
 	    $(PBUILD_ARGS) \
-	    --debbuildopts -B $(BUILDINDEP) \
+	    --debbuildopts $(BUILDTYPE) \
 	    pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc
 	touch $@
 .PRECIOUS: $(call CA_EXPAND,stamps/3.0.3.%.xenomai-build-binary)
@@ -344,7 +349,7 @@ ARCH_CLEAN_TARGETS += xenomai-build
 
 # Hook into rest of build
 ifneq ($(filter xenomai.%,$(FEATURESETS_ENABLED)),)
-PPA_INTERMEDIATE_DEPS += $(call CA_EXPAND,stamps/3.0.3.%.xenomai-build)
+PPA_INTERMEDIATE_DEPS += $(call CA_EXPAND,stamps/3.0.3.%.xenomai-build-binary)
 endif
 
 ###################################################
@@ -480,14 +485,14 @@ stamps/4.1.%.ppa-intermediate: \
 		pbuild/ppa-distributions.tmpl \
 		$(PPA_INTERMEDIATE_DEPS)
 	$(call BUILD_PPA,4.1,intermediate)
-.PRECIOUS: $(call CA_EXPAND,stamps/4.1.%.ppa-intermediate)
+.PRECIOUS: $(call C_EXPAND,stamps/4.1.%.ppa-intermediate)
 
-clean.%.ppa-intermediate: \
-		clean.%.ppa \
+clean-ppa-intermediate: \
+		clean.ppa \
 		clean.%.chroot-update
-	@echo "cleaning up $* PPA directory"
-	rm -f stamps/4.1-$*-ppa-intermediate
-ARCH_CLEAN_TARGETS += ppa-intermediate
+	@echo "cleaning up PPA directory"
+	rm -f stamps/4.1.ppa-intermediate
+CLEAN_TARGETS += clean-ppa-intermediate
 
 # 4.2. Update chroot with featureset packages
 
