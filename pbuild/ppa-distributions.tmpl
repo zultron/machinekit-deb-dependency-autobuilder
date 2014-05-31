@@ -1,10 +1,20 @@
-Origin: tmp-ppa
-Label: tmp-ppa-@codename@
+#								-*-conf-*-
+# Origin, Label, Description are copied into the Release file
+Origin: Dovetail Automata
+Label: RT Kernel Packages
+Description: Machinekit RT Kernel packages for @codename@,
+ courtesy of Dovetail Automata LLC
 # copied into Release files; stable, testing or unstable
+#
+# (the Debian kernel packaging wants anything besides testing or
+# unstable when the release looks like '3.8.13-1mk~wheezy1')
 Suite: stable
-# distribution; dists/<codename> & in Release files
+# distribution; dists/<codename> & in Release files (auto-configured)
 Codename: @codename@
-Version: 3.0
+# What's this for?
+#Version: 3.0
 Architectures: @arch@
+# List of distribution components
 Components: main
-Description: @codename@ intermediate pbuilder ppa for Xenomai kernel build
+# When we are ready...
+#SignWith: 
