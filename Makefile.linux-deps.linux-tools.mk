@@ -143,7 +143,7 @@ $(call C_EXPAND,stamps/6.5.%.linux-tools-ppa): \
 stamps/6.5.%.linux-tools-ppa: \
 		stamps/6.3.%.linux-tools-source-package \
 		stamps/0.3.all.ppa-init
-	$(call BUILD_PPA,6.5,Final,linux-tools,\
+	$(call BUILD_PPA,6.5,linux-tools,\
 	    pkgs/linux-tools_$(LINUX_PKG_VERSION).dsc,\
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),\
 		pkgs/$(LINUX_TOOLS_PKG_NAME)_$(LINUX_PKG_VERSION)_$(a).deb \
