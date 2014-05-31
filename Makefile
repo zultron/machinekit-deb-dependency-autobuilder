@@ -20,7 +20,7 @@ ALL_CODENAMES_ARCHES = \
 	# precise-amd64 \
 	# precise-i386 \
 
-# Define this to have a deterministic chroot for step 5.3
+# Define this to have a deterministic chroot for step 5.4
 A_CHROOT = wheezy-amd64
 
 # List of all featuresets
@@ -605,23 +605,23 @@ clean-linux-kernel-tarball-downloaded: \
 	rm -f stamps/5.2.linux-kernel-tarball-downloaded
 SQUEAKY_CLEAN_TARGETS += clean-linux-kernel-tarball-downloaded
 
-# 5.2.1. Update chroot with Xenomai packages
-$(call CA_EXPAND,stamps/5.2.1.%.linux-kernel-xenomai-update-chroot,\
+# 5.3. Update chroot with Xenomai packages
+$(call CA_EXPAND,stamps/5.3.%.linux-kernel-xenomai-update-chroot,\
 	$(XENOMAI_ARTIFACTS)): \
-stamps/5.2.1.%.linux-kernel-xenomai-update-chroot: \
+stamps/5.3.%.linux-kernel-xenomai-update-chroot: \
 		stamps/5.1.linux-kernel-package-checkout \
 		stamps/5.2.linux-kernel-tarball-downloaded
-	$(call UPDATE_CHROOT,5.2.1)
-.PRECIOUS: $(call CA_EXPAND,stamps/5.2.1.%.linux-kernel-xenomai-update-chroot)
+	$(call UPDATE_CHROOT,5.3)
+.PRECIOUS: $(call CA_EXPAND,stamps/5.3.%.linux-kernel-xenomai-update-chroot)
 
-# 5.3. Unpack and configure Linux package source tree
+# 5.4. Unpack and configure Linux package source tree
 #
 # This has to be done in a chroot with the featureset packages
-stamps/5.3.linux-kernel-package-configured: CODENAME = $(A_CODENAME)
-stamps/5.3.linux-kernel-package-configured: ARCH = $(AN_ARCH)
-stamps/5.3.linux-kernel-package-configured: \
-		stamps/5.2.1.$(A_CHROOT).linux-kernel-xenomai-update-chroot
-	@echo "===== 5.3. All:  Unpacking and configuring" \
+stamps/5.4.linux-kernel-package-configured: CODENAME = $(A_CODENAME)
+stamps/5.4.linux-kernel-package-configured: ARCH = $(AN_ARCH)
+stamps/5.4.linux-kernel-package-configured: \
+		stamps/5.3.$(A_CHROOT).linux-kernel-xenomai-update-chroot
+	@echo "===== 5.4. All:  Unpacking and configuring" \
 	    " Linux source package ====="
 	$(REASON)
 #	# Starting clean, copy debian packaging and hardlink source tarball
@@ -647,7 +647,7 @@ stamps/5.3.linux-kernel-package-configured: \
 	cd src/linux/build && debian/rules orig
 	cd src/linux/build && debian/rules clean
 	touch $@
-.PRECIOUS: stamps/5.3.linux-kernel-package-configured
+.PRECIOUS: stamps/5.4.linux-kernel-package-configured
 
 clean-linux-kernel-package-configured: \
 		clean-linux-kernel-source-package
@@ -655,15 +655,15 @@ clean-linux-kernel-package-configured: \
 	rm -rf src/linux/build
 	rm -rf src/linux/orig
 	rm -f src/linux/linux_*.orig.tar.xz
-	rm -f stamps/5.3.linux-kernel-package-configured
+	rm -f stamps/5.4.linux-kernel-package-configured
 CLEAN_TARGETS += clean-linux-kernel-package-configured
 
-# 5.4. Build Linux kernel source package for each distro
-$(call C_EXPAND,stamps/5.4.%.linux-kernel-source-package): \
-stamps/5.4.%.linux-kernel-source-package: \
+# 5.5. Build Linux kernel source package for each distro
+$(call C_EXPAND,stamps/5.5.%.linux-kernel-source-package): \
+stamps/5.5.%.linux-kernel-source-package: \
 		stamps/5.1.linux-kernel-package-checkout \
-		stamps/5.3.linux-kernel-package-configured
-	@echo "===== 5.4. $(CODENAME)-all: " \
+		stamps/5.4.linux-kernel-package-configured
+	@echo "===== 5.5. $(CODENAME)-all: " \
 	    "Building Linux source package ====="
 	$(REASON)
 #	# Restore original changelog
@@ -677,7 +677,7 @@ stamps/5.4.%.linux-kernel-source-package: \
 	mv src/linux/linux_$(LINUX_PKG_VERSION).debian.tar.xz \
 	    src/linux/linux_$(LINUX_PKG_VERSION).dsc pkgs
 	touch $@
-.PRECIOUS: $(call C_EXPAND,stamps/5.4.%.linux-kernel-source-package)
+.PRECIOUS: $(call C_EXPAND,stamps/5.5.%.linux-kernel-source-package)
 
 clean-linux-kernel-source-package: \
 		$(call CA_EXPAND,%/clean-linux-kernel-build)
@@ -685,18 +685,18 @@ clean-linux-kernel-source-package: \
 	rm -f src/linux/linux_*.debian.tar.xz
 	rm -f src/linux/linux_*.orig.tar.xz
 	rm -f src/linux/linux_*.dsc
-	rm -f stamps/5.4.linux-kernel-source-package
+	rm -f stamps/5.5.linux-kernel-source-package
 CLEAN_TARGETS += clean-linux-kernel-source-package
 
-# 5.5. Build kernel packages for each distro/arch
+# 5.6. Build kernel packages for each distro/arch
 #
 # Use the PPA with featureset devel packages
-$(call CA_TO_C_DEPS,stamps/5.5.%.linux-kernel-build,\
-	stamps/5.4.%.linux-kernel-source-package)
+$(call CA_TO_C_DEPS,stamps/5.6.%.linux-kernel-build,\
+	stamps/5.5.%.linux-kernel-source-package)
 
-$(call CA_EXPAND,stamps/5.5.%.linux-kernel-build): \
-stamps/5.5.%.linux-kernel-build: stamps/4.2.%.chroot-update
-	@echo "===== 5.5. $(CA):  Building Linux binary package ====="
+$(call CA_EXPAND,stamps/5.6.%.linux-kernel-build): \
+stamps/5.6.%.linux-kernel-build: stamps/4.2.%.chroot-update
+	@echo "===== 5.6. $(CA):  Building Linux binary package ====="
 	$(REASON)
 	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) --build \
@@ -704,8 +704,8 @@ stamps/5.5.%.linux-kernel-build: stamps/4.2.%.chroot-update
 	        pkgs/linux_$(LINUX_PKG_VERSION).dsc || \
 	    (rm -f $@ && exit 1)
 	touch $@
-.PRECIOUS: $(call CA_EXPAND,stamps/5.5.%.linux-kernel-build)
-LINUX_ARTIFACTS_ARCH += stamps/5.5.%.linux-kernel-build
+.PRECIOUS: $(call CA_EXPAND,stamps/5.6.%.linux-kernel-build)
+LINUX_ARTIFACTS_ARCH += stamps/5.6.%.linux-kernel-build
 
 %/clean-linux-kernel-build:
 	@echo "cleaning up $* linux kernel binary build"
@@ -717,25 +717,25 @@ LINUX_ARTIFACTS_ARCH += stamps/5.5.%.linux-kernel-build
 	rm -f $*/pkgs/linux_*.dsc
 	rm -f $*/pkgs/linux_*.debian.tar.xz
 	rm -f $*/pkgs/linux_*.orig.tar.xz
-	rm -f $*/.stamp.5.5.linux-kernel-build
+	rm -f $*/.stamp.5.6.linux-kernel-build
 ARCH_CLEAN_TARGETS += linux-kernel-build
 
-# 5.6. Add kernel packages to the PPA for each distro
+# 5.7. Add kernel packages to the PPA for each distro
 # linux-headers-3.8-1mk-common-xenomai.x86_3.8.13-1mk~wheezy1_i386.deb
 # linux-headers-3.8-1mk-xenomai.x86-686-pae_3.8.13-1mk~wheezy1_i386.deb
 # linux-image-3.8-1mk-xenomai.x86-686-pae_3.8.13-1mk~wheezy1_i386.deb
-$(call C_TO_CA_DEPS,stamps/5.6.%.linux-kernel-ppa,\
-	stamps/5.5.%.linux-kernel-build)
-$(call C_EXPAND,stamps/5.6.%.linux-kernel-ppa): \
-stamps/5.6.%.linux-kernel-ppa: \
-		stamps/5.4.%.linux-kernel-source-package \
+$(call C_TO_CA_DEPS,stamps/5.7.%.linux-kernel-ppa,\
+	stamps/5.6.%.linux-kernel-build)
+$(call C_EXPAND,stamps/5.7.%.linux-kernel-ppa): \
+stamps/5.7.%.linux-kernel-ppa: \
+		stamps/5.5.%.linux-kernel-source-package \
 		stamps/0.3.all.ppa-init
-	$(call BUILD_PPA,5.6,linux,\
+	$(call BUILD_PPA,5.7,linux,\
 	    pkgs/linux_$(LINUX_PKG_VERSION).dsc,\
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
 		pkgs/linux-headers-*_$(LINUX_PKG_VERSION)_$(a).deb \
 		pkgs/linux-image-*_$(LINUX_PKG_VERSION)_$(a).deb)))
-LINUX_KERNEL_ARTIFACTS += stamps/5.6.%.linux-kernel-ppa
+LINUX_KERNEL_ARTIFACTS += stamps/5.7.%.linux-kernel-ppa
 
 ###################################################
 # 6. linux-tools package build rules
@@ -867,37 +867,37 @@ LINUX_TOOLS_ARTIFACTS += stamps/6.5.%.linux-tools-ppa
 
 
 ###################################################
-# 7. Final PPA
+# 100. Final PPA
 #
-# 7.1. Build final PPA for each distro with distro/arch packages
+# 100.1. Build final PPA for each distro with distro/arch packages
 #
-$(call C_EXPAND,stamps/7.1.%.ppa-final): \
-stamps/7.1.%.ppa-final: \
+$(call C_EXPAND,stamps/100.1.%.ppa-final): \
+stamps/100.1.%.ppa-final: \
 		$(XENOMAI_ARTIFACTS) \
 		$(LINUX_KERNEL_ARTIFACTS) \
 		$(LINUX_TOOLS_ARTIFACTS) \
 		pbuild/ppa-distributions.tmpl
-	$(call BUILD_PPA,7.1,Final)
+	$(call BUILD_PPA,100.1,Final)
 
-$(call C_EXPAND,stamps/7.1.%.ppa-final-list): \
-stamps/7.1.%.ppa-final-list:
-	$(call LIST_PPA,7.1,Final)
+$(call C_EXPAND,stamps/100.1.%.ppa-final-list): \
+stamps/100.1.%.ppa-final-list:
+	$(call LIST_PPA,100.1,Final)
 
-stamps/7.1.%.ppa-final-clean: \
-		stamps/7.2.ppa-final-clean
-	@echo "7.1. $(CODENAME):  Removing packages from PPA"
-	rm -f stamps/7.1.$*.ppa-final
+stamps/100.1.%.ppa-final-clean: \
+		stamps/100.2.ppa-final-clean
+	@echo "100.1. $(CODENAME):  Removing packages from PPA"
+	rm -f stamps/100.1.$*.ppa-final
 
 
-# 7.2.  Tie in all final PPAs for each distro
-stamps/7.2.ppa-final: \
-		$(call C_EXPAND,stamps/7.1.%.ppa-final)
-	@echo "===== 7.2. All:  All packages in PPA ====="
+# 100.2.  Tie in all final PPAs for each distro
+stamps/100.2.ppa-final: \
+		$(call C_EXPAND,stamps/100.1.%.ppa-final)
+	@echo "===== 100.2. All:  All packages in PPA ====="
 	touch $@
 
-stamps/7.2.ppa-final-clean:
-	@echo "7.2. All:  Cleaning up final PPA stamp"
-	rm -f stamps/7.2.ppa-final
+stamps/100.2.ppa-final-clean:
+	@echo "100.2. All:  Cleaning up final PPA stamp"
+	rm -f stamps/100.2.ppa-final
 
 ###################################################
 # Clean targets
