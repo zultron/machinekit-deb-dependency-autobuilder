@@ -13,3 +13,6 @@
 [submodule "git/rtai-deb"]
 	path = git/rtai-deb
 	url = https://github.com/zultron/rtai-deb.git
+[submodule "git/libsodium-deb"]
+	path = git/libsodium-deb
+	url = https://github.com/zultron/libsodium-deb.git

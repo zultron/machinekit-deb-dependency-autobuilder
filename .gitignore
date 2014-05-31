@@ -3,6 +3,7 @@
 !/git/
 /git/*
 !/git/kernel-rt-deb2
+!/git/libsodium-deb
 !/git/linux-tools-deb
 !/git/rcn-linux-arm
 !/git/rtai
