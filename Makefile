@@ -371,11 +371,20 @@ XENOMAI_SQUEAKY_ALL += stamps/3.0.1.xenomai-tarball-download-squeaky
 # 3.0.1.1. Set up Xenomai sources
 stamps/3.0.1.1.xenomai-source-setup: \
 		stamps/3.0.1.xenomai-tarball-download
-	@echo "===== 3.0.1. All: " \
+	@echo "===== 3.0.1.1. All: " \
 	    "Setting up Xenomai source ====="
-	mkdir -p src/xenomai
+#	# Unpack source
+	rm -rf src/xenomai/build; mkdir -p src/xenomai/build
+	tar xC src/xenomai/build --strip-components=1 \
+	    -f dist/$(XENOMAI_TARBALL)
+#	# Make clean copy of changelog for later munging
+	cp --preserve=all src/xenomai/build/debian/changelog \
+	    src/xenomai
+#	# Link source tarball with Debian name
 	ln -f dist/$(XENOMAI_TARBALL) \
 	    src/xenomai/$(XENOMAI_TARBALL_DEBIAN_ORIG)
+	ln -f dist/$(XENOMAI_TARBALL) \
+	    pkgs/$(XENOMAI_TARBALL_DEBIAN_ORIG)
 	touch $@
 
 $(call C_EXPAND,stamps/3.0.1.1.%.xenomai-source-setup-clean): \
@@ -389,26 +398,27 @@ XENOMAI_CLEAN_INDEP += stamps/3.0.1.1.%.xenomai-source-setup-clean
 # 3.0.2. Build Xenomai source package for each distro
 $(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source): \
 stamps/3.0.2.%.xenomai-build-source: \
-		stamps/3.0.1.xenomai-source-setup
+		stamps/3.0.1.1.xenomai-source-setup
 	@echo "===== 3.0.2. $(CODENAME)-all: " \
 	    "Building Xenomai source package ====="
 	$(REASON)
-	rm -rf src/xenomai/$(CODENAME); mkdir -p src/xenomai/$(CODENAME)
-	tar xC src/xenomai/$(CODENAME) \
-	    -f src/xenomai/$(XENOMAI_TARBALL_DEBIAN_ORIG) \
-	    --strip-components=1
-	cd src/xenomai/$(CODENAME) && \
+#	# Restore original changelog
+	cp --preserve=all src/xenomai/changelog \
+	    src/xenomai/build/debian
+#	# Add changelog entry
+	cd src/xenomai/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(XENOMAI_PKG_VERSION) "$(MAINTAINER)"
-	cd pkgs && dpkg-source -i -I \
-	    -b $(TOPDIR)/src/xenomai/$(CODENAME)
+#	# Build source package
+	cd src/xenomai/build && dpkg-source -i -I -b .
+	mv src/xenomai/xenomai_$(XENOMAI_PKG_VERSION).debian.tar.gz \
+	    src/xenomai/xenomai_$(XENOMAI_PKG_VERSION).dsc pkgs
 	touch $@
 .PRECIOUS:  $(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source)
 
 $(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source-clean): \
 stamps/3.0.2.%.xenomai-build-source-clean:
 	@echo "3.0.2. $(CODENAME):  Clean xenomai source package"
-	rm -rf src/xenomai/$(CODENAME)
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc
 	rm -f pkgs/$(XENOMAI_TARBALL_DEBIAN_ORIG)
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION).debian.tar.gz
@@ -762,7 +772,8 @@ $(call CA_TO_C_DEPS,stamps/5.6.%.linux-kernel-build,\
 	stamps/5.5.%.linux-kernel-source-package)
 
 $(call CA_EXPAND,stamps/5.6.%.linux-kernel-build): \
-stamps/5.6.%.linux-kernel-build: stamps/4.2.%.chroot-update
+stamps/5.6.%.linux-kernel-build: \
+		stamps/5.3.%.linux-kernel-deps-update-chroot
 	@echo "===== 5.6. $(CA):  Building Linux binary package ====="
 	$(REASON)
 	$(SUDO) INTERMEDIATE_REPO=ppa \
@@ -852,7 +863,7 @@ stamps/6.2.linux-tools-unpacked: \
 	@echo "===== 6.2. All variants: " \
 	    "Unpacking linux-tools source directory ====="
 	$(REASON)
-	rm -rf src/linux-tools/*
+	rm -rf src/linux-tools
 	mkdir -p src/linux-tools/build
 	git --git-dir="git/linux-tools-deb/.git" archive --prefix=debian/ HEAD \
 	    | tar xCf src/linux-tools/build -
@@ -972,14 +983,14 @@ CLEAN_INDEP += $(LINUX_TOOLS_CLEAN_INDEP)
 # 100.0. Final target for each distro
 #
 # wheezy.all
-$(call C_EXPAND,stamps/%.all): \
-stamps/%.all: \
+$(call C_EXPAND,%.all): \
+%.all: \
 	$(FINAL_DEPS_INDEP)
-.PHONY: $(call C_EXPAND,stamps/%.all)
+.PHONY: $(call C_EXPAND,%.all)
 
 # Final target
 all: \
-	$(call C_EXPAND,stamps/%.all)
+	$(call C_EXPAND,%.all)
 .PHONY: all
 
 
@@ -987,22 +998,22 @@ all: \
 # 100.1. Clean targets
 #
 # distro/arch targets
-$(call CA_EXPAND,stamps/%.clean): \
-stamps/%.clean: \
+$(call CA_EXPAND,%.clean): \
+%.clean: \
 	$(CLEAN_ARCH)
-.PHONY:  $(call CA_EXPAND,stamps/%.clean)
+.PHONY:  $(call CA_EXPAND,%.clean)
 
 # distro targets
-$(call C_TO_CA_DEPS,stamps/%.clean,stamps/%.clean)
-$(call C_EXPAND,stamps/%.clean): \
-stamps/%.clean: \
+$(call C_TO_CA_DEPS,%.clean,%.clean)
+$(call C_EXPAND,%.clean): \
+%.clean: \
 	$(CLEAN_INDEP)
-.PHONY:  $(call C_EXPAND,stamps/%.clean)
+.PHONY:  $(call C_EXPAND,%.clean)
 
 # all targets
 clean: \
 	$(CLEAN_ALL) \
-	$(call C_EXPAND,stamps/%.clean)
+	$(call C_EXPAND,%.clean)
 .PHONY:  clean
 
 
