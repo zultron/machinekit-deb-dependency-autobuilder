@@ -181,17 +181,10 @@ REASON = @if test -f $@; then \
  fi
 
 ###################################################
-# Misc rules
+# Default rule
 
+all:
 .PHONY:  all
-all:  $(ALLSTAMPS)
-
-%/all: %/$(FINAL_STEP)
-	: # do nothing
-
-test:
-	@echo ALLSTAMPS:
-	@for i in $(ALLSTAMPS); do echo "    $$i"; done
 
 ###################################################
 # PPA rules (reusable)
@@ -256,9 +249,10 @@ stamps/0.1.base-builddeps: \
 endif
 .PRECIOUS:  stamps/0.1.base-builddeps
 
-clean-base-builddeps:
+stamps/0.1.clean-base-builddeps:
 	rm -f stamps/0.1.base-builddeps
-SQUEAKY_CLEAN_TARGETS += clean-base-builddeps
+SQUEAKY_ALL += stamps/0.1.clean-base-builddeps
+
 
 # 0.2 Init distro ppa directories and configuration
 $(call C_EXPAND,stamps/0.2.%.ppa-init): \
@@ -272,20 +266,30 @@ stamps/0.2.%.ppa-init:
 
 	touch $@
 
+$(call C_EXPAND,stamps/0.2.%.ppa-init-squeaky): \
+stamps/0.2.%.ppa-init-squeaky:
+	@echo "0.2. $(CODENAME):  Removing ppa directories"
+	rm -rf ppa/conf-$(CODENAME) ppa/db-$(CODENAME)
+
+
 # 0.3 Init distro ppa
 stamps/0.3.all.ppa-init: \
 		$(call C_EXPAND,stamps/0.2.%.ppa-init)
-	@echo "===== 0.2.  All:  Init ppa directories ====="
+	@echo "===== 0.3.  All:  Init ppa directories ====="
 	mkdir -p ppa/dists ppa/pool
 	touch $@
+
+stamps/0.3.all.ppa-init-squeaky: \
+	$(call C_EXPAND,stamps/0.2.%.ppa-init-squeaky)
+	@echo "0.3.  All:  Remove ppa directories"
+	rm -rf ppa
+SQUEAKY_ALL += stamps/0.3.all.ppa-init-squeaky
+
 
 ###################################################
 # 1. GPG keyring
 
 # 1.1 Download GPG keys for the various distros, needed by pbuilder
-#
-# Always touch the keyring so it isn't rebuilt over and over if the
-# mtime looks out of date
 
 stamps/1.1.keyring-downloaded: \
 		stamps/0.1.base-builddeps
@@ -298,11 +302,12 @@ stamps/1.1.keyring-downloaded: \
 	test -f $(KEYRING) && touch $@  # otherwise, fail
 .PRECIOUS:  stamps/1.1.keyring-downloaded
 
-clean-keyring:
-	@echo "cleaning package GPG keyring"
+stamps/1.1.keyring-downloaded-clean:
+	@echo "1.1. All:  Cleaning package GPG keyring"
 	rm -f $(KEYRING)
 	rm -f stamps/1.1.keyring-downloaded
-SQUEAKY_CLEAN_TARGETS += clean-keyring
+SQUEAKY_ALL += stamps/1.1.keyring-downloaded-clean
+
 
 ###################################################
 # 2. Base chroot tarball
@@ -321,15 +326,16 @@ stamps/2.1.%.chroot-build: \
 	touch $@
 .PRECIOUS:  $(call CA_EXPAND,stamps/2.1.%.chroot-build)
 
-clean.%.chroot:
-	@echo "cleaning $(CA) chroot tarball"
+2.1.clean.%.chroot:
+	@echo "2.1. $(CA):  Cleaning chroot tarball"
 	rm -f chroots/base-$(CA).tgz
 	rm -f stamps/2.1-$(CA)-chroot-build
-ARCH_SQUEAKY_CLEAN_TARGETS += clean-chroot
+SQUEAKY_ARCH += 2.1.clean.%.chroot
 
-###################################################
+
+#
 # Log into chroot
-
+#
 $(call CA_EXPAND,%.chroot): \
 %.chroot: \
 		stamps/2.1.%.chroot-build
@@ -351,25 +357,42 @@ stamps/3.0.1.xenomai-tarball-download: \
 	$(REASON)
 	mkdir -p dist
 	wget $(XENOMAI_URL)/$(XENOMAI_TARBALL) -O dist/$(XENOMAI_TARBALL)
+	touch $@
+.PRECIOUS: stamps/3.0.1.xenomai-tarball-download
+
+stamps/3.0.1.xenomai-tarball-download-squeaky: \
+		$(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source-clean)
+	@echo "3.0.1. All:  Clean xenomai tarball"
+	rm -f dist/$(XENOMAI_TARBALL)
+	rm -f stamps/3.0.1.xenomai-tarball-download
+XENOMAI_SQUEAKY_ALL += stamps/3.0.1.xenomai-tarball-download-squeaky
+
+
+# 3.0.1.1. Set up Xenomai sources
+stamps/3.0.1.1.xenomai-source-setup: \
+		stamps/3.0.1.xenomai-tarball-download
+	@echo "===== 3.0.1. All: " \
+	    "Setting up Xenomai source ====="
 	mkdir -p src/xenomai
 	ln -f dist/$(XENOMAI_TARBALL) \
 	    src/xenomai/$(XENOMAI_TARBALL_DEBIAN_ORIG)
 	touch $@
-.PRECIOUS: stamps/3.0.1.xenomai-tarball-download
 
-clean-xenomai-tarball-download: \
-		clean-xenomai-source-package
-	@echo "cleaning up xenomai tarball"
-	rm -f dist/$(XENOMAI_TARBALL)
-	rm -f stamps/3.0.1.xenomai-tarball-download
-SQUEAKY_CLEAN_TARGETS += clean-xenomai-tarball-download
+$(call C_EXPAND,stamps/3.0.1.1.%.xenomai-source-setup-clean): \
+stamps/3.0.1.1.%.xenomai-source-setup-clean: \
+		$(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source-clean)
+	@echo "3.0.1.1. All:  Clean xenomai sources"
+	rm -rf src/xenomai
+XENOMAI_CLEAN_INDEP += stamps/3.0.1.1.%.xenomai-source-setup-clean
+
 
 # 3.0.2. Build Xenomai source package for each distro
-XENO_SOURCE_STAMPS := $(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source)
-$(XENO_SOURCE_STAMPS): stamps/3.0.2.%.xenomai-build-source: \
-		stamps/3.0.1.xenomai-tarball-download
+$(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source): \
+stamps/3.0.2.%.xenomai-build-source: \
+		stamps/3.0.1.xenomai-source-setup
 	@echo "===== 3.0.2. $(CODENAME)-all: " \
 	    "Building Xenomai source package ====="
+	$(REASON)
 	rm -rf src/xenomai/$(CODENAME); mkdir -p src/xenomai/$(CODENAME)
 	tar xC src/xenomai/$(CODENAME) \
 	    -f src/xenomai/$(XENOMAI_TARBALL_DEBIAN_ORIG) \
@@ -380,28 +403,33 @@ $(XENO_SOURCE_STAMPS): stamps/3.0.2.%.xenomai-build-source: \
 	cd pkgs && dpkg-source -i -I \
 	    -b $(TOPDIR)/src/xenomai/$(CODENAME)
 	touch $@
-.PRECIOUS: $(XENO_SOURCE_STAMPS)
-XENOMAI_ARTIFACTS_INDEP += stamps/3.0.2.%.xenomai-build-source
+.PRECIOUS:  $(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source)
 
-clean.%.xenomai-build-source: \
-		$(call CA_EXPAND,%/clean-xenomai-build)
-	@echo "cleaning up xenomai source package for $(CODENAME)"
-	rm -f src/xenomai/xenomai_*.dsc
-	rm -f src/xenomai/xenomai_*.tar.gz
-	rm -f stamps/3.0.2-$(CODENAME)-xenomai-source-package
-ARCH_CLEAN_TARGETS += xenomai-build-source
+$(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source-clean): \
+stamps/3.0.2.%.xenomai-build-source-clean:
+	@echo "3.0.2. $(CODENAME):  Clean xenomai source package"
+	rm -rf src/xenomai/$(CODENAME)
+	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc
+	rm -f pkgs/$(XENOMAI_TARBALL_DEBIAN_ORIG)
+	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION).debian.tar.gz
+	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)_all.changes
+	rm -f stamps/3.0.2-$(CODENAME)-xenomai-build-source
+$(call C_TO_CA_DEPS,stamps/3.0.2.%.xenomai-build-source-clean,\
+	stamps/3.0.3.%.xenomai-build-binary-clean)
+XENOMAI_CLEAN_INDEP += stamps/3.0.2.%.xenomai-build-source-clean
+
 
 # 3.0.3. Build Xenomai binary packages for each distro/arch
-#   But only build binary-indep packages once:
+#
+#   Only build binary-indep packages once:
 stamps/3.0.3.%.xenomai-build-binary: \
 	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-A)
-#   Depend on the Xenomai source package build for the matching codename
+
 $(call CA_TO_C_DEPS,stamps/3.0.3.%.xenomai-build-binary,\
 	stamps/3.0.2.%.xenomai-build-source)
-#   List of Xenomai all codename-arch binary package targets
-XENO_BINARY_STAMPS := $(call CA_EXPAND,stamps/3.0.3.%.xenomai-build-binary)
-$(XENO_BINARY_STAMPS): \
-stamps/3.0.3.%.xenomai-build-binary: stamps/2.1.%.chroot-build
+$(call CA_EXPAND,stamps/3.0.3.%.xenomai-build-binary): \
+stamps/3.0.3.%.xenomai-build-binary: \
+		stamps/2.1.%.chroot-build
 	@echo "===== 3.0.3. $(CA): " \
 	    "Building Xenomai binary packages ====="
 	$(REASON)
@@ -411,21 +439,22 @@ stamps/3.0.3.%.xenomai-build-binary: stamps/2.1.%.chroot-build
 	    --debbuildopts $(BUILDTYPE) \
 	    pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc
 	touch $@
-.PRECIOUS: $(XENO_BINARY_STAMPS)
+.PRECIOUS: $(call CA_EXPAND,stamps/3.0.3.%.xenomai-build-binary)
 
-clean.%.xenomai-build:
-	@echo "cleaning up $(CA) xenomai binary-build"
-	rm -f $*/pkgs/xenomai_*_$(ARCH).build
-	rm -f $*/pkgs/xenomai_*_$(ARCH).changes
-	rm -f $*/pkgs/xenomai_*.dsc
-	rm -f $*/pkgs/xenomai_*.tar.gz
-	rm -f $*/pkgs/xenomai-doc_*.deb
-	rm -f $*/pkgs/xenomai-runtime_*.deb
-	rm -f $*/pkgs/linux-patch-xenomai_*.deb
-	rm -f $*/pkgs/libxenomai1_*.deb
-	rm -f $*/pkgs/libxenomai-dev_*.deb
-	rm -f stamps/3.0.3-$*-xenomai-build
-ARCH_CLEAN_TARGETS += xenomai-build
+$(call CA_EXPAND,stamps/3.0.3.%.xenomai-build-binary-clean): \
+stamps/3.0.3.%.xenomai-build-binary-clean:
+	@echo "3.0.3. $(CA):  Clean Xenomai binary build"
+	rm -f pkgs/libxenomai-dev_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
+	rm -f pkgs/libxenomai1_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
+	rm -f pkgs/xenomai-runtime_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
+	rm -f pkgs/xenomai-doc_$(XENOMAI_PKG_VERSION)_all.deb
+	rm -f pkgs/xenomai-kernel-source_$(XENOMAI_PKG_VERSION)_all.deb
+	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)-$(ARCH).build
+	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)_$(ARCH).changes
+	rm -f stamps/3.0.3-$(CA)-xenomai-build
+$(call CA_TO_C_DEPS,stamps/3.0.3.%.xenomai-build-binary-clean,\
+	stamps/3.0.4.%.xenomai-ppa-clean)
+
 
 # 3.0.4. Add Xenomai packages to the PPA for each distro
 $(call C_TO_CA_DEPS,stamps/3.0.4.%.xenomai-ppa,\
@@ -442,7 +471,22 @@ stamps/3.0.4.%.xenomai-ppa: \
 		pkgs/libxenomai-dev_$(XENOMAI_PKG_VERSION)_$(a).deb \
 		pkgs/libxenomai1_$(XENOMAI_PKG_VERSION)_$(a).deb \
 		pkgs/xenomai-runtime_$(XENOMAI_PKG_VERSION)_$(a).deb)))
-XENOMAI_ARTIFACTS += stamps/3.0.4.%.xenomai-ppa
+XENOMAI_INDEP := stamps/3.0.4.%.xenomai-ppa
+
+$(call C_EXPAND,stamps/3.0.4.%.xenomai-ppa-clean): \
+stamps/3.0.4.%.xenomai-ppa-clean:
+	@echo "3.0.4. $(CODENAME):  Clean Xenomai PPA stamp"
+	rm -f stamps/3.0.4.$(CODENAME).xenomai-ppa
+
+
+# Hook Xenomai builds into kernel and final builds, if configured
+ifneq ($(filter xenomai.%,$(FEATURESETS)),)
+LINUX_KERNEL_DEPS_INDEP += $(XENOMAI_INDEP)
+FINAL_DEPS_INDEP += $(XENOMAI_INDEP)
+SQUEAKY_ALL += $(XENOMAI_SQUEAKY_ALL)
+CLEAN_INDEP += $(XENOMAI_CLEAN_INDEP)
+endif
+
 
 ###################################################
 # 3.1. RTAI build rules
@@ -465,7 +509,7 @@ clean-rtai-source-checkout: \
 	@echo "cleaning up RTAI git submodule directory"
 	rm -rf git/rtai; mkdir -p git/rtai
 	rm -f stamps/3.1.1.rtai-source-checkout
-SQUEAKY_CLEAN_TARGETS += clean-rtai-source-checkout
+SQUEAKY_CLEAN += clean-rtai-source-checkout
 
 # 3.1.2. clone & update the rtai-deb submodule
 stamps/3.1.2.rtai-deb-source-checkout: \
@@ -486,7 +530,7 @@ clean-rtai-deb-source-checkout: \
 	@echo "cleaning up RTAI Debian git submodule directory"
 	rm -rf git/rtai-deb; mkdir -p git/rtai-deb
 	rm -f stamps/3.1.2.rtai-deb-source-checkout
-SQUEAKY_CLEAN_TARGETS += clean-rtai-deb-source-checkout
+SQUEAKY_CLEAN += clean-rtai-deb-source-checkout
 
 # 3.1.3. Build RTAI orig source tarball
 stamps/3.1.3.rtai-source-tarball: \
@@ -581,12 +625,17 @@ stamps/5.1.linux-kernel-package-checkout: \
 	git submodule update --recursive --init git/kernel-rt-deb2
 	touch $@
 
-clean-linux-kernel-package-checkout: \
-		clean-linux-kernel-tarball-downloaded
-	@echo "cleaning up linux kernel packaging git submodule directory"
-	rm -rf git/kernel-rt-deb2; mkdir -p git/kernel-rt-deb2
+stamps/5.1.linux-kernel-package-checkout-clean: \
+		$(call CA_EXPAND,\
+			stamps/5.3.%.linux-kernel-deps-update-chroot-clean)
+	@echo "5.1. All:  Clean linux kernel packaging git submodule stamp"
 	rm -f stamps/5.1.linux-kernel-package-checkout
-SQUEAKY_CLEAN_TARGETS += clean-linux-kernel-package-checkout
+
+stamps/5.1.linux-kernel-package-checkout-squeaky: \
+		stamps/5.1.linux-kernel-package-checkout-clean
+	@echo "5.1. All:  Clean linux kernel packaging git submodule"
+	rm -rf git/kernel-rt-deb2; mkdir -p git/kernel-rt-deb2
+LINUX_SQUEAKY_ALL += stamps/5.1.linux-kernel-package-checkout-squeaky
 
 # 5.2. Download linux tarball
 stamps/5.2.linux-kernel-tarball-downloaded: \
@@ -598,21 +647,39 @@ stamps/5.2.linux-kernel-tarball-downloaded: \
 	wget $(LINUX_URL)/$(LINUX_TARBALL) -O dist/$(LINUX_TARBALL)
 	touch $@
 
-clean-linux-kernel-tarball-downloaded: \
-		clean-linux-kernel-package-configured
-	@echo "cleaning up linux kernel tarball"
+stamps/5.2.linux-kernel-tarball-downloaded-clean: \
+		$(call CA_EXPAND,\
+			stamps/5.3.%.linux-kernel-deps-update-chroot-clean)
+	@echo "5.2. All:  Clean up linux kernel tarball"
 	rm -f dist/$(LINUX_TARBALL)
 	rm -f stamps/5.2.linux-kernel-tarball-downloaded
-SQUEAKY_CLEAN_TARGETS += clean-linux-kernel-tarball-downloaded
+LINUX_SQUEAKY_ALL += stamps/5.2.linux-kernel-tarball-downloaded
 
-# 5.3. Update chroot with Xenomai packages
-$(call CA_EXPAND,stamps/5.3.%.linux-kernel-xenomai-update-chroot,\
-	$(XENOMAI_ARTIFACTS)): \
-stamps/5.3.%.linux-kernel-xenomai-update-chroot: \
+
+# 5.3. Update chroot with dependent packages
+#
+# Any indep targets should be added to $(LINUX_KERNEL_DEPS_INDEP), and
+# arch or all targets should be added to $(LINUX_KERNEL_DEPS)
+$(call CA_TO_C_DEPS,stamps/5.3.%.linux-kernel-deps-update-chroot,\
+	$(LINUX_KERNEL_DEPS_INDEP))
+$(call CA_EXPAND,stamps/5.3.%.linux-kernel-deps-update-chroot): \
+stamps/5.3.%.linux-kernel-deps-update-chroot: \
 		stamps/5.1.linux-kernel-package-checkout \
-		stamps/5.2.linux-kernel-tarball-downloaded
+		stamps/5.2.linux-kernel-tarball-downloaded \
+		$(LINUX_KERNEL_DEPS)
 	$(call UPDATE_CHROOT,5.3)
-.PRECIOUS: $(call CA_EXPAND,stamps/5.3.%.linux-kernel-xenomai-update-chroot)
+.PRECIOUS: $(call CA_EXPAND,stamps/5.3.%.linux-kernel-deps-update-chroot)
+
+$(call CA_EXPAND,stamps/5.3.%.linux-kernel-deps-update-chroot-clean): \
+stamps/5.3.%.linux-kernel-deps-update-chroot-clean:
+	@echo "5.3. $(CA):  Clean linux kernel chroot xenomai update stamp"
+	rm -f stamps/5.3.$(CA).linux-kernel-deps-update-chroot
+$(call CA_TO_C_DEPS,stamps/5.3.%.linux-kernel-deps-update-chroot-clean,\
+	stamps/5.5.%.linux-kernel-source-package-clean)
+
+# Cleaning this cleans up all (non-squeaky) linux arch and indep artifacts
+LINUX_CLEAN_ARCH := stamps/5.3.%.linux-kernel-deps-update-chroot-clean
+
 
 # 5.4. Unpack and configure Linux package source tree
 #
@@ -620,7 +687,7 @@ stamps/5.3.%.linux-kernel-xenomai-update-chroot: \
 stamps/5.4.linux-kernel-package-configured: CODENAME = $(A_CODENAME)
 stamps/5.4.linux-kernel-package-configured: ARCH = $(AN_ARCH)
 stamps/5.4.linux-kernel-package-configured: \
-		stamps/5.3.$(A_CHROOT).linux-kernel-xenomai-update-chroot
+		stamps/5.3.$(A_CHROOT).linux-kernel-deps-update-chroot
 	@echo "===== 5.4. All:  Unpacking and configuring" \
 	    " Linux source package ====="
 	$(REASON)
@@ -649,14 +716,14 @@ stamps/5.4.linux-kernel-package-configured: \
 	touch $@
 .PRECIOUS: stamps/5.4.linux-kernel-package-configured
 
-clean-linux-kernel-package-configured: \
-		clean-linux-kernel-source-package
-	@echo "cleaning up linux kernel source directory"
-	rm -rf src/linux/build
-	rm -rf src/linux/orig
-	rm -f src/linux/linux_*.orig.tar.xz
+stamps/5.4.linux-kernel-package-configured-clean: \
+		$(call C_EXPAND,stamps/5.5.%.linux-kernel-source-package-clean)
+	@echo "5.4.  All: Clean configured linux kernel source directory"
+	rm -rf src/linux
+	rm -f pkgs/$(LINUX_TARBALL_DEBIAN_ORIG)
 	rm -f stamps/5.4.linux-kernel-package-configured
-CLEAN_TARGETS += clean-linux-kernel-package-configured
+LINUX_CLEAN_ALL += stamps/5.4.linux-kernel-package-configured-clean
+
 
 # 5.5. Build Linux kernel source package for each distro
 $(call C_EXPAND,stamps/5.5.%.linux-kernel-source-package): \
@@ -679,14 +746,14 @@ stamps/5.5.%.linux-kernel-source-package: \
 	touch $@
 .PRECIOUS: $(call C_EXPAND,stamps/5.5.%.linux-kernel-source-package)
 
-clean-linux-kernel-source-package: \
-		$(call CA_EXPAND,%/clean-linux-kernel-build)
-	@echo "cleaning up linux kernel source package"
-	rm -f src/linux/linux_*.debian.tar.xz
-	rm -f src/linux/linux_*.orig.tar.xz
-	rm -f src/linux/linux_*.dsc
+$(call C_EXPAND,stamps/5.5.%.linux-kernel-source-package-clean): \
+stamps/5.5.%.linux-kernel-source-package-clean:
+	@echo "5.5.  $(CODENAME):  Clean linux kernel source build"
+	rm -f pkgs/linux_$(LINUX_PKG_VERSION).debian.tar.xz
+	rm -f pkgs/linux_$(LINUX_PKG_VERSION).dsc
 	rm -f stamps/5.5.linux-kernel-source-package
-CLEAN_TARGETS += clean-linux-kernel-source-package
+$(call C_TO_CA_DEPS,stamps/5.5.%.linux-kernel-source-package-clean,\
+	stamps/5.6.%.linux-kernel-build-clean)
 
 # 5.6. Build kernel packages for each distro/arch
 #
@@ -707,18 +774,16 @@ stamps/5.6.%.linux-kernel-build: stamps/4.2.%.chroot-update
 .PRECIOUS: $(call CA_EXPAND,stamps/5.6.%.linux-kernel-build)
 LINUX_ARTIFACTS_ARCH += stamps/5.6.%.linux-kernel-build
 
-%/clean-linux-kernel-build:
-	@echo "cleaning up $* linux kernel binary build"
-	rm -f $*/pkgs/linux-headers-*.deb
-	rm -f $*/pkgs/linux-image-*.deb
-	rm -f $*/pkgs/linux-libc-dev_*.deb
-	rm -f $*/pkgs/linux_*.build
-	rm -f $*/pkgs/linux_*.changes
-	rm -f $*/pkgs/linux_*.dsc
-	rm -f $*/pkgs/linux_*.debian.tar.xz
-	rm -f $*/pkgs/linux_*.orig.tar.xz
-	rm -f $*/.stamp.5.6.linux-kernel-build
-ARCH_CLEAN_TARGETS += linux-kernel-build
+$(call CA_EXPAND,stamps/5.6.%.linux-kernel-build-clean): \
+stamps/5.6.%.linux-kernel-build-clean:
+	@echo "5.6.  $(CA):  Clean linux kernel binary builds"
+	rm -f $(wildcard pkgs/linux-headers-*_$(LINUX_PKG_VERSION)_$(ARCH).deb)
+	rm -f $(wildcard pkgs/linux-image-*_$(LINUX_PKG_VERSION)_$(ARCH).deb)
+	rm -f pkgs/linux_$(LINUX_PKG_VERSION)-$(ARCH).build
+	rm -f pkgs/linux_$(LINUX_PKG_VERSION)_$(ARCH).changes
+	rm -f stamps/5.6.$*.linux-kernel-build
+$(call CA_TO_C_DEPS,stamps/5.6.%.linux-kernel-build-clean,\
+	stamps/5.7.%.linux-kernel-ppa-clean)
 
 # 5.7. Add kernel packages to the PPA for each distro
 # linux-headers-3.8-1mk-common-xenomai.x86_3.8.13-1mk~wheezy1_i386.deb
@@ -735,7 +800,22 @@ stamps/5.7.%.linux-kernel-ppa: \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
 		pkgs/linux-headers-*_$(LINUX_PKG_VERSION)_$(a).deb \
 		pkgs/linux-image-*_$(LINUX_PKG_VERSION)_$(a).deb)))
-LINUX_KERNEL_ARTIFACTS += stamps/5.7.%.linux-kernel-ppa
+
+# This is the final result of the linux kernel build
+LINUX_INDEP := stamps/5.7.%.linux-kernel-ppa
+
+$(call C_EXPAND,stamps/5.7.%.linux-kernel-ppa-clean): \
+stamps/5.7.%.linux-kernel-ppa-clean:
+	@echo "5.7.  $(CODENAME):  Clean linux kernel PPA stamp"
+	rm -f stamps/5.7.%.linux-kernel-ppa-clean
+
+
+# Hook kernel build into final build
+FINAL_DEPS_INDEP += $(LINUX_INDEP)
+SQUEAKY_ALL += $(LINUX_SQUEAKY_ALL)
+CLEAN_ARCH += $(LINUX_CLEAN_ARCH)
+CLEAN_ALL += $(LINUX_CLEAN_ALL)
+
 
 ###################################################
 # 6. linux-tools package build rules
@@ -752,12 +832,17 @@ stamps/6.1.linux-tools-package-checkout: \
 	git submodule update --recursive --init git/linux-tools-deb
 	touch $@
 
-clean-linux-tools-package-checkout: \
-		clean-linux-tools-unpacked
-	@echo "cleaning up linux-tools git submodule directory"	
-	rm -rf git/linux-tools-deb; mkdir -p git/linux-tools-deb
+stamps/6.1.linux-tools-package-checkout-clean: \
+		stamps/6.2.linux-tools-unpacked-clean
+	@echo "6.2.  All:  Remove linux-tools git submodule stamp"
 	rm -f stamps/6.1.linux-tools-package-checkout
-SQUEAKY_CLEAN_TARGETS += clean-linux-tools-package-checkout
+
+stamps/6.1.linux-tools-package-checkout-squeaky: \
+		stamps/6.1.linux-tools-package-checkout-clean
+	@echo "6.2.  All:  Cleaning up linux-tools git submodule"
+	rm -rf git/linux-tools-deb; mkdir -p git/linux-tools-deb
+LINUX_TOOLS_SQUEAKY_ALL += stamps/6.1.linux-tools-package-checkout-squeaky
+
 
 # 6.2. Prepare linux-tools tarball and prepare source tree
 stamps/6.2.linux-tools-unpacked: \
@@ -792,6 +877,7 @@ stamps/6.2.linux-tools-unpacked-clean: \
 	rm -rf src/linux-tools
 	rm -f pkgs/linux-tools_$(LINUX_VERSION).orig.tar.xz
 	rm -f stamps/6.2.linux-tools-unpacked
+LINUX_TOOLS_CLEAN_ALL += stamps/6.2.linux-tools-unpacked-clean
 
 # 6.3. Build linux-tools source package for each distro
 $(call C_EXPAND,stamps/6.3.%.linux-tools-source-package): \
@@ -822,6 +908,7 @@ stamps/6.3.%.linux-tools-source-package-clean:
 	rm -f stamps/6.3.$(CODENAME).linux-tools-source-package
 $(call C_TO_CA_DEPS,stamps/6.3.%.linux-tools-source-package-clean,\
 	stamps/6.4.%.linux-tools-build-clean)
+LINUX_TOOLS_CLEAN_INDEP += stamps/6.3.%.linux-tools-source-package-clean
 
 
 # 6.4. Build linux-tools binary packages for each distro/arch against
@@ -849,7 +936,7 @@ stamps/6.4.%.linux-tools-build-clean:
 	rm -f stamps/6.4.$(CA).linux-tools-build
 # Clean up the distro PPA
 $(call CA_TO_C_DEPS,stamps/6.4.%.linux-tools-build-clean,\
-	stamps/7.1.%.ppa-final-clean)
+	stamps/6.5.%.linux-tools-ppa-clean)
 
 # 6.5. Add linux-tools binary packages to the PPA for each distro
 $(call C_TO_CA_DEPS,stamps/6.5.%.linux-tools-ppa,\
@@ -863,67 +950,97 @@ stamps/6.5.%.linux-tools-ppa: \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),\
 		pkgs/$(LINUX_TOOLS_PKG_NAME)_$(LINUX_PKG_VERSION)_$(a).deb \
 		pkgs/$(LINUX_KBUILD_PKG_NAME)_$(LINUX_PKG_VERSION)_$(a).deb))
-LINUX_TOOLS_ARTIFACTS += stamps/6.5.%.linux-tools-ppa
+# This target is the main result of the linux-tools build
+LINUX_TOOLS_INDEP := stamps/6.5.%.linux-tools-ppa
+
+$(call C_EXPAND,stamps/6.5.%.linux-tools-ppa-clean): \
+stamps/6.5.%.linux-tools-ppa-clean:
+	@echo "6.5. $(CODENAME):  Clean linux-tools PPA stamp"
+	rm -f stamps/6.5.$(CODENAME).linux-tools-ppa
+
+
+# Hook linux-tools builds into final build
+FINAL_DEPS_INDEP += $(LINUX_TOOLS_INDEP)
+SQUEAKY_ALL += $(LINUX_TOOLS_SQUEAKY_ALL)
+CLEAN_ALL += $(LINUX_TOOLS_CLEAN_ALL)
+CLEAN_INDEP += $(LINUX_TOOLS_CLEAN_INDEP)
 
 
 ###################################################
-# 100. Final PPA
+# 100. Final Targets
 #
-# 100.1. Build final PPA for each distro with distro/arch packages
+# 100.0. Final target for each distro
 #
-$(call C_EXPAND,stamps/100.1.%.ppa-final): \
-stamps/100.1.%.ppa-final: \
-		$(XENOMAI_ARTIFACTS) \
-		$(LINUX_KERNEL_ARTIFACTS) \
-		$(LINUX_TOOLS_ARTIFACTS) \
-		pbuild/ppa-distributions.tmpl
-	$(call BUILD_PPA,100.1,Final)
+# wheezy.all
+$(call C_EXPAND,stamps/%.all): \
+stamps/%.all: \
+	$(FINAL_DEPS_INDEP)
+.PHONY: $(call C_EXPAND,stamps/%.all)
 
-$(call C_EXPAND,stamps/100.1.%.ppa-final-list): \
-stamps/100.1.%.ppa-final-list:
-	$(call LIST_PPA,100.1,Final)
-
-stamps/100.1.%.ppa-final-clean: \
-		stamps/100.2.ppa-final-clean
-	@echo "100.1. $(CODENAME):  Removing packages from PPA"
-	rm -f stamps/100.1.$*.ppa-final
+# Final target
+all: \
+	$(call C_EXPAND,stamps/%.all)
+.PHONY: all
 
 
-# 100.2.  Tie in all final PPAs for each distro
-stamps/100.2.ppa-final: \
-		$(call C_EXPAND,stamps/100.1.%.ppa-final)
-	@echo "===== 100.2. All:  All packages in PPA ====="
-	touch $@
+# 
+# 100.1. Clean targets
+#
+# distro/arch targets
+$(call CA_EXPAND,stamps/%.clean): \
+stamps/%.clean: \
+	$(CLEAN_ARCH)
+.PHONY:  $(call CA_EXPAND,stamps/%.clean)
 
-stamps/100.2.ppa-final-clean:
-	@echo "100.2. All:  Cleaning up final PPA stamp"
-	rm -f stamps/100.2.ppa-final
+# distro targets
+$(call C_TO_CA_DEPS,stamps/%.clean,stamps/%.clean)
+$(call C_EXPAND,stamps/%.clean): \
+stamps/%.clean: \
+	$(CLEAN_INDEP)
+.PHONY:  $(call C_EXPAND,stamps/%.clean)
 
-###################################################
-# Clean targets
+# all targets
+clean: \
+	$(CLEAN_ALL) \
+	$(call C_EXPAND,stamps/%.clean)
+.PHONY:  clean
 
-%/clean: $(foreach t,$(ARCH_CLEAN_TARGETS),%/$(t))
-	@echo "Cleaned up $(CA) build artifacts"
 
-# Expand the list of ARCH_CLEAN_TARGETS
-CLEAN_TARGETS += $(foreach t,$(ARCH_CLEAN_TARGETS),\
-	$(call CA_EXPAND,clean.%.$(t)))
-clean: $(CLEAN_TARGETS)
+#
+# 100.2. Squeaky clean targets
+#
+# These remove things that don't often need removing and are expensive
+# to replace
 
-%/squeaky-clean-caches:
-	@echo "Removing $(CA) aptcache"
+# 100.2.1 Remove aptcache
+100.2.1.squeaky-aptcache:
+	@echo "100.2.1. All:  Remove aptcache"
 	rm -rf aptcache; mkdir -p aptcache
-squeaky-clean-caches: \
-		$(call CA_EXPAND,%/squeaky-clean-caches)
-	@echo "Removing ccache"
-	rm -rf ccache; mkdir -p ccache
-	@echo "Removing unpacked chroots"
-	rm -rf build; mkdir -p build
+.PHONY: 100.2.1.squeaky-aptcache
+SQUEAKY_ALL += 100.2.1.squeaky-aptcache
 
-# Expand the list of ARCH_SQUEAKY_CLEAN_TARGETS
-SQUEAKY_CLEAN_TARGETS += $(foreach t,$(ARCH_SQUEAKY_CLEAN_TARGETS),\
-	$(call CA_EXPAND,%/$(t)))
+# 100.2.2 Remove ccache
+100.2.2.squeaky-ccache:
+	@echo "100.2.2. All:  Remove ccache"
+	rm -rf ccache; mkdir -p ccache
+.PHONY: 100.2.2.squeaky-ccache
+SQUEAKY_ALL += 100.2.2.squeaky-ccache
+
+# 100.2.3 Squeaky clean distro/arch artifacts
+$(call CA_EXPAND,100.2.3.%.squeaky-clean): \
+100.2.3.%.squeaky-clean: \
+	$(SQUEAKY_ARCH)
+.PHONY: $(call CA_EXPAND,100.2.3.%.squeaky-clean)
+
+# 100.2.4 Squeaky clean distro artifacts
+$(call C_EXPAND,100.2.4.%.squeaky-clean): \
+100.2.4.%.squeaky-clean: \
+	$(SQUEAKY_INDEP)
+.PHONY: $(call C_EXPAND,100.2.4.%.squeaky-clean)
+
+# 100.2.5 Make everything squeaky clean
 squeaky-clean: \
-		$(CLEAN_TARGETS) \
-		$(SQUEAKY_CLEAN_TARGETS) \
-		squeaky-clean-caches
+	clean \
+	$(SQUEAKY_ALL) \
+	$(call C_EXPAND,100.2.4.%.squeaky-clean)
+.PHONY: squeaky-clean
