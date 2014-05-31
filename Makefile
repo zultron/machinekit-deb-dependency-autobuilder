@@ -175,6 +175,11 @@ define LIST_PPA
 	    list $(CODENAME)
 endef
 
+# handy target
+$(call C_EXPAND,stamps/%.list-ppa): \
+stamps/%.list-ppa:
+	$(call LIST_PPA,,$(CODENAME))
+
 # Clean a PPA's packages for a distro
 define CLEAN_PPA
 	@echo "===== $(1). $(CODENAME):  Listing $(2) PPA ====="
