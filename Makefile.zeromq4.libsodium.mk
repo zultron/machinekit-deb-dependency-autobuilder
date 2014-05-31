@@ -121,8 +121,8 @@ stamps/20.4.%.libsodium-build-binary: \
 	@echo "===== 20.4. $(CA): " \
 	    "Building Libsodium binary packages ====="
 	$(REASON)
-	$(SUDO) $(PBUILD) \
-	    --build \
+	$(SUDO) \
+	   $(PBUILD) --build \
 	    $(PBUILD_ARGS) \
 	    --debbuildopts $(BUILDTYPE) \
 	    pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).dsc
@@ -151,8 +151,8 @@ stamps/20.5.%.libsodium-ppa: \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,20.5,libsodium,\
 	    pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).dsc,\
+	    pkgs/libsodium-dev_$(LIBSODIUM_PKG_VERSION)_all.deb \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
-		pkgs/libsodium-dev_$(LIBSODIUM_PKG_VERSION)_$(a).deb \
 		pkgs/libsodium_$(LIBSODIUM_PKG_VERSION)_$(a).deb)))
 LIBSODIUM_INDEP := stamps/20.5.%.libsodium-ppa
 
@@ -162,9 +162,8 @@ stamps/20.5.%.libsodium-ppa-clean:
 	rm -f stamps/20.5.$(CODENAME).libsodium-ppa
 
 
-# Hook Libsodium builds into kernel and final builds, if configured
-ifneq ($(filter libsodium.%,$(FEATURESETS)),)
+# Hook Libsodium builds into zeromq4 and final builds
+ZEROMQ4_DEPS_INDEP += $(LIBSODIUM_INDEP)
 FINAL_DEPS_INDEP += $(LIBSODIUM_INDEP)
 SQUEAKY_ALL += $(LIBSODIUM_SQUEAKY_ALL)
 CLEAN_INDEP += $(LIBSODIUM_CLEAN_INDEP)
-endif
