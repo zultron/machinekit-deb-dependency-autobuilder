@@ -104,8 +104,7 @@ stamps/3.0.2.%.xenomai-build-source-clean:
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc
 	rm -f pkgs/$(XENOMAI_TARBALL_DEBIAN_ORIG)
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION).debian.tar.gz
-	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)_all.changes
-	rm -f stamps/3.0.2-$(CODENAME)-xenomai-build-source
+	rm -f stamps/3.0.2.$(CODENAME).xenomai-build-source
 $(call C_TO_CA_DEPS,stamps/3.0.2.%.xenomai-build-source-clean,\
 	stamps/3.0.3.%.xenomai-build-binary-clean)
 XENOMAI_CLEAN_INDEP += stamps/3.0.2.%.xenomai-build-source-clean
@@ -143,6 +142,7 @@ stamps/3.0.3.%.xenomai-build-binary-clean:
 	rm -f pkgs/xenomai-doc_$(XENOMAI_PKG_VERSION)_all.deb
 	rm -f pkgs/xenomai-kernel-source_$(XENOMAI_PKG_VERSION)_all.deb
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)-$(ARCH).build
+	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)_all.changes
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/3.0.3-$(CA)-xenomai-build
 $(call CA_TO_C_DEPS,stamps/3.0.3.%.xenomai-build-binary-clean,\
