@@ -16,3 +16,6 @@
 [submodule "git/libsodium-deb"]
 	path = git/libsodium-deb
 	url = https://github.com/zultron/libsodium-deb.git
+[submodule "git/zeromq4-deb"]
+	path = git/zeromq4-deb
+	url = https://github.com/zultron/zeromq4-deb.git

@@ -8,6 +8,7 @@
 !/git/rcn-linux-arm
 !/git/rtai
 !/git/rtai-deb
+!/git/zeromq4-deb
 !/pbuild/
 
 # ignore stamps
