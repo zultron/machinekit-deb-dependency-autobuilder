@@ -120,6 +120,11 @@ stamps/5.4.linux-kernel-package-configured: \
 	rm -rf src/linux/build; mkdir -p src/linux/build
 	git --git-dir="git/kernel-rt-deb2/.git" archive --prefix=debian/ HEAD \
 	    | tar xCf src/linux/build -
+#	# Hardlink linux tarball with Debian-format path name
+	ln -f dist/$(LINUX_TARBALL) \
+	    pkgs/$(LINUX_TARBALL_DEBIAN_ORIG)
+	ln -f dist/$(LINUX_TARBALL) \
+	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
 #	# Configure the package in a chroot
 	chmod +x pbuild/linux-unpacked-chroot-script.sh
 	$(SUDO) INTERMEDIATE_REPO=ppa \
@@ -128,11 +133,6 @@ stamps/5.4.linux-kernel-package-configured: \
 		$(PBUILD_ARGS) \
 		pbuild/linux-unpacked-chroot-script.sh \
 		$(FEATURESETS_DISABLED)
-#	# Hardlink linux tarball with Debian-format path name
-	ln -f dist/$(LINUX_TARBALL) \
-	    pkgs/$(LINUX_TARBALL_DEBIAN_ORIG)
-	ln -f dist/$(LINUX_TARBALL) \
-	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
 #	# Make copy of changelog for later munging
 	cp --preserve=all src/linux/build/debian/changelog src/linux
 #	# Build the source tree and clean up
