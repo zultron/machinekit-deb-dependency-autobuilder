@@ -34,7 +34,7 @@ stamps/20.1.libsodium-tarball-download: \
 .PRECIOUS: stamps/20.1.libsodium-tarball-download
 
 stamps/20.1.libsodium-tarball-download-squeaky: \
-		$(call C_EXPAND,stamps/20.2.%.libsodium-build-source-clean)
+		$(call C_EXPAND,stamps/20.3.%.libsodium-build-source-clean)
 	@echo "20.1. All:  Clean libsodium tarball"
 	rm -f dist/$(LIBSODIUM_TARBALL)
 	rm -f stamps/20.1.libsodium-tarball-download
@@ -42,10 +42,10 @@ LIBSODIUM_SQUEAKY_ALL += stamps/20.1.libsodium-tarball-download-squeaky
 
 
 ###################################################
-# 20.1.1. Set up Libsodium sources
-stamps/20.1.1.libsodium-source-setup: \
+# 20.2. Set up Libsodium sources
+stamps/20.2.libsodium-source-setup: \
 		stamps/20.1.libsodium-tarball-download
-	@echo "===== 20.1.1. All: " \
+	@echo "===== 20.2. All: " \
 	    "Setting up Libsodium source ====="
 #	# Unpack source
 	rm -rf src/libsodium/build; mkdir -p src/libsodium/build
@@ -64,20 +64,20 @@ stamps/20.1.1.libsodium-source-setup: \
 	    pkgs/$(LIBSODIUM_TARBALL_DEBIAN_ORIG)
 	touch $@
 
-$(call C_EXPAND,stamps/20.1.1.%.libsodium-source-setup-clean): \
-stamps/20.1.1.%.libsodium-source-setup-clean: \
-		$(call C_EXPAND,stamps/20.2.%.libsodium-build-source-clean)
-	@echo "20.1.1. All:  Clean libsodium sources"
+$(call C_EXPAND,stamps/20.2.%.libsodium-source-setup-clean): \
+stamps/20.2.%.libsodium-source-setup-clean: \
+		$(call C_EXPAND,stamps/20.3.%.libsodium-build-source-clean)
+	@echo "20.2. All:  Clean libsodium sources"
 	rm -rf src/libsodium
-LIBSODIUM_CLEAN_INDEP += stamps/20.1.1.%.libsodium-source-setup-clean
+LIBSODIUM_CLEAN_INDEP += stamps/20.2.%.libsodium-source-setup-clean
 
 
 ###################################################
-# 20.2. Build Libsodium source package for each distro
-$(call C_EXPAND,stamps/20.2.%.libsodium-build-source): \
-stamps/20.2.%.libsodium-build-source: \
-		stamps/20.1.1.libsodium-source-setup
-	@echo "===== 20.2. $(CODENAME)-all: " \
+# 20.3. Build Libsodium source package for each distro
+$(call C_EXPAND,stamps/20.3.%.libsodium-build-source): \
+stamps/20.3.%.libsodium-build-source: \
+		stamps/20.2.libsodium-source-setup
+	@echo "===== 20.3. $(CODENAME)-all: " \
 	    "Building Libsodium source package ====="
 	$(REASON)
 #	# Restore original changelog
@@ -92,33 +92,33 @@ stamps/20.2.%.libsodium-build-source: \
 	mv src/libsodium/libsodium_$(LIBSODIUM_PKG_VERSION).debian.tar.gz \
 	    src/libsodium/libsodium_$(LIBSODIUM_PKG_VERSION).dsc pkgs
 	touch $@
-.PRECIOUS:  $(call C_EXPAND,stamps/20.2.%.libsodium-build-source)
+.PRECIOUS:  $(call C_EXPAND,stamps/20.3.%.libsodium-build-source)
 
-$(call C_EXPAND,stamps/20.2.%.libsodium-build-source-clean): \
-stamps/20.2.%.libsodium-build-source-clean:
-	@echo "20.2. $(CODENAME):  Clean libsodium source package"
+$(call C_EXPAND,stamps/20.3.%.libsodium-build-source-clean): \
+stamps/20.3.%.libsodium-build-source-clean:
+	@echo "20.3. $(CODENAME):  Clean libsodium source package"
 	rm -f pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).dsc
 	rm -f pkgs/$(LIBSODIUM_TARBALL_DEBIAN_ORIG)
 	rm -f pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).debian.tar.gz
-	rm -f stamps/20.2.$(CODENAME).libsodium-build-source
-$(call C_TO_CA_DEPS,stamps/20.2.%.libsodium-build-source-clean,\
-	stamps/20.3.%.libsodium-build-binary-clean)
-LIBSODIUM_CLEAN_INDEP += stamps/20.2.%.libsodium-build-source-clean
+	rm -f stamps/20.3.$(CODENAME).libsodium-build-source
+$(call C_TO_CA_DEPS,stamps/20.3.%.libsodium-build-source-clean,\
+	stamps/20.4.%.libsodium-build-binary-clean)
+LIBSODIUM_CLEAN_INDEP += stamps/20.3.%.libsodium-build-source-clean
 
 
 ###################################################
-# 20.3. Build Libsodium binary packages for each distro/arch
+# 20.4. Build Libsodium binary packages for each distro/arch
 #
 #   Only build binary-indep packages once:
-stamps/20.3.%.libsodium-build-binary: \
+stamps/20.4.%.libsodium-build-binary: \
 	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-A)
 
-$(call CA_TO_C_DEPS,stamps/20.3.%.libsodium-build-binary,\
-	stamps/20.2.%.libsodium-build-source)
-$(call CA_EXPAND,stamps/20.3.%.libsodium-build-binary): \
-stamps/20.3.%.libsodium-build-binary: \
+$(call CA_TO_C_DEPS,stamps/20.4.%.libsodium-build-binary,\
+	stamps/20.3.%.libsodium-build-source)
+$(call CA_EXPAND,stamps/20.4.%.libsodium-build-binary): \
+stamps/20.4.%.libsodium-build-binary: \
 		stamps/2.1.%.chroot-build
-	@echo "===== 20.3. $(CA): " \
+	@echo "===== 20.4. $(CA): " \
 	    "Building Libsodium binary packages ====="
 	$(REASON)
 	$(SUDO) $(PBUILD) \
@@ -127,42 +127,39 @@ stamps/20.3.%.libsodium-build-binary: \
 	    --debbuildopts $(BUILDTYPE) \
 	    pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).dsc
 	touch $@
-.PRECIOUS: $(call CA_EXPAND,stamps/20.3.%.libsodium-build-binary)
+.PRECIOUS: $(call CA_EXPAND,stamps/20.4.%.libsodium-build-binary)
 
-$(call CA_EXPAND,stamps/20.3.%.libsodium-build-binary-clean): \
-stamps/20.3.%.libsodium-build-binary-clean:
-	@echo "20.3. $(CA):  Clean Libsodium binary build"
+$(call CA_EXPAND,stamps/20.4.%.libsodium-build-binary-clean): \
+stamps/20.4.%.libsodium-build-binary-clean:
+	@echo "20.4. $(CA):  Clean Libsodium binary build"
 	rm -f pkgs/libsodium-dev_$(LIBSODIUM_PKG_VERSION)_all.deb
 	rm -f pkgs/libsodium_$(LIBSODIUM_PKG_VERSION)_$(ARCH).deb
 	rm -f pkgs/libsodium_$(LIBSODIUM_PKG_VERSION)-$(ARCH).build
 	rm -f pkgs/libsodium_$(LIBSODIUM_PKG_VERSION)_$(ARCH).changes
-	rm -f stamps/20.3-$(CA)-libsodium-build
-$(call CA_TO_C_DEPS,stamps/20.3.%.libsodium-build-binary-clean,\
-	stamps/20.4.%.libsodium-ppa-clean)
+	rm -f stamps/20.4-$(CA)-libsodium-build
+$(call CA_TO_C_DEPS,stamps/20.4.%.libsodium-build-binary-clean,\
+	stamps/20.5.%.libsodium-ppa-clean)
 
 
 ###################################################
-# 20.4. Add Libsodium packages to the PPA for each distro
-$(call C_TO_CA_DEPS,stamps/20.4.%.libsodium-ppa,\
-	stamps/20.3.%.libsodium-build-binary)
-$(call C_EXPAND,stamps/20.4.%.libsodium-ppa): \
-stamps/20.4.%.libsodium-ppa: \
-		stamps/20.2.%.libsodium-build-source \
+# 20.5. Add Libsodium packages to the PPA for each distro
+$(call C_TO_CA_DEPS,stamps/20.5.%.libsodium-ppa,\
+	stamps/20.4.%.libsodium-build-binary)
+$(call C_EXPAND,stamps/20.5.%.libsodium-ppa): \
+stamps/20.5.%.libsodium-ppa: \
+		stamps/20.3.%.libsodium-build-source \
 		stamps/0.3.all.ppa-init
-	$(call BUILD_PPA,20.4,libsodium,\
+	$(call BUILD_PPA,20.5,libsodium,\
 	    pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).dsc,\
-	    pkgs/libsodium-doc_$(LIBSODIUM_PKG_VERSION)_all.deb \
-	    pkgs/libsodium-kernel-source_$(LIBSODIUM_PKG_VERSION)_all.deb \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
-		pkgs/liblibsodium-dev_$(LIBSODIUM_PKG_VERSION)_$(a).deb \
-		pkgs/liblibsodium1_$(LIBSODIUM_PKG_VERSION)_$(a).deb \
-		pkgs/libsodium-runtime_$(LIBSODIUM_PKG_VERSION)_$(a).deb)))
-LIBSODIUM_INDEP := stamps/20.4.%.libsodium-ppa
+		pkgs/libsodium-dev_$(LIBSODIUM_PKG_VERSION)_$(a).deb \
+		pkgs/libsodium_$(LIBSODIUM_PKG_VERSION)_$(a).deb)))
+LIBSODIUM_INDEP := stamps/20.5.%.libsodium-ppa
 
-$(call C_EXPAND,stamps/20.4.%.libsodium-ppa-clean): \
-stamps/20.4.%.libsodium-ppa-clean:
-	@echo "20.4. $(CODENAME):  Clean Libsodium PPA stamp"
-	rm -f stamps/20.4.$(CODENAME).libsodium-ppa
+$(call C_EXPAND,stamps/20.5.%.libsodium-ppa-clean): \
+stamps/20.5.%.libsodium-ppa-clean:
+	@echo "20.5. $(CODENAME):  Clean Libsodium PPA stamp"
+	rm -f stamps/20.5.$(CODENAME).libsodium-ppa
 
 
 # Hook Libsodium builds into kernel and final builds, if configured
