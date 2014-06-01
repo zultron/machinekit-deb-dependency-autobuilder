@@ -22,3 +22,6 @@
 [submodule "git/cython-deb"]
 	path = git/cython-deb
 	url = https://github.com/zultron/cython-deb.git
+[submodule "git/pyzmq-deb"]
+	path = git/pyzmq-deb
+	url = https://github.com/zultron/pyzmq-deb.git

@@ -6,6 +6,7 @@
 !/git/kernel-rt-deb2
 !/git/libsodium-deb
 !/git/linux-tools-deb
+!/git/pyzmq-deb
 !/git/rcn-linux-arm
 !/git/rtai
 !/git/rtai-deb
