@@ -7,9 +7,8 @@
 # Variables that may change
 
 # Cython package
-CYTHON_PKG_RELEASE = 1mk
-CYTHON_VERSION = 0.20.1
-CYTHON_URL = http://cython.org/release
+CYTHON_PKG_RELEASE := 1mk
+CYTHON_VERSION := 0.20.1
 
 
 ###################################################
@@ -17,6 +16,7 @@ CYTHON_URL = http://cython.org/release
 # (or auto-generated)
 
 # Misc paths, filenames, executables
+CYTHON_URL := http://cython.org/release
 CYTHON_TARBALL := Cython-$(CYTHON_VERSION).tar.gz
 CYTHON_TARBALL_DEBIAN_ORIG := cython_$(CYTHON_VERSION).orig.tar.gz
 CYTHON_PKG_VERSION = $(CYTHON_VERSION)-$(CYTHON_PKG_RELEASE)~$(CODENAME)1
