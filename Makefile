@@ -66,9 +66,9 @@ ARCH_$(1) = $(shell echo $(1) | sed 's/.*-//')
 CODENAME_$(1) = $(shell echo $(1) | sed 's/-.*//')
 endef
 $(foreach ca,$(ALL_CODENAMES_ARCHES),$(eval $(call setca,$(ca))))
-stamps/% clean-%: ARCH = $(ARCH_$*)
-stamps/% clean-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$(CA))
-stamps/% clean-%: CA = $(*)
+stamps/% clean-% info-%: ARCH = $(ARCH_$*)
+stamps/% clean-% info-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$(CA))
+stamps/% clean-% info-%: CA = $(*)
 
 # Lists of codenames and arches and functions to expand them
 uniq = $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
@@ -174,12 +174,6 @@ define LIST_PPA
 	$(REPREPRO) \
 	    list $(CODENAME)
 endef
-
-# handy target
-$(call C_EXPAND,stamps/%.list-ppa): \
-stamps/%.list-ppa:
-	$(call LIST_PPA,,$(CODENAME))
-
 # Clean a PPA's packages for a distro
 define CLEAN_PPA
 	@echo "===== $(1). $(CODENAME):  Listing $(2) PPA ====="
@@ -198,6 +192,16 @@ define UPDATE_CHROOT
 		$(PBUILD_ARGS)
 	touch $@
 endef
+
+# PPA help target:  print PPA contents
+$(call C_EXPAND,info-%.list-ppa): \
+info-%.list-ppa:
+	$(call LIST_PPA,info,$(CODENAME))
+INFO_PPA_LIST_TARGET_INDEP := "info-%.list-ppa"
+INFO_PPA_LIST_DESC := "List current PPA contents for a distro"
+HELP_VARS += INFO_PPA_LIST
+
+
 
 ###################################################
 # 0. Basic build dependencies
@@ -315,15 +319,34 @@ $(call CA_EXPAND,%.chroot): \
 
 
 ###################################################
+# 03.  Info targets
+#
+# These present help for humans
+
+# Print arch-independent target help
+define HELP_INDEP
+	@echo "$(patsubst %,$($(1)_TARGET_INDEP),\<distro\>):	$($(1)_DESC)"
+endef
+help:
+	$(call HELP_INDEP,INFO_PPA_LIST)
+	$(foreach var,$(HELP_VARS),\
+	    $(if $($(1)_TARGET_INDEP),\
+		$(call HELP_INDEP,$(var)),\
+	    $(if $($(1)_TARGET_ARCH),\
+		$(call HELP_ARCH,$(var)),\
+		$(call HELP_ALL,$(var)))))
+.PHONY: help
+
+###################################################
 # Include package build makefiles
 
 -include $(wildcard Makefile.*.mk)
 
 
 ###################################################
-# 100. Final Targets
+# 99. Final Targets
 #
-# 100.0. Final target for each distro
+# 99.0. Final target for each distro
 #
 # wheezy.all
 $(call C_EXPAND,%.all): \
@@ -338,7 +361,7 @@ all: \
 
 
 # 
-# 100.1. Clean targets
+# 99.1. Clean targets
 #
 # distro/arch targets
 $(call CA_EXPAND,%.clean): \
@@ -361,40 +384,40 @@ clean: \
 
 
 #
-# 100.2. Squeaky clean targets
+# 99.2. Squeaky clean targets
 #
 # These remove things that don't often need removing and are expensive
 # to replace
 
-# 100.2.1 Remove aptcache
-100.2.1.squeaky-aptcache:
-	@echo "100.2.1. All:  Remove aptcache"
+# 99.2.1 Remove aptcache
+99.2.1.squeaky-aptcache:
+	@echo "99.2.1. All:  Remove aptcache"
 	rm -rf aptcache; mkdir -p aptcache
-.PHONY: 100.2.1.squeaky-aptcache
-SQUEAKY_ALL += 100.2.1.squeaky-aptcache
+.PHONY: 99.2.1.squeaky-aptcache
+SQUEAKY_ALL += 99.2.1.squeaky-aptcache
 
-# 100.2.2 Remove ccache
-100.2.2.squeaky-ccache:
-	@echo "100.2.2. All:  Remove ccache"
+# 99.2.2 Remove ccache
+99.2.2.squeaky-ccache:
+	@echo "99.2.2. All:  Remove ccache"
 	rm -rf ccache; mkdir -p ccache
-.PHONY: 100.2.2.squeaky-ccache
-SQUEAKY_ALL += 100.2.2.squeaky-ccache
+.PHONY: 99.2.2.squeaky-ccache
+SQUEAKY_ALL += 99.2.2.squeaky-ccache
 
-# 100.2.3 Squeaky clean distro/arch artifacts
-$(call CA_EXPAND,100.2.3.%.squeaky-clean): \
-100.2.3.%.squeaky-clean: \
+# 99.2.3 Squeaky clean distro/arch artifacts
+$(call CA_EXPAND,99.2.3.%.squeaky-clean): \
+99.2.3.%.squeaky-clean: \
 	$(SQUEAKY_ARCH)
-.PHONY: $(call CA_EXPAND,100.2.3.%.squeaky-clean)
+.PHONY: $(call CA_EXPAND,99.2.3.%.squeaky-clean)
 
-# 100.2.4 Squeaky clean distro artifacts
-$(call C_EXPAND,100.2.4.%.squeaky-clean): \
-100.2.4.%.squeaky-clean: \
+# 99.2.4 Squeaky clean distro artifacts
+$(call C_EXPAND,99.2.4.%.squeaky-clean): \
+99.2.4.%.squeaky-clean: \
 	$(SQUEAKY_INDEP)
-.PHONY: $(call C_EXPAND,100.2.4.%.squeaky-clean)
+.PHONY: $(call C_EXPAND,99.2.4.%.squeaky-clean)
 
-# 100.2.5 Make everything squeaky clean
+# 99.2.5 Make everything squeaky clean
 squeaky-clean: \
 	clean \
 	$(SQUEAKY_ALL) \
-	$(call C_EXPAND,100.2.4.%.squeaky-clean)
+	$(call C_EXPAND,99.2.4.%.squeaky-clean)
 .PHONY: squeaky-clean
