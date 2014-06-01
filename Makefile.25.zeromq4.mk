@@ -16,6 +16,10 @@ ZEROMQ4_URL = http://download.zeromq.org
 # Variables that should not change much
 # (or auto-generated)
 
+# Packages; will be suffixed by _<pkg_version>_<arch>.deb
+ZEROMQ4_PKGS_ALL := 
+ZEROMQ4_PKGS_ARCH := libzmq4 libzmq4-dev libzmq4-dbg
+
 # Misc paths, filenames, executables
 ZEROMQ4_TARBALL := zeromq-$(ZEROMQ4_VERSION).tar.gz
 ZEROMQ4_TARBALL_DEBIAN_ORIG := zeromq4_$(ZEROMQ4_VERSION).orig.tar.gz
@@ -156,8 +160,10 @@ stamps/25.5.%.zeromq4-build-binary: \
 $(call CA_EXPAND,stamps/25.5.%.zeromq4-build-binary-clean): \
 stamps/25.5.%.zeromq4-build-binary-clean:
 	@echo "25.5. $(CA):  Clean Zeromq4 binary build"
-	rm -f pkgs/zeromq4-dev_$(ZEROMQ4_PKG_VERSION)_all.deb
-	rm -f pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION)_$(ARCH).deb
+	rm -f $(patsubst %,pkgs/%_$(ZEROMQ4_PKG_VERSION)_all.deb,\
+	    $(ZEROMQ4_PKGS_ALL))
+	rm -f $(patsubst %,pkgs/%_$(ZEROMQ4_PKG_VERSION)_$(ARCH).deb,\
+	    $(ZEROMQ4_PKGS_ARCH))
 	rm -f pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION)-$(ARCH).build
 	rm -f pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/25.5-$(CA)-zeromq4-build
@@ -175,9 +181,12 @@ stamps/25.6.%.zeromq4-ppa: \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,25.6,zeromq4,\
 	    pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION).dsc,\
-	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
-		pkgs/zeromq4-dev_$(ZEROMQ4_PKG_VERSION)_$(a).deb \
-		pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION)_$(a).deb)))
+	    $(patsubst %,pkgs/%_$(ZEROMQ4_PKG_VERSION)_all.deb,\
+		$(ZEROMQ4_PKGS_ALL)) \
+	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),\
+		$(patsubst %,pkgs/%_$(ZEROMQ4_PKG_VERSION)_$(a).deb,\
+		    $(ZEROMQ4_PKGS_ARCH))))
+
 ZEROMQ4_INDEP := stamps/25.6.%.zeromq4-ppa
 
 $(call C_EXPAND,stamps/25.6.%.zeromq4-ppa-clean): \
