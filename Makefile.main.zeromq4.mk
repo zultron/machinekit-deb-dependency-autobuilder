@@ -109,8 +109,6 @@ ZEROMQ4_CLEAN_INDEP += stamps/25.3.%.zeromq4-build-source-clean
 ###################################################
 # 25.4. Update chroot with dependent packages
 
--include $(wildcard Makefile.zeromq4.*.mk)
-
 # Any indep targets should be added to $(ZEROMQ4_DEPS_INDEP), and
 # arch or all targets should be added to $(ZEROMQ4_DEPS)
 $(call CA_TO_C_DEPS,stamps/25.4.%.zeromq4-deps-update-chroot,\

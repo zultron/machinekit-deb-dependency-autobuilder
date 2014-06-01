@@ -317,7 +317,7 @@ $(call CA_EXPAND,%.chroot): \
 ###################################################
 # Include package build makefiles
 
--include $(wildcard Makefile.main.*.mk)
+-include $(wildcard Makefile.*.mk)
 
 
 ###################################################

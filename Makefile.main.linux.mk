@@ -31,9 +31,6 @@ FEATURESETS_ENABLED ?= $(FEATURESETS)
 # Disabled featuresets
 FEATURESETS_DISABLED = $(filter-out $(FEATURESETS_ENABLED),$(FEATURESETS))
 
-# Pull in featureset makefiles
--include $(wildcard Makefile.linux-deps.*.mk)
-
 
 ###################################################
 # 5.1. Check out git submodule

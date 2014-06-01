@@ -128,6 +128,7 @@ stamps/20.4.%.libsodium-build-binary: \
 	    pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).dsc
 	touch $@
 .PRECIOUS: $(call CA_EXPAND,stamps/20.4.%.libsodium-build-binary)
+LIBSODIUM_ARCH += stamps/20.4.%.libsodium-build-binary
 
 $(call CA_EXPAND,stamps/20.4.%.libsodium-build-binary-clean): \
 stamps/20.4.%.libsodium-build-binary-clean:
@@ -154,6 +155,7 @@ stamps/20.5.%.libsodium-ppa: \
 	    pkgs/libsodium-dev_$(LIBSODIUM_PKG_VERSION)_all.deb \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
 		pkgs/libsodium_$(LIBSODIUM_PKG_VERSION)_$(a).deb)))
+.PRECIOUS: $(call C_EXPAND,stamps/20.5.%.libsodium-ppa)
 LIBSODIUM_INDEP := stamps/20.5.%.libsodium-ppa
 
 $(call C_EXPAND,stamps/20.5.%.libsodium-ppa-clean): \
@@ -164,6 +166,7 @@ stamps/20.5.%.libsodium-ppa-clean:
 
 # Hook Libsodium builds into zeromq4 and final builds
 ZEROMQ4_DEPS_INDEP += $(LIBSODIUM_INDEP)
+ZEROMQ4_DEPS += $(LIBSODIUM_ARCH)
 FINAL_DEPS_INDEP += $(LIBSODIUM_INDEP)
 SQUEAKY_ALL += $(LIBSODIUM_SQUEAKY_ALL)
 CLEAN_INDEP += $(LIBSODIUM_CLEAN_INDEP)

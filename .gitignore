@@ -2,6 +2,7 @@
 /*/
 !/git/
 /git/*
+!/git/cython-deb
 !/git/kernel-rt-deb2
 !/git/libsodium-deb
 !/git/linux-tools-deb
