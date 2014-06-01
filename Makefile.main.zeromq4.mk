@@ -136,7 +136,7 @@ ZEROMQ4_CLEAN_ARCH += stamps/25.4.%.zeromq4-deps-update-chroot-clean
 #
 #   Only build binary-indep packages once:
 stamps/25.5.%.zeromq4-build-binary: \
-	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-A)
+	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-B)
 
 $(call CA_TO_C_DEPS,stamps/25.5.%.zeromq4-build-binary,\
 	stamps/25.3.%.zeromq4-build-source)

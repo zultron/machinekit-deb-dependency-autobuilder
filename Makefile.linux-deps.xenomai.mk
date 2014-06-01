@@ -115,7 +115,7 @@ XENOMAI_CLEAN_INDEP += stamps/3.0.2.%.xenomai-build-source-clean
 #
 #   Only build binary-indep packages once:
 stamps/3.0.3.%.xenomai-build-binary: \
-	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-A)
+	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-B)
 
 $(call CA_TO_C_DEPS,stamps/3.0.3.%.xenomai-build-binary,\
 	stamps/3.0.2.%.xenomai-build-source)

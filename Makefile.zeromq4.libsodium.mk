@@ -111,7 +111,7 @@ LIBSODIUM_CLEAN_INDEP += stamps/20.3.%.libsodium-build-source-clean
 #
 #   Only build binary-indep packages once:
 stamps/20.4.%.libsodium-build-binary: \
-	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-A)
+	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-B)
 
 $(call CA_TO_C_DEPS,stamps/20.4.%.libsodium-build-binary,\
 	stamps/20.3.%.libsodium-build-source)
