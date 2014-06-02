@@ -1,5 +1,5 @@
 ###################################################
-# 3.0. Xeno build rules
+# 10. Xeno build rules
 #
 # Included by Makefile.main.linux.mk
 
@@ -30,29 +30,29 @@ XENOMAI_PKG_VERSION = $(XENOMAI_VERSION)-$(XENOMAI_PKG_RELEASE)~$(CODENAME)1
 
 
 ###################################################
-# 3.0.1. Download Xenomai tarball distribution
-stamps/3.0.1.xenomai-tarball-download: \
+# 10.1. Download Xenomai tarball distribution
+stamps/10.1.xenomai-tarball-download: \
 		stamps/0.1.base-builddeps
-	@echo "===== 3.0.1. All variants:  Downloading Xenomai tarball ====="
+	@echo "===== 10.1. All variants:  Downloading Xenomai tarball ====="
 	$(REASON)
 	mkdir -p dist
 	wget $(XENOMAI_URL)/$(XENOMAI_TARBALL) -O dist/$(XENOMAI_TARBALL)
 	touch $@
-.PRECIOUS: stamps/3.0.1.xenomai-tarball-download
+.PRECIOUS: stamps/10.1.xenomai-tarball-download
 
-stamps/3.0.1.xenomai-tarball-download-squeaky: \
-		$(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source-clean)
-	@echo "3.0.1. All:  Clean xenomai tarball"
+stamps/10.1.xenomai-tarball-download-squeaky: \
+		$(call C_EXPAND,stamps/10.2.%.xenomai-build-source-clean)
+	@echo "10.1. All:  Clean xenomai tarball"
 	rm -f dist/$(XENOMAI_TARBALL)
-	rm -f stamps/3.0.1.xenomai-tarball-download
-XENOMAI_SQUEAKY_ALL += stamps/3.0.1.xenomai-tarball-download-squeaky
+	rm -f stamps/10.1.xenomai-tarball-download
+XENOMAI_SQUEAKY_ALL += stamps/10.1.xenomai-tarball-download-squeaky
 
 
 ###################################################
-# 3.0.1.1. Set up Xenomai sources
-stamps/3.0.1.1.xenomai-source-setup: \
-		stamps/3.0.1.xenomai-tarball-download
-	@echo "===== 3.0.1.1. All: " \
+# 10.1.1. Set up Xenomai sources
+stamps/10.1.1.xenomai-source-setup: \
+		stamps/10.1.xenomai-tarball-download
+	@echo "===== 10.1.1. All: " \
 	    "Setting up Xenomai source ====="
 #	# Unpack source
 	rm -rf src/xenomai/build; mkdir -p src/xenomai/build
@@ -68,20 +68,20 @@ stamps/3.0.1.1.xenomai-source-setup: \
 	    pkgs/$(XENOMAI_TARBALL_DEBIAN_ORIG)
 	touch $@
 
-$(call C_EXPAND,stamps/3.0.1.1.%.xenomai-source-setup-clean): \
-stamps/3.0.1.1.%.xenomai-source-setup-clean: \
-		$(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source-clean)
-	@echo "3.0.1.1. All:  Clean xenomai sources"
+$(call C_EXPAND,stamps/10.1.1.%.xenomai-source-setup-clean): \
+stamps/10.1.1.%.xenomai-source-setup-clean: \
+		$(call C_EXPAND,stamps/10.2.%.xenomai-build-source-clean)
+	@echo "10.1.1. All:  Clean xenomai sources"
 	rm -rf src/xenomai
-XENOMAI_CLEAN_INDEP += stamps/3.0.1.1.%.xenomai-source-setup-clean
+XENOMAI_CLEAN_INDEP += stamps/10.1.1.%.xenomai-source-setup-clean
 
 
 ###################################################
-# 3.0.2. Build Xenomai source package for each distro
-$(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source): \
-stamps/3.0.2.%.xenomai-build-source: \
-		stamps/3.0.1.1.xenomai-source-setup
-	@echo "===== 3.0.2. $(CODENAME)-all: " \
+# 10.2. Build Xenomai source package for each distro
+$(call C_EXPAND,stamps/10.2.%.xenomai-build-source): \
+stamps/10.2.%.xenomai-build-source: \
+		stamps/10.1.1.xenomai-source-setup
+	@echo "===== 10.2. $(CODENAME)-all: " \
 	    "Building Xenomai source package ====="
 	$(REASON)
 #	# Restore original changelog
@@ -96,33 +96,33 @@ stamps/3.0.2.%.xenomai-build-source: \
 	mv src/xenomai/xenomai_$(XENOMAI_PKG_VERSION).debian.tar.gz \
 	    src/xenomai/xenomai_$(XENOMAI_PKG_VERSION).dsc pkgs
 	touch $@
-.PRECIOUS:  $(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source)
+.PRECIOUS:  $(call C_EXPAND,stamps/10.2.%.xenomai-build-source)
 
-$(call C_EXPAND,stamps/3.0.2.%.xenomai-build-source-clean): \
-stamps/3.0.2.%.xenomai-build-source-clean:
-	@echo "3.0.2. $(CODENAME):  Clean xenomai source package"
+$(call C_EXPAND,stamps/10.2.%.xenomai-build-source-clean): \
+stamps/10.2.%.xenomai-build-source-clean:
+	@echo "10.2. $(CODENAME):  Clean xenomai source package"
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc
 	rm -f pkgs/$(XENOMAI_TARBALL_DEBIAN_ORIG)
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION).debian.tar.gz
-	rm -f stamps/3.0.2.$(CODENAME).xenomai-build-source
-$(call C_TO_CA_DEPS,stamps/3.0.2.%.xenomai-build-source-clean,\
-	stamps/3.0.3.%.xenomai-build-binary-clean)
-XENOMAI_CLEAN_INDEP += stamps/3.0.2.%.xenomai-build-source-clean
+	rm -f stamps/10.2.$(CODENAME).xenomai-build-source
+$(call C_TO_CA_DEPS,stamps/10.2.%.xenomai-build-source-clean,\
+	stamps/10.3.%.xenomai-build-binary-clean)
+XENOMAI_CLEAN_INDEP += stamps/10.2.%.xenomai-build-source-clean
 
 
 ###################################################
-# 3.0.3. Build Xenomai binary packages for each distro/arch
+# 10.3. Build Xenomai binary packages for each distro/arch
 #
 #   Only build binary-indep packages once:
-stamps/3.0.3.%.xenomai-build-binary: \
+stamps/10.3.%.xenomai-build-binary: \
 	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-B)
 
-$(call CA_TO_C_DEPS,stamps/3.0.3.%.xenomai-build-binary,\
-	stamps/3.0.2.%.xenomai-build-source)
-$(call CA_EXPAND,stamps/3.0.3.%.xenomai-build-binary): \
-stamps/3.0.3.%.xenomai-build-binary: \
+$(call CA_TO_C_DEPS,stamps/10.3.%.xenomai-build-binary,\
+	stamps/10.2.%.xenomai-build-source)
+$(call CA_EXPAND,stamps/10.3.%.xenomai-build-binary): \
+stamps/10.3.%.xenomai-build-binary: \
 		stamps/2.1.%.chroot-build
-	@echo "===== 3.0.3. $(CA): " \
+	@echo "===== 10.3. $(CA): " \
 	    "Building Xenomai binary packages ====="
 	$(REASON)
 	$(SUDO) $(PBUILD) \
@@ -131,11 +131,11 @@ stamps/3.0.3.%.xenomai-build-binary: \
 	    --debbuildopts $(BUILDTYPE) \
 	    pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc
 	touch $@
-.PRECIOUS: $(call CA_EXPAND,stamps/3.0.3.%.xenomai-build-binary)
+.PRECIOUS: $(call CA_EXPAND,stamps/10.3.%.xenomai-build-binary)
 
-$(call CA_EXPAND,stamps/3.0.3.%.xenomai-build-binary-clean): \
-stamps/3.0.3.%.xenomai-build-binary-clean:
-	@echo "3.0.3. $(CA):  Clean Xenomai binary build"
+$(call CA_EXPAND,stamps/10.3.%.xenomai-build-binary-clean): \
+stamps/10.3.%.xenomai-build-binary-clean:
+	@echo "10.3. $(CA):  Clean Xenomai binary build"
 	rm -f pkgs/libxenomai-dev_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
 	rm -f pkgs/libxenomai1_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
 	rm -f pkgs/xenomai-runtime_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
@@ -144,20 +144,20 @@ stamps/3.0.3.%.xenomai-build-binary-clean:
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)-$(ARCH).build
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)_all.changes
 	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)_$(ARCH).changes
-	rm -f stamps/3.0.3-$(CA)-xenomai-build
-$(call CA_TO_C_DEPS,stamps/3.0.3.%.xenomai-build-binary-clean,\
-	stamps/3.0.4.%.xenomai-ppa-clean)
+	rm -f stamps/10.3-$(CA)-xenomai-build
+$(call CA_TO_C_DEPS,stamps/10.3.%.xenomai-build-binary-clean,\
+	stamps/10.4.%.xenomai-ppa-clean)
 
 
 ###################################################
-# 3.0.4. Add Xenomai packages to the PPA for each distro
-$(call C_TO_CA_DEPS,stamps/3.0.4.%.xenomai-ppa,\
-	stamps/3.0.3.%.xenomai-build-binary)
-$(call C_EXPAND,stamps/3.0.4.%.xenomai-ppa): \
-stamps/3.0.4.%.xenomai-ppa: \
-		stamps/3.0.2.%.xenomai-build-source \
+# 10.4. Add Xenomai packages to the PPA for each distro
+$(call C_TO_CA_DEPS,stamps/10.4.%.xenomai-ppa,\
+	stamps/10.3.%.xenomai-build-binary)
+$(call C_EXPAND,stamps/10.4.%.xenomai-ppa): \
+stamps/10.4.%.xenomai-ppa: \
+		stamps/10.2.%.xenomai-build-source \
 		stamps/0.3.all.ppa-init
-	$(call BUILD_PPA,3.0.4,xenomai,\
+	$(call BUILD_PPA,10.4,xenomai,\
 	    pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc,\
 	    pkgs/xenomai-doc_$(XENOMAI_PKG_VERSION)_all.deb \
 	    pkgs/xenomai-kernel-source_$(XENOMAI_PKG_VERSION)_all.deb \
@@ -165,12 +165,12 @@ stamps/3.0.4.%.xenomai-ppa: \
 		pkgs/libxenomai-dev_$(XENOMAI_PKG_VERSION)_$(a).deb \
 		pkgs/libxenomai1_$(XENOMAI_PKG_VERSION)_$(a).deb \
 		pkgs/xenomai-runtime_$(XENOMAI_PKG_VERSION)_$(a).deb)))
-XENOMAI_INDEP := stamps/3.0.4.%.xenomai-ppa
+XENOMAI_INDEP := stamps/10.4.%.xenomai-ppa
 
-$(call C_EXPAND,stamps/3.0.4.%.xenomai-ppa-clean): \
-stamps/3.0.4.%.xenomai-ppa-clean:
-	@echo "3.0.4. $(CODENAME):  Clean Xenomai PPA stamp"
-	rm -f stamps/3.0.4.$(CODENAME).xenomai-ppa
+$(call C_EXPAND,stamps/10.4.%.xenomai-ppa-clean): \
+stamps/10.4.%.xenomai-ppa-clean:
+	@echo "10.4. $(CODENAME):  Clean Xenomai PPA stamp"
+	rm -f stamps/10.4.$(CODENAME).xenomai-ppa
 
 
 # Hook Xenomai builds into kernel and final builds, if configured
