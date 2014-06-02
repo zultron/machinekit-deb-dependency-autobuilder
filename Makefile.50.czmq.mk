@@ -37,6 +37,18 @@ CZMQ_DEPS =
 
 
 ###################################################
+# 50.0. Update czmq submodule
+stamps/50.0.czmq-checkout-submodule:
+	@echo "===== 50.0. All: " \
+	    "Check out czmq submodule ====="
+#	# be sure the submodule has been checked out
+	test -e git/czmq-deb/.git || \
+	    git submodule update --init git/czmq-deb
+	test -e git/czmq-deb/.git
+	touch $@
+
+
+###################################################
 # 50.1. Download Czmq tarball distribution
 stamps/50.1.czmq-tarball-download: \
 		stamps/0.1.base-builddeps
@@ -58,7 +70,8 @@ CZMQ_SQUEAKY_ALL += stamps/50.1.czmq-tarball-download-squeaky
 ###################################################
 # 50.2. Set up Czmq sources
 stamps/50.2.czmq-source-setup: \
-		stamps/50.1.czmq-tarball-download
+		stamps/50.1.czmq-tarball-download \
+		stamps/50.0.czmq-checkout-submodule
 	@echo "===== 50.2. All: " \
 	    "Setting up Czmq source ====="
 #	# Unpack source
@@ -213,7 +226,17 @@ stamps/50.6.%.czmq-ppa-clean:
 	rm -f stamps/50.6.$(CODENAME).czmq-ppa
 
 
+###################################################
+# 50.7. Wrap up
+
 # Hook Czmq builds into final builds, if configured
 FINAL_DEPS_INDEP += $(CZMQ_INDEP)
 SQUEAKY_ALL += $(CZMQ_SQUEAKY_ALL)
 CLEAN_INDEP += $(CZMQ_CLEAN_INDEP)
+
+# Convenience target
+czmq:  $(call C_EXPAND,$(CZMQ_INDEP))
+CZMQ_TARGET_ALL := "czmq"
+CZMQ_DESC := "Convenience:  Build czmq packages for all distros"
+CZMQ_SECTION := packages
+HELP_VARS += CZMQ
