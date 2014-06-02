@@ -66,9 +66,9 @@ ARCH_$(1) = $(shell echo $(1) | sed 's/.*-//')
 CODENAME_$(1) = $(shell echo $(1) | sed 's/-.*//')
 endef
 $(foreach ca,$(ALL_CODENAMES_ARCHES),$(eval $(call setca,$(ca))))
-stamps/% clean-% info-%: ARCH = $(ARCH_$*)
-stamps/% clean-% info-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$(CA))
-stamps/% clean-% info-%: CA = $(*)
+stamps/% clean-% util-%: ARCH = $(ARCH_$*)
+stamps/% clean-% util-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$(CA))
+stamps/% clean-% util-%: CA = $(*)
 
 # Lists of codenames and arches and functions to expand them
 uniq = $(if $1,$(firstword $1) $(call uniq,$(filter-out $(firstword $1),$1)))
@@ -194,11 +194,11 @@ define UPDATE_CHROOT
 endef
 
 # PPA help target:  print PPA contents
-$(call C_EXPAND,info-%.list-ppa): \
-info-%.list-ppa:
+$(call C_EXPAND,util-%.list-ppa): \
+util-%.list-ppa:
 	$(call LIST_PPA,info,$(CODENAME))
 
-INFO_PPA_LIST_TARGET_INDEP := "info-%.list-ppa"
+INFO_PPA_LIST_TARGET_INDEP := "util-%.list-ppa"
 INFO_PPA_LIST_DESC := "List current PPA contents for a distro"
 INFO_PPA_LIST_SECTION := info
 HELP_VARS += INFO_PPA_LIST
@@ -325,8 +325,8 @@ SQUEAKY_ARCH += 2.1.clean.%.chroot
 #
 # Log into chroot
 #
-$(call CA_EXPAND,%.chroot): \
-%.chroot: \
+$(call CA_EXPAND,util-%.chroot): \
+util-%.chroot: \
 		stamps/2.1.%.chroot-build
 	@echo "===== Logging into $(*) pbuilder chroot ====="
 	$(REASON)
@@ -336,7 +336,7 @@ $(call CA_EXPAND,%.chroot): \
 		$(PBUILD_ARGS)
 .PHONY:  $(call CA_EXPAND,%.chroot)
 
-CHROOT_LOGIN_TARGET_ARCH := "%.chroot"
+CHROOT_LOGIN_TARGET_ARCH := "util-%.chroot"
 CHROOT_LOGIN_DESC := "Log into a chroot"
 CHROOT_LOGIN_SECTION := info
 HELP_VARS += CHROOT_LOGIN
