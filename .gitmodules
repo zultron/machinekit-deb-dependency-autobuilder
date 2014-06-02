@@ -28,3 +28,6 @@
 [submodule "git/libwebsockets-deb"]
 	path = git/libwebsockets-deb
 	url = https://github.com/zultron/libwebsockets-deb.git
+[submodule "git/jansson-deb"]
+	path = git/jansson-deb
+	url = https://github.com/zultron/jansson-deb.git

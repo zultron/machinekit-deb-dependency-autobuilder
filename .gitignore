@@ -4,6 +4,7 @@
 /git/*
 !/git/cython-deb
 !/git/kernel-rt-deb2
+!/git/jansson-deb
 !/git/libsodium-deb
 !/git/libwebsockets-deb
 !/git/linux-tools-deb
