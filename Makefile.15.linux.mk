@@ -54,7 +54,7 @@ stamps/15.1.linux-kernel-package-checkout-clean: \
 stamps/15.1.linux-kernel-package-checkout-squeaky: \
 		stamps/15.1.linux-kernel-package-checkout-clean
 	@echo "15.1. All:  Clean linux kernel packaging git submodule"
-	rm -rf git/kernel-rt-deb2; mkdir -p git/kernel-rt-deb2
+	rm -rf git/kernel-rt-deb; mkdir -p git/kernel-rt-deb
 LINUX_SQUEAKY_ALL += stamps/15.1.linux-kernel-package-checkout-squeaky
 
 
@@ -119,7 +119,7 @@ stamps/15.4.linux-kernel-package-configured: \
 	$(REASON)
 #	# Starting clean, copy debian packaging and hardlink source tarball
 	rm -rf src/linux/build; mkdir -p src/linux/build
-	git --git-dir="git/kernel-rt-deb2/.git" archive --prefix=debian/ HEAD \
+	git --git-dir="git/kernel-rt-deb/.git" archive --prefix=debian/ HEAD \
 	    | tar xCf src/linux/build -
 #	# Hardlink linux tarball with Debian-format path name
 	ln -f dist/$(LINUX_TARBALL) \
