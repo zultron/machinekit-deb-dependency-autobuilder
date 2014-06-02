@@ -12,9 +12,9 @@
 ALL_CODENAMES_ARCHES = \
 	wheezy-amd64 \
 	wheezy-i386 \
-	wheezy-armhf \
-	jessie-amd64 \
-	jessie-i386
+	# wheezy-armhf \
+	# jessie-amd64 \
+	# jessie-i386
 # Precise doesn't have gcc 4.7; using gcc 4.6 might be the cause of
 # the kernel module problems I've been finding
 	# precise-amd64 \
@@ -221,6 +221,7 @@ stamps/0.1.base-builddeps: \
 		.gitmodules
 endif
 .PRECIOUS:  stamps/0.1.base-builddeps
+INFRA_TARGETS_ALL += stamps/0.1.base-builddeps
 
 stamps/0.1.base-builddeps-squeaky:
 	rm -f stamps/0.1.base-builddeps
@@ -238,6 +239,7 @@ stamps/0.2.%.ppa-init:
 		> ppa/conf-$(CODENAME)/distributions
 
 	touch $@
+.PRECIOUS:  $(call C_EXPAND,stamps/0.2.%.ppa-init)
 
 $(call C_EXPAND,stamps/0.2.%.ppa-init-squeaky): \
 stamps/0.2.%.ppa-init-squeaky:
@@ -251,6 +253,8 @@ stamps/0.3.all.ppa-init: \
 	@echo "===== 0.3.  All:  Init ppa directories ====="
 	mkdir -p ppa/dists ppa/pool
 	touch $@
+.PRECIOUS: stamps/0.3.all.ppa-init
+INFRA_TARGETS_ALL += stamps/0.3.all.ppa-init
 
 stamps/0.3.all.ppa-init-squeaky: \
 	$(call C_EXPAND,stamps/0.2.%.ppa-init-squeaky)
@@ -279,6 +283,7 @@ stamps/1.1.keyring-downloaded:
 		$(KEYIDS)
 	test -f $(KEYRING) && touch $@  # otherwise, fail
 .PRECIOUS:  stamps/1.1.keyring-downloaded
+INFRA_TARGETS_ALL += stamps/1.1.keyring-downloaded
 
 stamps/1.1.keyring-downloaded-squeaky:
 	@echo "1.1. All:  Cleaning package GPG keyring"
@@ -308,8 +313,9 @@ stamps/2.1.%.chroot-build: \
 		$(PBUILD_ARGS)
 	touch $@
 .PRECIOUS:  $(call CA_EXPAND,stamps/2.1.%.chroot-build)
+INFRA_TARGETS_ARCH += stamps/2.1.%.chroot-build
 
-2.1.clean.%.chroot:
+2.1.clean.%.chroot:  stamps/2.1.%.chroot-build
 	@echo "2.1. $(CA):  Cleaning chroot tarball"
 	rm -f chroots/base-$(CA).tgz
 	rm -f stamps/2.1-$(CA)-chroot-build
@@ -372,6 +378,34 @@ help:
 
 -include $(wildcard Makefile.*.mk)
 
+
+###################################################
+# 90. Infra Targets
+
+$(call CA_EXPAND,%.infra): \
+%.infra: \
+	$(call CA_EXPAND,$(INFRA_TARGETS_ARCH))
+.PHONY: $(call CA_EXPAND,%.infra)
+
+$(call C_EXPAND,%.infra): \
+%.infra: \
+	$(call C_EXPAND,$(INFRA_TARGETS_INDEP))
+.PHONY: $(call C_EXPAND,%.infra)
+
+all.infra: \
+	$(INFRA_TARGETS_ALL)
+.PHONY: all.infra
+
+infra: \
+	$(call CA_EXPAND,%.infra) \
+	$(call C_EXPAND,%.infra) \
+	all.infra
+.PHONY: infra
+
+INFRA_TARGET_ALL := "infra"
+INFRA_DESC := "Convenience:  Build all common infra \(chroots, etc.\)"
+INFRA_SECTION := common
+HELP_VARS += INFRA
 
 ###################################################
 # 99. Final Targets
