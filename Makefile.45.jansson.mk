@@ -37,6 +37,18 @@ JANSSON_DEPS =
 
 
 ###################################################
+# 45.0. Update Jansson submodule
+stamps/45.0.jansson-checkout-submodule:
+	@echo "===== 45.0. All: " \
+	    "Check out jansson submodule ====="
+#	# be sure the submodule has been checked out
+	test -e git/jansson-deb/.git || \
+	    git submodule update --init git/jansson-deb
+	test -e git/jansson-deb/.git
+	touch $@
+
+
+###################################################
 # 45.1. Download Jansson tarball distribution
 stamps/45.1.jansson-tarball-download: \
 		stamps/0.1.base-builddeps
@@ -58,7 +70,8 @@ JANSSON_SQUEAKY_ALL += stamps/45.1.jansson-tarball-download-squeaky
 ###################################################
 # 45.2. Set up Jansson sources
 stamps/45.2.jansson-source-setup: \
-		stamps/45.1.jansson-tarball-download
+		stamps/45.1.jansson-tarball-download \
+		stamps/45.0.jansson-checkout-submodule
 	@echo "===== 45.2. All: " \
 	    "Setting up Jansson source ====="
 #	# Unpack source
@@ -213,7 +226,17 @@ stamps/45.6.%.jansson-ppa-clean:
 	rm -f stamps/45.6.$(CODENAME).jansson-ppa
 
 
+###################################################
+# 45.7. Wrap up
+
 # Hook Jansson builds into final builds, if configured
 FINAL_DEPS_INDEP += $(JANSSON_INDEP)
 SQUEAKY_ALL += $(JANSSON_SQUEAKY_ALL)
 CLEAN_INDEP += $(JANSSON_CLEAN_INDEP)
+
+# Convenience target
+jansson:  $(call C_EXPAND,$(JANSSON_INDEP))
+JANSSON_TARGET_ALL := "jansson"
+JANSSON_DESC := "Convenience:  Build jansson packages for all distros"
+JANSSON_SECTION := packages
+HELP_VARS += JANSSON
