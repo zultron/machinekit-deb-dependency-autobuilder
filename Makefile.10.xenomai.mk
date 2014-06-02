@@ -173,6 +173,9 @@ stamps/10.4.%.xenomai-ppa-clean:
 	rm -f stamps/10.4.$(CODENAME).xenomai-ppa
 
 
+###################################################
+# 10.5. Wrap up
+
 # Hook Xenomai builds into kernel and final builds, if configured
 ifneq ($(filter xenomai.%,$(FEATURESETS)),)
 LINUX_KERNEL_DEPS_INDEP += $(XENOMAI_INDEP)
@@ -181,4 +184,9 @@ SQUEAKY_ALL += $(XENOMAI_SQUEAKY_ALL)
 CLEAN_INDEP += $(XENOMAI_CLEAN_INDEP)
 endif
 
-
+# Convenience target
+xenomai:  $(call C_EXPAND,$(XENOMAI_INDEP))
+XENOMAI_TARGET_ALL := "xenomai"
+XENOMAI_DESC := "Convenience:  Build Xenomai packages for all distros"
+XENOMAI_SECTION := packages
+HELP_VARS += XENOMAI
