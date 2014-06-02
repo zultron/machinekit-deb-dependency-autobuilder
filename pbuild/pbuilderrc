@@ -109,6 +109,11 @@ if test $DIST = hardy; then
     OTHERMIRROR="$OTHERMIRROR | deb http://archive.ubuntu.com/ubuntu hardy-backports main restricted universe multiverse"
 fi
 
+# Wheezy backports; also see the E05 hook that enables specific packages
+if test ${DIST} = wheezy; then
+    OTHERMIRROR="$OTHERMIRROR | deb $MIRRORSITE wheezy-backports $COMPONENTS"
+fi
+
 
 # Print diagnostics
 echo "script = $(basename $0)"

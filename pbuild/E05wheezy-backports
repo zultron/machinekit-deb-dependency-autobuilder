@@ -1,0 +1,17 @@
+#!/bin/sh
+#							-*-shell-script-*-
+# Configure wheezy to install cython from backports
+#
+# Needed by pyzmq
+set -e
+
+STABLE_VERSION_REGEX='^7\.[0-9]\+$'
+
+if $(egrep -q "$STABLE_VERSION_REGEX" "/etc/debian_version"); then
+    cat > "/etc/apt/preferences.d/backports" << EOF
+Package: cython
+Pin: release a=wheezy-backports
+Pin-Priority: 999
+
+EOF
+fi
