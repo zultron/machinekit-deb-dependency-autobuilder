@@ -22,7 +22,9 @@ stamps/16.1.linux-tools-package-checkout: \
 	    "Checking out linux-tools-deb git repo ====="
 	$(REASON)
 #	# be sure the submodule has been checked out
-	git submodule update --recursive --init git/linux-tools-deb
+	test -e git/linux-tools-deb/.git || \
+	    git submodule update --init git/linux-tools-deb
+	test -e git/kernel-rt-deb/.git
 	touch $@
 
 stamps/16.1.linux-tools-package-checkout-clean: \

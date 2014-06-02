@@ -243,7 +243,7 @@ stamps/15.7.%.linux-kernel-ppa-clean:
 
 
 ###################################################
-# 10.5. Wrap up
+# 15.5. Wrap up
 
 # Hook kernel build into final build
 FINAL_DEPS_INDEP += $(LINUX_INDEP)
