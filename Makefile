@@ -12,9 +12,9 @@
 ALL_CODENAMES_ARCHES = \
 	wheezy-amd64 \
 	wheezy-i386 \
-	# wheezy-armhf \
-	# jessie-amd64 \
-	# jessie-i386
+	wheezy-armhf \
+	jessie-amd64 \
+	jessie-i386
 # Precise doesn't have gcc 4.7; using gcc 4.6 might be the cause of
 # the kernel module problems I've been finding
 	# precise-amd64 \
