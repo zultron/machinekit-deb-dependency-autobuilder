@@ -10,6 +10,15 @@ Current list of packages:
 - jansson
 
 ---------------------------
+Preparing:
+
+The scripts should be cloned out recursively, since they contain
+submodules for each package.
+
+    git clone --recursive \
+        https://github.com/zultron/machinekit-deb-dependency-autobuilder.git
+
+---------------------------
 Prerequisites:
 
 The pbuilder, reprepro and quilt packages must be installed, in
