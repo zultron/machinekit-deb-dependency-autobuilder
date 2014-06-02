@@ -240,10 +240,18 @@ stamps/15.7.%.linux-kernel-ppa-clean:
 	rm -f stamps/15.7.%.linux-kernel-ppa-clean
 
 
+###################################################
+# 10.5. Wrap up
+
 # Hook kernel build into final build
 FINAL_DEPS_INDEP += $(LINUX_INDEP)
 SQUEAKY_ALL += $(LINUX_SQUEAKY_ALL)
 CLEAN_ARCH += $(LINUX_CLEAN_ARCH)
 CLEAN_ALL += $(LINUX_CLEAN_ALL)
 
-
+# Convenience target
+linux:  $(call C_EXPAND,$(LINUX_INDEP))
+LINUX_TARGET_ALL := "linux"
+LINUX_DESC := "Convenience:  Build Linux packages for all distros"
+LINUX_SECTION := packages
+HELP_VARS += LINUX
