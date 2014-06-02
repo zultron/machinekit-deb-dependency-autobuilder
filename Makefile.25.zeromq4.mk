@@ -27,6 +27,18 @@ ZEROMQ4_PKG_VERSION = $(ZEROMQ4_VERSION)-$(ZEROMQ4_PKG_RELEASE)~$(CODENAME)1
 
 
 ###################################################
+# 25.0. Update Zeromq4 submodule
+stamps/25.0.zeromq4-checkout-submodule:
+	@echo "===== 25.0. All: " \
+	    "Check out zeromq4 submodule ====="
+#	# be sure the submodule has been checked out
+	test -e git/zeromq4-deb/.git || \
+	    git submodule update --init git/zeromq4-deb
+	test -e git/zeromq4-deb/.git
+	touch $@
+
+
+###################################################
 # 25.1. Download Zeromq4 tarball distribution
 stamps/25.1.zeromq4-tarball-download: \
 		stamps/0.1.base-builddeps
@@ -48,7 +60,8 @@ ZEROMQ4_SQUEAKY_ALL += stamps/25.1.zeromq4-tarball-download-squeaky
 ###################################################
 # 25.2. Set up Zeromq4 sources
 stamps/25.2.zeromq4-source-setup: \
-		stamps/25.1.zeromq4-tarball-download
+		stamps/25.1.zeromq4-tarball-download \
+		stamps/25.0.zeromq4-checkout-submodule
 	@echo "===== 25.2. All: " \
 	    "Setting up Zeromq4 source ====="
 #	# Unpack source
