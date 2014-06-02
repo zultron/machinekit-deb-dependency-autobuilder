@@ -15,6 +15,10 @@ CYTHON_VERSION := 0.20.1
 # Variables that should not change much
 # (or auto-generated)
 
+# Packages; will be suffixed by _<pkg_version>_<arch>.deb
+CYTHON_PKGS_ALL := 
+CYTHON_PKGS_ARCH := cython cython3 cython-dbg cython3-dbg
+
 # Misc paths, filenames, executables
 CYTHON_URL := http://cython.org/release
 CYTHON_TARBALL := Cython-$(CYTHON_VERSION).tar.gz
@@ -132,8 +136,10 @@ stamps/30.5.%.cython-build-binary: \
 $(call CA_EXPAND,stamps/30.5.%.cython-build-binary-clean): \
 stamps/30.5.%.cython-build-binary-clean:
 	@echo "30.5. $(CA):  Clean Cython binary build"
-	rm -f pkgs/cython-dev_$(CYTHON_PKG_VERSION)_all.deb
-	rm -f pkgs/cython_$(CYTHON_PKG_VERSION)_$(ARCH).deb
+	rm -f $(patsubst %,pkgs/%_$(CYTHON_PKG_VERSION)_all.deb,\
+	    $(CYTHON_PKGS_ALL))
+	rm -f $(patsubst %,pkgs/%_$(CYTHON_PKG_VERSION)_$(ARCH).deb,\
+	    $(CYTHON_PKGS_ARCH))
 	rm -f pkgs/cython_$(CYTHON_PKG_VERSION)-$(ARCH).build
 	rm -f pkgs/cython_$(CYTHON_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/30.5-$(CA)-cython-build
@@ -151,9 +157,11 @@ stamps/30.6.%.cython-ppa: \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,30.6,cython,\
 	    pkgs/cython_$(CYTHON_PKG_VERSION).dsc,\
-	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
-		pkgs/cython-dev_$(CYTHON_PKG_VERSION)_$(a).deb \
-		pkgs/cython_$(CYTHON_PKG_VERSION)_$(a).deb)))
+	    $(patsubst %,pkgs/%_$(CYTHON_PKG_VERSION)_all.deb,\
+		$(CYTHON_PKGS_ALL)) \
+	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),\
+		$(patsubst %,pkgs/%_$(CYTHON_PKG_VERSION)_$(a).deb,\
+		    $(CYTHON_PKGS_ARCH))))
 CYTHON_INDEP := stamps/30.6.%.cython-ppa
 
 $(call C_EXPAND,stamps/30.6.%.cython-ppa-clean): \
