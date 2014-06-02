@@ -1,6 +1,13 @@
-A Makefile and pbuilderrc to automatically build Xenomai and RTAI
-kernel packages for many Debian/Ubuntu release and architecture
-combinations
+A Makefile and pbuilderrc to automatically build Machinekit package
+dependencies for Debian armhf, amd64 and i386
+
+Current list of packages:
+
+- Xenomai and RT kernel
+- ZeroMQ, czmq, pyzmq, libsodium
+  - For wheezy, the cython dependency
+- libwebsockets
+- jansson
 
 ---------------------------
 Prerequisites:
@@ -8,13 +15,13 @@ Prerequisites:
 The pbuilder, reprepro and quilt packages must be installed, in
 addition to the usual kernel development environment.
 
-    apt-get install pbuilder reprepro
+    apt-get install pbuilder reprepro quilt
 
 ---------------------------
 Restricting build list:
 
 NOTE: It is advised to trim the build list to save build time, even if
-explicitly supplying a <codename>/<arch> target.
+explicitly supplying a <codename>-<arch> target.
 
 If only a subset of codenames or arches is needed, restrict them by
 trimming the 'CODENAMES' and 'ARCHES' variables in the Makefile.
@@ -27,20 +34,23 @@ For example, to build only Wheezy and Jessie amd64 kernels:
 ---------------------------
 Targets:
 
-all:  (Default target)  Build all <codename>/<arch> combos
+all:  (Default target)  Build all <codename>-<arch> combos
+
+help:  Print some help
 
 clean:  Clean up all targets that can be easily regenerated
 
-squeaky-clean:  Clean up all targets, including downloaded tarballs,
-    git submodules, apt and C caches; in general, avoid this!
+squeaky-clean: Clean up all targets that are expensive to repace,
+    including downloaded tarballs, git submodules, apt and C caches,
+    and chroots.
 
-<codename>/<arch>/all:  e.g. wheezy/i386/all
-    Build all packages and PPA for the specified distro and architecture
+<codename>.all:  e.g. wheezy.all
+    Build all packages for the specified distro
 
-<codename>/<arch>/chroot:  e.g. jessie/amd64/chroot
+<codename>-<arch>.chroot:  e.g. jessie-amd64.chroot
     Set up and log into a chroot
 
-<codename>/<arch>/clean:
+<codename>-<arch>.clean:
     Remove build artifacts specific to that codename/arch; leave
     common artifacts
 
@@ -49,7 +59,7 @@ Codename is one of wheezy, jessie, precise
 Arch is one of amd64, i386
 
 Most simply, just run 'make' to build all packages for all
-<codename>/<arch> combos.
+<codename>-<arch> combos.
 
 To pass in options to dpkg-buildpackage, use e.g.
 
@@ -58,7 +68,7 @@ To pass in options to dpkg-buildpackage, use e.g.
 ---------------------------
 What it does
 
-For each <codename>/<arch> combo:
+For each <codename>-<arch> combo:
 - Downloads sources, checks out git repos, builds gpg keyring
 - Creates a base pbuilder chroot tarball
 - Builds the Xenomai and RTAI packages
@@ -70,38 +80,6 @@ For each <codename>/<arch> combo:
 - Builds the linux-tools package
 - Updates the local PPA with all packages
 
-Package results go into <codename>/<arch>/pkgs.
+Package results go into pkgs.
 
-PPAs go into <codename>/<arch>/ppa.
-
----------------------------
-TODO
-
-- build smictrl packages
-
-
----------------------------
-Links
-
-http://wiki.debian.org/Debootstrap
-
-https://wiki.ubuntu.com/PbuilderHowto
-
-http://wiki.debian.org/PbuilderTricks
-
-http://manpages.ubuntu.com/manpages/intrepid/man1/pbuilder-dist.1.html
-
-http://en.wikipedia.org/wiki/Debian_build_toolchain
-
-
----------------------------
-Random notes follow
-
-multiple releases in a single ppa
-http://bobthegnome.blogspot.com/2012/12/a-script-for-supporting-multiple-ubuntu.html
-
-
-# build smictrl
-git clone git://git.kiszka.org/smictrl.git && cd smictrl
-git clone git://github.com/zultron/smictrl-deb.git debian
-dpkg-buildpackage -uc -us && cd ..
+PPAs go into ppa.
