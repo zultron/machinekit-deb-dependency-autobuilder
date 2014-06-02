@@ -164,9 +164,19 @@ stamps/20.5.%.libsodium-ppa-clean:
 	rm -f stamps/20.5.$(CODENAME).libsodium-ppa
 
 
+###################################################
+# 20.6. Wrap up
+
 # Hook Libsodium builds into zeromq4 and final builds
 ZEROMQ4_DEPS_INDEP += $(LIBSODIUM_INDEP)
 ZEROMQ4_DEPS += $(LIBSODIUM_ARCH)
 FINAL_DEPS_INDEP += $(LIBSODIUM_INDEP)
 SQUEAKY_ALL += $(LIBSODIUM_SQUEAKY_ALL)
 CLEAN_INDEP += $(LIBSODIUM_CLEAN_INDEP)
+
+# Convenience target
+libsodium:  $(call C_EXPAND,$(LIBSODIUM_INDEP))
+LIBSODIUM_TARGET_ALL := "libsodium"
+LIBSODIUM_DESC := "Convenience:  Build libsodium packages for all distros"
+LIBSODIUM_SECTION := packages
+HELP_VARS += LIBSODIUM
