@@ -159,10 +159,18 @@ stamps/16.5.%.linux-tools-ppa-clean:
 	rm -f stamps/16.5.$(CODENAME).linux-tools-ppa
 
 
+###################################################
+# 16.6. Wrap up
+
 # Hook linux-tools builds into final build
 FINAL_DEPS_INDEP += $(LINUX_TOOLS_INDEP)
 SQUEAKY_ALL += $(LINUX_TOOLS_SQUEAKY_ALL)
 CLEAN_ALL += $(LINUX_TOOLS_CLEAN_ALL)
 CLEAN_INDEP += $(LINUX_TOOLS_CLEAN_INDEP)
 
-
+# Convenience target
+linux-tools:  $(call C_EXPAND,$(LINUX_TOOLS_INDEP))
+LINUX_TOOLS_TARGET_ALL := "linux-tools"
+LINUX_TOOLS_DESC := "Convenience:  Build linux-tools packages for all distros"
+LINUX_TOOLS_SECTION := packages
+HELP_VARS += LINUX_TOOLS
