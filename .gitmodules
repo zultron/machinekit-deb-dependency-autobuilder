@@ -31,3 +31,6 @@
 [submodule "git/jansson-deb"]
 	path = git/jansson-deb
 	url = https://github.com/zultron/jansson-deb.git
+[submodule "git/czmq-deb"]
+	path = git/czmq-deb
+	url = https://github.com/zultron/czmq-deb.git
