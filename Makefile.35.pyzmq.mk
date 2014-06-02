@@ -35,6 +35,18 @@ PYZMQ_DEPS =
 
 
 ###################################################
+# 35.0. Update Pyzmq submodule
+stamps/35.0.pyzmq-checkout-submodule:
+	@echo "===== 35.0. All: " \
+	    "Check out pyzmq submodule ====="
+#	# be sure the submodule has been checked out
+	test -e git/pyzmq-deb/.git || \
+	    git submodule update --init git/pyzmq-deb
+	test -e git/pyzmq-deb/.git
+	touch $@
+
+
+###################################################
 # 35.1. Download Pyzmq tarball distribution
 stamps/35.1.pyzmq-tarball-download: \
 		stamps/0.1.base-builddeps
@@ -56,7 +68,8 @@ PYZMQ_SQUEAKY_ALL += stamps/35.1.pyzmq-tarball-download-squeaky
 ###################################################
 # 35.2. Set up Pyzmq sources
 stamps/35.2.pyzmq-source-setup: \
-		stamps/35.1.pyzmq-tarball-download
+		stamps/35.1.pyzmq-tarball-download \
+		stamps/35.0.pyzmq-checkout-submodule
 	@echo "===== 35.2. All: " \
 	    "Setting up Pyzmq source ====="
 #	# Unpack source
@@ -210,7 +223,17 @@ stamps/35.6.%.pyzmq-ppa-clean:
 	rm -f stamps/35.6.$(CODENAME).pyzmq-ppa
 
 
+###################################################
+# 35.7. Wrap up
+
 # Hook Pyzmq builds into final builds, if configured
 FINAL_DEPS_INDEP += $(PYZMQ_INDEP)
 SQUEAKY_ALL += $(PYZMQ_SQUEAKY_ALL)
 CLEAN_INDEP += $(PYZMQ_CLEAN_INDEP)
+
+# Convenience target
+pyzmq:  $(call C_EXPAND,$(PYZMQ_INDEP))
+PYZMQ_TARGET_ALL := "pyzmq"
+PYZMQ_DESC := "Convenience:  Build pyzmq packages for all distros"
+PYZMQ_SECTION := packages
+HELP_VARS += PYZMQ
