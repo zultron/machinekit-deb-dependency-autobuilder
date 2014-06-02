@@ -197,8 +197,10 @@ endef
 $(call C_EXPAND,info-%.list-ppa): \
 info-%.list-ppa:
 	$(call LIST_PPA,info,$(CODENAME))
+
 INFO_PPA_LIST_TARGET_INDEP := "info-%.list-ppa"
 INFO_PPA_LIST_DESC := "List current PPA contents for a distro"
+INFO_PPA_LIST_SECTION := info
 HELP_VARS += INFO_PPA_LIST
 
 
@@ -208,7 +210,8 @@ HELP_VARS += INFO_PPA_LIST
 #
 # 0.1 Generic target for non-<codename>/<arch>-specific targets
 stamps/0.1.base-builddeps:
-	mkdir -p admin git dist src stamps pkgs aptcache chroots logs
+	@echo "===== 0.1. All:  Initialize basic build deps ====="
+	mkdir -p git dist src stamps pkgs aptcache chroots logs
 	touch $@
 ifneq ($(DEBUG),yes)
 # While hacking, don't rebuild everything whenever a file is changed
@@ -219,9 +222,9 @@ stamps/0.1.base-builddeps: \
 endif
 .PRECIOUS:  stamps/0.1.base-builddeps
 
-stamps/0.1.clean-base-builddeps:
+stamps/0.1.base-builddeps-squeaky:
 	rm -f stamps/0.1.base-builddeps
-SQUEAKY_ALL += stamps/0.1.clean-base-builddeps
+SQUEAKY_ALL += stamps/0.1.base-builddeps-squeaky
 
 
 # 0.2 Init distro ppa directories and configuration
@@ -255,16 +258,21 @@ stamps/0.3.all.ppa-init-squeaky: \
 	rm -rf ppa
 SQUEAKY_ALL += stamps/0.3.all.ppa-init-squeaky
 
+PPA_INIT_TARGET_INDEP := "stamps/0.3.all.ppa-init"
+PPA_INIT_DESC := "Create basic PPA directories and initial configuration"
+PPA_INIT_SECTION := common
+HELP_VARS += PPA_INIT
+
 
 ###################################################
 # 1. GPG keyring
 
 # 1.1 Download GPG keys for the various distros, needed by pbuilder
 
-stamps/1.1.keyring-downloaded: \
-		stamps/0.1.base-builddeps
+stamps/1.1.keyring-downloaded:
 	@echo "===== 1.1. All variants:  Creating GPG keyring ====="
 	$(REASON)
+	mkdir -p admin
 	gpg --no-default-keyring --keyring=$(KEYRING) \
 		--keyserver=$(KEYSERVER) --recv-keys \
 		--trust-model always \
@@ -272,14 +280,15 @@ stamps/1.1.keyring-downloaded: \
 	test -f $(KEYRING) && touch $@  # otherwise, fail
 .PRECIOUS:  stamps/1.1.keyring-downloaded
 
-stamps/1.1.keyring-downloaded-clean:
+stamps/1.1.keyring-downloaded-squeaky:
 	@echo "1.1. All:  Cleaning package GPG keyring"
 	rm -f $(KEYRING)
 	rm -f stamps/1.1.keyring-downloaded
-SQUEAKY_ALL += stamps/1.1.keyring-downloaded-clean
+SQUEAKY_ALL += stamps/1.1.keyring-downloaded-squeaky
 
 KEYRING_TARGET_ALL := "stamps/1.1.keyring-downloaded"
 KEYRING_DESC := "Download upstream distro GPG keys"
+KEYRING_SECTION := common
 HELP_VARS += KEYRING
 
 
@@ -321,6 +330,12 @@ $(call CA_EXPAND,%.chroot): \
 		$(PBUILD_ARGS)
 .PHONY:  $(call CA_EXPAND,%.chroot)
 
+CHROOT_LOGIN_TARGET_ARCH := "%.chroot"
+CHROOT_LOGIN_DESC := "Log into a chroot"
+CHROOT_LOGIN_SECTION := info
+HELP_VARS += CHROOT_LOGIN
+
+
 
 ###################################################
 # 03.  Info targets
@@ -329,8 +344,7 @@ $(call CA_EXPAND,%.chroot): \
 
 # Print arch target help
 define HELP_ARCH
-	@echo "$(patsubst %,\
-	    $($(1)_TARGET_INDEP),\<distro\>-\<arch\>):	$($(1)_DESC)"
+	@echo "$(patsubst %,$($(1)_TARGET_ARCH),\<distro\>-\<arch\>):	$($(1)_DESC)"
 
 endef
 # Print arch-independent target help
