@@ -5,6 +5,7 @@
 !/git/cython-deb
 !/git/kernel-rt-deb2
 !/git/libsodium-deb
+!/git/libwebsockets-deb
 !/git/linux-tools-deb
 !/git/pyzmq-deb
 !/git/rcn-linux-arm

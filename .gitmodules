@@ -25,3 +25,6 @@
 [submodule "git/pyzmq-deb"]
 	path = git/pyzmq-deb
 	url = https://github.com/zultron/pyzmq-deb.git
+[submodule "git/libwebsockets-deb"]
+	path = git/libwebsockets-deb
+	url = https://github.com/zultron/libwebsockets-deb.git
