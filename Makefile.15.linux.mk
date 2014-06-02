@@ -40,7 +40,9 @@ stamps/15.1.linux-kernel-package-checkout: \
 	    "Checking out kernel Debian git repo ====="
 	$(REASON)
 #	# be sure the submodule has been checked out
-	git submodule update --recursive --init git/kernel-rt-deb2
+	test -e git/kernel-rt-deb/.git || \
+	    git submodule update --init git/kernel-rt-deb
+	test -e git/kernel-rt-deb/.git
 	touch $@
 
 stamps/15.1.linux-kernel-package-checkout-clean: \
