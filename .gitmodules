@@ -1,6 +1,3 @@
-[submodule "git/kernel-rt-deb2"]
-	path = git/kernel-rt-deb2
-	url = https://github.com/zultron/kernel-rt-deb2.git
 [submodule "git/linux-tools-deb"]
 	path = git/linux-tools-deb
 	url = https://github.com/zultron/linux-tools-deb.git
@@ -34,3 +31,6 @@
 [submodule "git/czmq-deb"]
 	path = git/czmq-deb
 	url = https://github.com/zultron/czmq-deb.git
+[submodule "git/kernel-rt-deb"]
+	path = git/kernel-rt-deb
+	url = https://github.com/zultron/kernel-rt-deb.git
