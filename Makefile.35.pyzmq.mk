@@ -5,7 +5,7 @@
 # Variables that may change
 
 # Pyzmq package versions
-PYZMQ_PKG_RELEASE = 1mk
+PYZMQ_PKG_RELEASE = 2~1mk
 PYZMQ_VERSION = 14.3.0
 
 
@@ -16,7 +16,7 @@ PYZMQ_VERSION = 14.3.0
 # Packages; will be suffixed by _<pkg_version>_<arch>.deb
 # (may contain wildcards)
 PYZMQ_PKGS_ALL := 
-PYZMQ_PKGS_ARCH := pyzmq pyzmq-dev
+PYZMQ_PKGS_ARCH := python-zmq python-zmq-dev python3-zmq python3-zmq-dev
 
 # Misc paths, filenames, executables
 PYZMQ_URL = https://github.com/zeromq/pyzmq/archive
@@ -133,7 +133,7 @@ stamps/35.4.%.pyzmq-deps-update-chroot: \
 .PRECIOUS: $(call CA_EXPAND,stamps/35.4.%.pyzmq-deps-update-chroot)
 
 # Binary package build dependent on chroot update
-CHROOT_UPDATE_DEP := stamps/35.4.%.pyzmq-deps-update-chroot
+PYZMQ_CHROOT_UPDATE_DEP := stamps/35.4.%.pyzmq-deps-update-chroot
 
 $(call CA_EXPAND,stamps/35.4.%.pyzmq-deps-update-chroot-clean): \
 stamps/35.4.%.pyzmq-deps-update-chroot-clean: \
@@ -161,7 +161,7 @@ $(call CA_TO_C_DEPS,stamps/35.5.%.pyzmq-build-binary,\
 $(call CA_EXPAND,stamps/35.5.%.pyzmq-build-binary): \
 stamps/35.5.%.pyzmq-build-binary: \
 		stamps/2.1.%.chroot-build \
-		$(CHROOT_UPDATE_DEP)
+		$(PYZMQ_CHROOT_UPDATE_DEP)
 	@echo "===== 35.5. $(CA): " \
 	    "Building Pyzmq binary packages ====="
 	$(REASON)
