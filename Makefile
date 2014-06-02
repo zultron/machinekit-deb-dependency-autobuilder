@@ -278,6 +278,10 @@ stamps/1.1.keyring-downloaded-clean:
 	rm -f stamps/1.1.keyring-downloaded
 SQUEAKY_ALL += stamps/1.1.keyring-downloaded-clean
 
+KEYRING_TARGET_ALL := "stamps/1.1.keyring-downloaded"
+KEYRING_DESC := "Download upstream distro GPG keys"
+HELP_VARS += KEYRING
+
 
 ###################################################
 # 2. Base chroot tarball
@@ -323,16 +327,28 @@ $(call CA_EXPAND,%.chroot): \
 #
 # These present help for humans
 
+# Print arch target help
+define HELP_ARCH
+	@echo "$(patsubst %,\
+	    $($(1)_TARGET_INDEP),\<distro\>-\<arch\>):	$($(1)_DESC)"
+
+endef
 # Print arch-independent target help
 define HELP_INDEP
 	@echo "$(patsubst %,$($(1)_TARGET_INDEP),\<distro\>):	$($(1)_DESC)"
+
 endef
+# Print arch- and distro-independent target help
+define HELP_ALL
+	@echo "$($(1)_TARGET_ALL):	$($(1)_DESC)"
+
+endef
+
 help:
-	$(call HELP_INDEP,INFO_PPA_LIST)
 	$(foreach var,$(HELP_VARS),\
-	    $(if $($(1)_TARGET_INDEP),\
+	    $(if $($(var)_TARGET_INDEP),\
 		$(call HELP_INDEP,$(var)),\
-	    $(if $($(1)_TARGET_ARCH),\
+	    $(if $($(var)_TARGET_ARCH),\
 		$(call HELP_ARCH,$(var)),\
 		$(call HELP_ALL,$(var)))))
 .PHONY: help
