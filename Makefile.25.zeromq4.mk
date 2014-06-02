@@ -208,7 +208,17 @@ stamps/25.6.%.zeromq4-ppa-clean:
 	rm -f stamps/25.6.$(CODENAME).zeromq4-ppa
 
 
+###################################################
+# 25.6. Wrap up
+
 # Hook Zeromq4 builds into final builds, if configured
 FINAL_DEPS_INDEP += $(ZEROMQ4_INDEP)
 SQUEAKY_ALL += $(ZEROMQ4_SQUEAKY_ALL)
 CLEAN_INDEP += $(ZEROMQ4_CLEAN_INDEP)
+
+# Convenience target
+zeromq4:  $(call C_EXPAND,$(ZEROMQ4_INDEP))
+ZEROMQ4_TARGET_ALL := "zeromq4"
+ZEROMQ4_DESC := "Convenience:  Build zeromq4 packages for all distros"
+ZEROMQ4_SECTION := packages
+HELP_VARS += ZEROMQ4
