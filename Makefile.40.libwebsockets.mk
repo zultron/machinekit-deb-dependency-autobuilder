@@ -32,6 +32,18 @@ LIBWEBSOCKETS_PKG_VERSION = $(LIBWEBSOCKETS_VERSION)-$(LIBWEBSOCKETS_PKG_RELEASE
 
 
 ###################################################
+# 40.0. Update Libwebsockets submodule
+stamps/40.0.libwebsockets-checkout-submodule:
+	@echo "===== 40.0. All: " \
+	    "Check out libwebsockets submodule ====="
+#	# be sure the submodule has been checked out
+	test -e git/libwebsockets-deb/.git || \
+	    git submodule update --init git/libwebsockets-deb
+	test -e git/libwebsockets-deb/.git
+	touch $@
+
+
+###################################################
 # 40.1. Download Libwebsockets tarball distribution
 stamps/40.1.libwebsockets-tarball-download: \
 		stamps/0.1.base-builddeps
@@ -236,8 +248,18 @@ stamps/40.6.%.libwebsockets-ppa-clean:
 	rm -f stamps/40.6.$(CODENAME).libwebsockets-ppa
 
 
+###################################################
+# 40.7. Wrap up
+
 # Hook Libwebsockets builds into final builds, if configured
 FINAL_DEPS_INDEP += $(LIBWEBSOCKETS_INDEP)
 SQUEAKY_ALL += $(LIBWEBSOCKETS_SQUEAKY_ALL)
 CLEAN_INDEP += $(LIBWEBSOCKETS_CLEAN_INDEP)
 CLEAN_ALL += $(LIBWEBSOCKETS_CLEAN_ALL)
+
+# Convenience target
+libwebsockets:  $(call C_EXPAND,$(LIBWEBSOCKETS_INDEP))
+LIBWEBSOCKETS_TARGET_ALL := "libwebsockets"
+LIBWEBSOCKETS_DESC := "Convenience:  Build libwebsockets packages for all distros"
+LIBWEBSOCKETS_SECTION := packages
+HELP_VARS += LIBWEBSOCKETS
