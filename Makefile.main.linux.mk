@@ -66,6 +66,8 @@ stamps/5.2.linux-kernel-tarball-downloaded: \
 	rm -f dist/$(LINUX_TARBALL)
 	wget $(LINUX_URL)/$(LINUX_TARBALL) -O dist/$(LINUX_TARBALL)
 	touch $@
+# This target is needed by linux-tools
+LINUX_TARBALL_TARGET := stamps/5.2.linux-kernel-tarball-downloaded
 
 stamps/5.2.linux-kernel-tarball-downloaded-clean: \
 		$(call CA_EXPAND,\
