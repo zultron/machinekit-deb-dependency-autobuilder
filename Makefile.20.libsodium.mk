@@ -23,6 +23,18 @@ LIBSODIUM_PKG_VERSION = $(LIBSODIUM_VERSION)-$(LIBSODIUM_PKG_RELEASE)~$(CODENAME
 
 
 ###################################################
+# 20.0. Update Libsodium submodule
+stamps/20.0.libsodium-checkout-submodule:
+	@echo "===== 20.0. All: " \
+	    "Check out Libsodium submodule ====="
+#	# be sure the submodule has been checked out
+	test -e git/libsodium-deb/.git || \
+	    git submodule update --init git/libsodium-deb
+	test -e git/libsodium-deb/.git
+	touch $@
+
+
+###################################################
 # 20.1. Download Libsodium tarball distribution
 stamps/20.1.libsodium-tarball-download: \
 		stamps/0.1.base-builddeps
@@ -44,7 +56,8 @@ LIBSODIUM_SQUEAKY_ALL += stamps/20.1.libsodium-tarball-download-squeaky
 ###################################################
 # 20.2. Set up Libsodium sources
 stamps/20.2.libsodium-source-setup: \
-		stamps/20.1.libsodium-tarball-download
+		stamps/20.1.libsodium-tarball-download \
+		stamps/20.0.libsodium-checkout-submodule
 	@echo "===== 20.2. All: " \
 	    "Setting up Libsodium source ====="
 #	# Unpack source
