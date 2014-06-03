@@ -3,7 +3,7 @@
 	url = https://github.com/zultron/linux-tools-deb.git
 [submodule "git/rcn-linux-arm"]
 	path = git/rcn-linux-arm
-	url = https://github.com/zultron/linux-dev.git
+	url = https://github.com/zultron/rcn-linux-arm.git
 [submodule "git/rtai"]
 	path = git/rtai
 	url = https://github.com/zultron/RTAI.git
