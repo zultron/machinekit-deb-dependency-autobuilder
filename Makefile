@@ -2,6 +2,8 @@
 ###################################################
 # Variables that may change
 
+HOST_ARCH = $(shell uname -m)
+
 # List of codename/arch combos to build
 #
 # Lucid isn't supported by new kernel packaging, which requires python
@@ -9,19 +11,24 @@
 # gcc-4.6 (4.4 available).
 #
 # Squeeze (Debian 6.0) is reportedly obsolete.
+ifeq ($(HOST_ARCH),armv7l)
+ALL_CODENAMES_ARCHES = \
+	wheezy-armhf
+else
 ALL_CODENAMES_ARCHES = \
 	wheezy-amd64 \
 	wheezy-i386 \
-	wheezy-armhf \
 	jessie-amd64 \
 	jessie-i386
 # Precise doesn't have gcc 4.7; using gcc 4.6 might be the cause of
 # the kernel module problems I've been finding
 	# precise-amd64 \
 	# precise-i386 \
+	#
+endif
 
 # Define this to have a deterministic chroot for step 5.4
-A_CHROOT = wheezy-amd64
+#A_CHROOT = wheezy-amd64
 
 # Debian package signature keys
 UBUNTU_KEYID = 40976EAF437D05B5
