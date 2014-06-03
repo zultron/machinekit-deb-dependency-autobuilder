@@ -16,7 +16,8 @@ PYZMQ_VERSION = 14.3.0
 # Packages; will be suffixed by _<pkg_version>_<arch>.deb
 # (may contain wildcards)
 PYZMQ_PKGS_ALL := 
-PYZMQ_PKGS_ARCH := python-zmq python-zmq-dev python3-zmq python3-zmq-dev
+PYZMQ_PKGS_ARCH := python-zmq  python-zmq-dbg \
+		   python3-zmq python3-zmq-dbg
 
 # Misc paths, filenames, executables
 PYZMQ_URL = https://github.com/zeromq/pyzmq/archive
