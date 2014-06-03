@@ -1,23 +1,25 @@
 ###################################################
 # 10. Xeno build rules
-#
-# Included by Makefile.main.linux.mk
 
 ###################################################
 # Variables that may change
 
-# Add Xenomai featuresets
-FEATURESETS += \
+# List of Xenomai featuresets; passed to kernel build
+#
+# Xenomai builds by moving into the DISABLED list
+XENOMAI_FEATURESETS := \
     xenomai.x86 \
     xenomai.beaglebone
 
-# Explicitly define Xenomai featureset list to enable; default all
-#FEATURESETS_ENABLED += xenomai.beaglebone xenomai.x86
+XENOMAI_FEATURESETS_DISABLED := \
+    # xenomai.x86 \
+    # xenomai.beaglebone
 
 # Xenomai package
 XENOMAI_PKG_RELEASE = 1mk
 XENOMAI_VERSION = 2.6.3
 XENOMAI_URL = http://download.gna.org/xenomai/stable
+
 
 ###################################################
 # Variables that should not change much
@@ -28,6 +30,8 @@ XENOMAI_TARBALL := xenomai-$(XENOMAI_VERSION).tar.bz2
 XENOMAI_TARBALL_DEBIAN_ORIG := xenomai_$(XENOMAI_VERSION).orig.tar.bz2
 XENOMAI_PKG_VERSION = $(XENOMAI_VERSION)-$(XENOMAI_PKG_RELEASE)~$(CODENAME)1
 
+# Build-dep for kernel build
+XENOMAI_LINUX_KERNEL_SOURCE_DEPS := xenomai-kernel-source
 
 ###################################################
 # 10.1. Download Xenomai tarball distribution
@@ -176,17 +180,31 @@ stamps/10.4.%.xenomai-ppa-clean:
 ###################################################
 # 10.5. Wrap up
 
-# Hook Xenomai builds into kernel and final builds, if configured
-ifneq ($(filter xenomai.%,$(FEATURESETS)),)
-LINUX_KERNEL_DEPS_INDEP += $(XENOMAI_INDEP)
-FINAL_DEPS_INDEP += $(XENOMAI_INDEP)
-SQUEAKY_ALL += $(XENOMAI_SQUEAKY_ALL)
-CLEAN_INDEP += $(XENOMAI_CLEAN_INDEP)
-endif
-
-# Convenience target
-xenomai:  $(call C_EXPAND,$(XENOMAI_INDEP))
 XENOMAI_TARGET_ALL := "xenomai"
 XENOMAI_DESC := "Convenience:  Build Xenomai packages for all distros"
 XENOMAI_SECTION := packages
 HELP_VARS += XENOMAI
+
+# Hook Xenomai builds into kernel and final builds, if configured
+ifneq ($(XENOMAI_FEATURESETS),)
+# Pass information to Linux kernel build
+#
+# lists of enabled/disabled featuresets
+LINUX_KERNEL_FEATURESETS += $(XENOMAI_FEATURESETS)
+LINUX_KERNEL_FEATURESETS_DISABLED += $(XENOMAI_FEATURESETS_DISABLED)
+# list of kernel source package dependencies
+LINUX_KERNEL_SOURCE_DEPS += $(XENOMAI_LINUX_KERNEL_SOURCE_DEPS)
+# list of make target deps
+LINUX_KERNEL_DEPS_INDEP += $(XENOMAI_INDEP)
+
+# Pass lists of make targets to common build
+FINAL_DEPS_INDEP += $(XENOMAI_INDEP)
+SQUEAKY_ALL += $(XENOMAI_SQUEAKY_ALL)
+CLEAN_INDEP += $(XENOMAI_CLEAN_INDEP)
+
+# Convenience target
+xenomai:  $(call C_EXPAND,$(XENOMAI_INDEP))
+
+else # xenomai featureset disabled
+XENOMAI_DESC := "*** Xenomai featureset is disabled ***"
+endif

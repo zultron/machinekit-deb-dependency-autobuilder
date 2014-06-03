@@ -15,34 +15,27 @@ shell() {
 }
 trap shell ERR
 
-UNCONFIGURED_FEATURE_SETS="$*"
 cd ${TOPDIR}/src/linux/build
 
-# Install packages containing the i-pipe patches
-XENOMAI_PKGS=xenomai-kernel-source
-RTAI_PKGS=rtai-source
-
-for featureset in $UNCONFIGURED_FEATURE_SETS; do
-    case $featureset in
-	xenomai) XENOMAI_PKGS="" ;;
-	rtai) RTAI_PKGS="" ;;
+# Read list of build deps and disabled featuresets from command line
+BUILD_DEPS=
+DISABLED_FEATURESETS=
+while getopts b:d: ARG; do
+    case $ARG in
+        b) BUILD_DEPS="$BUILD_DEPS $OPTARG" ;;
+        d) DISABLED_FEATURESETS="$DISABLED_FEATURESETS $OPTARG" ;;
     esac
 done
-apt-get install -y --force-yes $XENOMAI_PKGS $RTAI_PKGS
 
-# Unconfigure any requested featuresets
-unconfigure_featureset() {
+apt-get install -y --force-yes $BUILD_DEPS
+
+# Disable any requested featuresets
+disable_featureset() {
     fs=$1
-    # List files to unconfigure featureset
-    DEFINES_FILES="$(find debian/config -name defines \
-	-exec grep -l '^ *'${fs} '{}' \;)"
-    # Comment out featureset in each file
-    for f in $DEFINES_FILES; do
-	sed -i 's/^\( *xenomai$\)/#\1/' $f
-    done
+    sed -i 's/^\( *'$fs'$\)/#\1/' debian/config/defines
 }
-for featureset in $UNCONFIGURED_FEATURE_SETS; do
-    unconfigure_featureset $featureset
+for featureset in $DISABLED_FEATURESETS; do
+    disable_featureset $featureset
 done
 
 # Build the debian/control file

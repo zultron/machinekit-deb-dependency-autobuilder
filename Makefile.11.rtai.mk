@@ -1,5 +1,38 @@
 ###################################################
 # 11. RTAI build rules
+
+
+###################################################
+# Variables that may change
+
+# Add RTAI featuresets
+# (disabled)
+# FEATURESETS += \
+#     rtai.x86
+
+# Explicitly define featureset list to enable; default all
+#FEATURESETS_ENABLED += rtai
+
+# RTAI package
+RTAI_PKG_RELEASE = 1mk
+RTAI_VERSION = 4.0.0
+RTAI_URL = ???
+
+
+###################################################
+# Variables that should not change much
+# (or auto-generated)
+
+RTAI_TARBALL := rtai-$(RTAI_VERSION).tar.bz2
+RTAI_TARBALL_DEBIAN_ORIG := rtai_$(RTAI_VERSION).orig.tar.bz2
+RTAI_PKG_VERSION = $(RTAI_VERSION)-$(RTAI_PKG_RELEASE)~$(CODENAME)1
+
+# Build-dep for kernel build
+RTAI_LINUX_KERNEL_SOURCE_DEPS := rtai-source
+
+
+###################################################
+# 11. RTAI build rules
 #
 # Included by Makefile.main.linux.mk
 
@@ -11,7 +44,7 @@
 # FEATURESETS += \
 #     rtai
 
-
+ifeq (foo,)
 # 11.1. clone & update the rtai submodule
 stamps/11.1.rtai-source-checkout: \
 		stamps/0.1.base-builddeps
@@ -133,3 +166,24 @@ ifneq ($(filter rtai,$(FEATURESETS_ENABLED)),)
 PPA_INTERMEDIATE_DEPS += %/.stamp.11.5.rtai-build
 endif
 
+endif #disable everything
+
+
+###################################################
+# 11.6. Wrap up
+
+# Hook RTAI builds into kernel and final builds, if configured
+ifneq ($(filter rtai.%,$(FEATURESETS)),)
+LINUX_KERNEL_DEPS_INDEP += $(RTAI_INDEP)
+LINUX_KERNEL_SOURCE_DEPS += $(RTAI_LINUX_KERNEL_SOURCE_DEPS)
+FINAL_DEPS_INDEP += $(RTAI_INDEP)
+SQUEAKY_ALL += $(RTAI_SQUEAKY_ALL)
+CLEAN_INDEP += $(RTAI_CLEAN_INDEP)
+endif
+
+# Convenience target
+rtai:  $(call C_EXPAND,$(RTAI_INDEP))
+RTAI_TARGET_ALL := "rtai"
+RTAI_DESC := "Convenience:  Build Rtai packages for all distros"
+RTAI_SECTION := packages
+HELP_VARS += RTAI

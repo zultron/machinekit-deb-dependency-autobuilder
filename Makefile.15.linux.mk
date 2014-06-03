@@ -1,6 +1,19 @@
 ###################################################
 # 15. Linux kernel build rules
 
+# This kernel can build featuresets for Xenomai and RTAI.  To hook
+# dependencies into this build, add to these variables in the
+# dependency's Makefile:
+#
+# LINUX_KERNEL_FEATURESETS :		Add names of enabled featuresets
+# LINUX_KERNEL_FEATURESETS_DISABLED :	Add names of featuresets to disable
+# LINUX_KERNEL_SOURCE_DEPS :		Add names of packages needed in the
+#					chroot to configure the kernel
+#					source package
+# LINUX_KERNEL_DEPS_INDEP :		Distro target dependencies
+# LINUX_KERNEL_DEPS :			Distro-arch or common target
+#					dependencies
+
 ###################################################
 # Variables that may change
 
@@ -8,12 +21,6 @@
 LINUX_PKG_RELEASE = 1mk
 LINUX_VERSION = 3.8.13
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
-
-# List of all featuresets; defined in Makefile.linux-deps.*.mk
-FEATURESETS = 
-
-# Explicitly define featureset list to enable; default all
-#FEATURESETS_ENABLED = 
 
 
 ###################################################
@@ -25,11 +32,6 @@ LINUX_TARBALL := linux-$(LINUX_VERSION).tar.xz
 LINUX_TARBALL_DEBIAN_ORIG := linux_$(LINUX_VERSION).orig.tar.xz
 LINUX_NAME_EXT := $(shell echo $(LINUX_VERSION) | sed 's/\.[0-9]*$$//')
 LINUX_PKG_VERSION = $(LINUX_VERSION)-$(LINUX_PKG_RELEASE)~$(CODENAME)1
-
-# All featuresets enabled by default
-FEATURESETS_ENABLED ?= $(FEATURESETS)
-# Disabled featuresets
-FEATURESETS_DISABLED = $(filter-out $(FEATURESETS_ENABLED),$(FEATURESETS))
 
 
 ###################################################
@@ -133,7 +135,8 @@ stamps/15.4.linux-kernel-package-configured: \
 		--execute --bindmounts ${TOPDIR}/src/linux \
 		$(PBUILD_ARGS) \
 		pbuild/linux-unpacked-chroot-script.sh \
-		$(FEATURESETS_DISABLED)
+		    -d "$(LINUX_KERNEL_FEATURESETS_DISABLED)" \
+		    -b "$(LINUX_KERNEL_SOURCE_DEPS)"
 #	# Make copy of changelog for later munging
 	cp --preserve=all src/linux/build/debian/changelog src/linux
 #	# Build the source tree and clean up
