@@ -7,7 +7,7 @@
 # Variables that may change
 
 # Libsodium package
-LIBSODIUM_PKG_RELEASE = 1mk
+LIBSODIUM_PKG_RELEASE = 0.1mk
 LIBSODIUM_VERSION = 0.5.0
 LIBSODIUM_URL = http://download.libsodium.org/libsodium/releases
 
