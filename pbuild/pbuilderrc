@@ -66,8 +66,8 @@ if test $ARCH = armhf; then
     EXTRA_PACKAGES="$EXTRA_PACKAGES,uboot-mkimage"
 fi
 
-# armhf needs qemu
-if test $ARCH = armhf; then
+# armhf needs qemu when not native
+if test $ARCH = armhf -a $(uname -m) != armv7l; then
     DEBOOTSTRAP=qemu-debootstrap
 fi
 
