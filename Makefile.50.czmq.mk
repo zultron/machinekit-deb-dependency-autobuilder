@@ -7,7 +7,7 @@
 # Variables that may change
 
 # Czmq package versions
-CZMQ_PKG_RELEASE = 0~1mk
+CZMQ_PKG_RELEASE = 0.1mk
 CZMQ_VERSION = 2.2.0
 
 
