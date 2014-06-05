@@ -97,27 +97,28 @@ stamps/40.2.libwebsockets-source-setup: \
 	@echo "===== 40.2. All: " \
 	    "Setting up Libwebsockets source ====="
 #	# Unpack source
-	rm -rf src/libwebsockets/build; mkdir -p src/libwebsockets/build
-	tar xC src/libwebsockets/build --strip-components=1 \
+	rm -rf $(SOURCEDIR)/libwebsockets/build
+	mkdir -p $(SOURCEDIR)/libwebsockets/build
+	tar xC $(SOURCEDIR)/libwebsockets/build --strip-components=1 \
 	    -f dist/$(LIBWEBSOCKETS_TARBALL)
 #	# Unpack debianization
 	git --git-dir="git/libwebsockets-deb/.git" archive --prefix=debian/ HEAD \
-	    | tar xCf src/libwebsockets/build -
+	    | tar xCf $(SOURCEDIR)/libwebsockets/build -
 #	# Make clean copy of changelog for later munging
-	cp --preserve=all src/libwebsockets/build/debian/changelog \
-	    src/libwebsockets
+	cp --preserve=all $(SOURCEDIR)/libwebsockets/build/debian/changelog \
+	    $(SOURCEDIR)/libwebsockets
 #	# Link source tarball with Debian name
-	ln -f dist/$(LIBWEBSOCKETS_TARBALL) \
-	    src/libwebsockets/$(LIBWEBSOCKETS_TARBALL_DEBIAN_ORIG)
-	ln -f dist/$(LIBWEBSOCKETS_TARBALL) \
-	    pkgs/$(LIBWEBSOCKETS_TARBALL_DEBIAN_ORIG)
+	ln -sf $(TOPDIR)/dist/$(LIBWEBSOCKETS_TARBALL) \
+	    $(SOURCEDIR)/libwebsockets/$(LIBWEBSOCKETS_TARBALL_DEBIAN_ORIG)
+	cp --preserve=all dist/$(LIBWEBSOCKETS_TARBALL) \
+	    $(BUILDRESULT)/$(LIBWEBSOCKETS_TARBALL_DEBIAN_ORIG)
 	touch $@
 
 $(call C_EXPAND,stamps/40.2.%.libwebsockets-source-setup-clean): \
 stamps/40.2.%.libwebsockets-source-setup-clean: \
 		$(call C_EXPAND,stamps/40.3.%.libwebsockets-build-source-clean)
 	@echo "40.2. All:  Clean libwebsockets sources"
-	rm -rf src/libwebsockets
+	rm -rf $(SOURCEDIR)/libwebsockets
 LIBWEBSOCKETS_CLEAN_INDEP += stamps/40.2.%.libwebsockets-source-setup-clean
 
 
@@ -130,25 +131,25 @@ stamps/40.3.%.libwebsockets-build-source: \
 	    "Building Libwebsockets source package ====="
 	$(REASON)
 #	# Restore original changelog
-	cp --preserve=all src/libwebsockets/changelog \
-	    src/libwebsockets/build/debian
+	cp --preserve=all $(SOURCEDIR)/libwebsockets/changelog \
+	    $(SOURCEDIR)/libwebsockets/build/debian
 #	# Add changelog entry
-	cd src/libwebsockets/build && \
+	cd $(SOURCEDIR)/libwebsockets/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(LIBWEBSOCKETS_PKG_VERSION) "$(MAINTAINER)"
 #	# Build source package
-	cd src/libwebsockets/build && dpkg-source -i -I -b .
-	mv src/libwebsockets/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).debian.tar.gz \
-	    src/libwebsockets/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).dsc pkgs
+	cd $(SOURCEDIR)/libwebsockets/build && dpkg-source -i -I -b .
+	mv $(SOURCEDIR)/libwebsockets/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).debian.tar.gz \
+	    $(SOURCEDIR)/libwebsockets/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).dsc $(BUILDRESULT)
 	touch $@
 .PRECIOUS:  $(call C_EXPAND,stamps/40.3.%.libwebsockets-build-source)
 
 $(call C_EXPAND,stamps/40.3.%.libwebsockets-build-source-clean): \
 stamps/40.3.%.libwebsockets-build-source-clean:
 	@echo "40.3. $(CODENAME):  Clean libwebsockets source package"
-	rm -f pkgs/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).dsc
-	rm -f pkgs/$(LIBWEBSOCKETS_TARBALL_DEBIAN_ORIG)
-	rm -f pkgs/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).debian.tar.gz
+	rm -f $(BUILDRESULT)/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).dsc
+	rm -f $(BUILDRESULT)/$(LIBWEBSOCKETS_TARBALL_DEBIAN_ORIG)
+	rm -f $(BUILDRESULT)/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).debian.tar.gz
 	rm -f stamps/40.3.$(CODENAME).libwebsockets-build-source
 $(call C_TO_CA_DEPS,stamps/40.3.%.libwebsockets-build-source-clean,\
 	stamps/40.5.%.libwebsockets-build-binary)
@@ -206,19 +207,19 @@ stamps/40.5.%.libwebsockets-build-binary: \
 	    $(PBUILD) --build \
 	    $(PBUILD_ARGS) \
 	    --debbuildopts $(BUILDTYPE) \
-	    pkgs/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).dsc
+	    $(BUILDRESULT)/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).dsc
 	touch $@
 .PRECIOUS: $(call CA_EXPAND,stamps/40.5.%.libwebsockets-build-binary)
 
 $(call CA_EXPAND,stamps/40.5.%.libwebsockets-build-binary-clean): \
 stamps/40.5.%.libwebsockets-build-binary-clean:
 	@echo "40.5. $(CA):  Clean Libwebsockets binary build"
-	rm -f $(patsubst %,pkgs/%_$(LIBWEBSOCKETS_PKG_VERSION)_all.deb,\
+	rm -f $(patsubst %,$(BUILDRESULT)/%_$(LIBWEBSOCKETS_PKG_VERSION)_all.deb,\
 	    $(LIBWEBSOCKETS_PKGS_ALL))
-	rm -f $(patsubst %,pkgs/%_$(LIBWEBSOCKETS_PKG_VERSION)_$(ARCH).deb,\
+	rm -f $(patsubst %,$(BUILDRESULT)/%_$(LIBWEBSOCKETS_PKG_VERSION)_$(ARCH).deb,\
 	    $(LIBWEBSOCKETS_PKGS_ARCH))
-	rm -f pkgs/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION)-$(ARCH).build
-	rm -f pkgs/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION)_$(ARCH).changes
+	rm -f $(BUILDRESULT)/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION)-$(ARCH).build
+	rm -f $(BUILDRESULT)/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/40.5-$(CA)-libwebsockets-build
 $(call CA_TO_C_DEPS,stamps/40.5.%.libwebsockets-build-binary-clean,\
 	stamps/40.6.%.libwebsockets-ppa-clean)
@@ -233,11 +234,11 @@ stamps/40.6.%.libwebsockets-ppa: \
 		stamps/40.3.%.libwebsockets-build-source \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,40.6,libwebsockets,\
-	    pkgs/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).dsc,\
-	    $(patsubst %,pkgs/%_$(LIBWEBSOCKETS_PKG_VERSION)_all.deb,\
+	    $(BUILDRESULT)/libwebsockets_$(LIBWEBSOCKETS_PKG_VERSION).dsc,\
+	    $(patsubst %,$(BUILDRESULT)/%_$(LIBWEBSOCKETS_PKG_VERSION)_all.deb,\
 		$(LIBWEBSOCKETS_PKGS_ALL)) \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),\
-		$(patsubst %,pkgs/%_$(LIBWEBSOCKETS_PKG_VERSION)_$(a).deb,\
+		$(patsubst %,$(BUILDRESULT)/%_$(LIBWEBSOCKETS_PKG_VERSION)_$(a).deb,\
 		    $(LIBWEBSOCKETS_PKGS_ARCH))))
 
 LIBWEBSOCKETS_INDEP := stamps/40.6.%.libwebsockets-ppa

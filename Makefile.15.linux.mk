@@ -120,36 +120,37 @@ stamps/15.4.linux-kernel-package-configured: \
 	    " Linux source package ====="
 	$(REASON)
 #	# Starting clean, copy debian packaging and hardlink source tarball
-	rm -rf src/linux/build; mkdir -p src/linux/build
+	rm -rf $(SOURCEDIR)/linux/build; mkdir -p $(SOURCEDIR)/linux/build
 	git --git-dir="git/kernel-rt-deb/.git" archive --prefix=debian/ HEAD \
-	    | tar xCf src/linux/build -
+	    | tar xCf $(SOURCEDIR)/linux/build -
 #	# Hardlink linux tarball with Debian-format path name
-	ln -f dist/$(LINUX_TARBALL) \
-	    pkgs/$(LINUX_TARBALL_DEBIAN_ORIG)
-	ln -f dist/$(LINUX_TARBALL) \
-	    src/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
+	ln -sf $(TOPDIR)/dist/$(LINUX_TARBALL) \
+	    $(SOURCEDIR)/linux/$(LINUX_TARBALL_DEBIAN_ORIG)
+	cp --preserve=all dist/$(LINUX_TARBALL) \
+	    $(BUILDRESULT)/$(LINUX_TARBALL_DEBIAN_ORIG)
 #	# Configure the package in a chroot
 	chmod +x pbuild/linux-unpacked-chroot-script.sh
 	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) \
-		--execute --bindmounts ${TOPDIR}/src/linux \
+		--execute --bindmounts ${TOPDIR}/$(SOURCEDIR)/linux \
 		$(PBUILD_ARGS) \
 		pbuild/linux-unpacked-chroot-script.sh \
 		    -d "$(LINUX_KERNEL_FEATURESETS_DISABLED)" \
 		    -b "$(LINUX_KERNEL_SOURCE_DEPS)"
 #	# Make copy of changelog for later munging
-	cp --preserve=all src/linux/build/debian/changelog src/linux
+	cp --preserve=all $(SOURCEDIR)/linux/build/debian/changelog \
+	    $(SOURCEDIR)/linux
 #	# Build the source tree and clean up
-	cd src/linux/build && debian/rules orig
-	cd src/linux/build && debian/rules clean
+	cd $(SOURCEDIR)/linux/build && debian/rules orig
+	cd $(SOURCEDIR)/linux/build && debian/rules clean
 	touch $@
 .PRECIOUS: stamps/15.4.linux-kernel-package-configured
 
 stamps/15.4.linux-kernel-package-configured-clean: \
 		$(call C_EXPAND,stamps/15.5.%.linux-kernel-source-package-clean)
 	@echo "15.4.  All: Clean configured linux kernel source directory"
-	rm -rf src/linux
-	rm -f pkgs/$(LINUX_TARBALL_DEBIAN_ORIG)
+	rm -rf $(SOURCEDIR)/linux
+	rm -f $(BUILDRESULT)/$(LINUX_TARBALL_DEBIAN_ORIG)
 	rm -f stamps/15.4.linux-kernel-package-configured
 LINUX_CLEAN_ALL += stamps/15.4.linux-kernel-package-configured-clean
 
@@ -164,23 +165,24 @@ stamps/15.5.%.linux-kernel-source-package: \
 	    "Building Linux source package ====="
 	$(REASON)
 #	# Restore original changelog
-	cp --preserve=all src/linux/changelog src/linux/build/debian
+	cp --preserve=all $(SOURCEDIR)/linux/changelog \
+	    $(SOURCEDIR)/linux/build/debian
 #	# Add changelog entry
-	cd src/linux/build && \
+	cd $(SOURCEDIR)/linux/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(LINUX_PKG_VERSION) "$(MAINTAINER)"
 #	# Create source pkg
-	cd src/linux/build && dpkg-source -i -I -b .
-	mv src/linux/linux_$(LINUX_PKG_VERSION).debian.tar.xz \
-	    src/linux/linux_$(LINUX_PKG_VERSION).dsc pkgs
+	cd $(SOURCEDIR)/linux/build && dpkg-source -i -I -b .
+	mv $(SOURCEDIR)/linux/linux_$(LINUX_PKG_VERSION).debian.tar.xz \
+	    $(SOURCEDIR)/linux/linux_$(LINUX_PKG_VERSION).dsc $(BUILDRESULT)
 	touch $@
 .PRECIOUS: $(call C_EXPAND,stamps/15.5.%.linux-kernel-source-package)
 
 $(call C_EXPAND,stamps/15.5.%.linux-kernel-source-package-clean): \
 stamps/15.5.%.linux-kernel-source-package-clean:
 	@echo "15.5.  $(CODENAME):  Clean linux kernel source build"
-	rm -f pkgs/linux_$(LINUX_PKG_VERSION).debian.tar.xz
-	rm -f pkgs/linux_$(LINUX_PKG_VERSION).dsc
+	rm -f $(BUILDRESULT)/linux_$(LINUX_PKG_VERSION).debian.tar.xz
+	rm -f $(BUILDRESULT)/linux_$(LINUX_PKG_VERSION).dsc
 	rm -f stamps/15.5.linux-kernel-source-package
 $(call C_TO_CA_DEPS,stamps/15.5.%.linux-kernel-source-package-clean,\
 	stamps/15.6.%.linux-kernel-build-clean)
@@ -200,7 +202,7 @@ stamps/15.6.%.linux-kernel-build: \
 	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
-	        pkgs/linux_$(LINUX_PKG_VERSION).dsc || \
+	        $(BUILDRESULT)/linux_$(LINUX_PKG_VERSION).dsc || \
 	    (rm -f $@ && exit 1)
 	touch $@
 .PRECIOUS: $(call CA_EXPAND,stamps/15.6.%.linux-kernel-build)
@@ -209,10 +211,10 @@ LINUX_ARTIFACTS_ARCH += stamps/15.6.%.linux-kernel-build
 $(call CA_EXPAND,stamps/15.6.%.linux-kernel-build-clean): \
 stamps/15.6.%.linux-kernel-build-clean:
 	@echo "15.6.  $(CA):  Clean linux kernel binary builds"
-	rm -f $(wildcard pkgs/linux-headers-*_$(LINUX_PKG_VERSION)_$(ARCH).deb)
-	rm -f $(wildcard pkgs/linux-image-*_$(LINUX_PKG_VERSION)_$(ARCH).deb)
-	rm -f pkgs/linux_$(LINUX_PKG_VERSION)-$(ARCH).build
-	rm -f pkgs/linux_$(LINUX_PKG_VERSION)_$(ARCH).changes
+	rm -f $(wildcard $(BUILDRESULT)/linux-headers-*_$(LINUX_PKG_VERSION)_$(ARCH).deb)
+	rm -f $(wildcard $(BUILDRESULT)/linux-image-*_$(LINUX_PKG_VERSION)_$(ARCH).deb)
+	rm -f $(BUILDRESULT)/linux_$(LINUX_PKG_VERSION)-$(ARCH).build
+	rm -f $(BUILDRESULT)/linux_$(LINUX_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/15.6.$*.linux-kernel-build
 $(call CA_TO_C_DEPS,stamps/15.6.%.linux-kernel-build-clean,\
 	stamps/15.7.%.linux-kernel-ppa-clean)
@@ -231,10 +233,10 @@ stamps/15.7.%.linux-kernel-ppa: \
 		stamps/15.5.%.linux-kernel-source-package \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,15.7,linux,\
-	    pkgs/linux_$(LINUX_PKG_VERSION).dsc,\
+	    $(BUILDRESULT)/linux_$(LINUX_PKG_VERSION).dsc,\
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
-		pkgs/linux-headers-*_$(LINUX_PKG_VERSION)_$(a).deb \
-		pkgs/linux-image-*_$(LINUX_PKG_VERSION)_$(a).deb)))
+		$(BUILDRESULT)/linux-headers-*_$(LINUX_PKG_VERSION)_$(a).deb \
+		$(BUILDRESULT)/linux-image-*_$(LINUX_PKG_VERSION)_$(a).deb)))
 
 # This is the final result of the linux kernel build
 LINUX_INDEP := stamps/15.7.%.linux-kernel-ppa

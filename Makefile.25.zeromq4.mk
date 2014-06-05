@@ -65,27 +65,27 @@ stamps/25.2.zeromq4-source-setup: \
 	@echo "===== 25.2. All: " \
 	    "Setting up Zeromq4 source ====="
 #	# Unpack source
-	rm -rf src/zeromq4/build; mkdir -p src/zeromq4/build
-	tar xC src/zeromq4/build --strip-components=1 \
+	rm -rf $(SOURCEDIR)/zeromq4/build; mkdir -p $(SOURCEDIR)/zeromq4/build
+	tar xC $(SOURCEDIR)/zeromq4/build --strip-components=1 \
 	    -f dist/$(ZEROMQ4_TARBALL)
 #	# Unpack debianization
 	git --git-dir="git/zeromq4-deb/.git" archive --prefix=debian/ HEAD \
-	    | tar xCf src/zeromq4/build -
+	    | tar xCf $(SOURCEDIR)/zeromq4/build -
 #	# Make clean copy of changelog for later munging
-	cp --preserve=all src/zeromq4/build/debian/changelog \
-	    src/zeromq4
+	cp --preserve=all $(SOURCEDIR)/zeromq4/build/debian/changelog \
+	    $(SOURCEDIR)/zeromq4
 #	# Link source tarball with Debian name
-	ln -f dist/$(ZEROMQ4_TARBALL) \
-	    src/zeromq4/$(ZEROMQ4_TARBALL_DEBIAN_ORIG)
-	ln -f dist/$(ZEROMQ4_TARBALL) \
-	    pkgs/$(ZEROMQ4_TARBALL_DEBIAN_ORIG)
+	ln -sf $(TOPDIR)/dist/$(ZEROMQ4_TARBALL) \
+	    $(SOURCEDIR)/zeromq4/$(ZEROMQ4_TARBALL_DEBIAN_ORIG)
+	cp --preserve=all dist/$(ZEROMQ4_TARBALL) \
+	    $(BUILDRESULT)/$(ZEROMQ4_TARBALL_DEBIAN_ORIG)
 	touch $@
 
 $(call C_EXPAND,stamps/25.2.%.zeromq4-source-setup-clean): \
 stamps/25.2.%.zeromq4-source-setup-clean: \
 		$(call C_EXPAND,stamps/25.3.%.zeromq4-build-source-clean)
 	@echo "25.2. All:  Clean zeromq4 sources"
-	rm -rf src/zeromq4
+	rm -rf $(SOURCEDIR)/zeromq4
 ZEROMQ4_CLEAN_INDEP += stamps/25.2.%.zeromq4-source-setup-clean
 
 
@@ -98,25 +98,25 @@ stamps/25.3.%.zeromq4-build-source: \
 	    "Building Zeromq4 source package ====="
 	$(REASON)
 #	# Restore original changelog
-	cp --preserve=all src/zeromq4/changelog \
-	    src/zeromq4/build/debian
+	cp --preserve=all $(SOURCEDIR)/zeromq4/changelog \
+	    $(SOURCEDIR)/zeromq4/build/debian
 #	# Add changelog entry
-	cd src/zeromq4/build && \
+	cd $(SOURCEDIR)/zeromq4/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(ZEROMQ4_PKG_VERSION) "$(MAINTAINER)"
 #	# Build source package
-	cd src/zeromq4/build && dpkg-source -i -I -b .
-	mv src/zeromq4/zeromq4_$(ZEROMQ4_PKG_VERSION).debian.tar.gz \
-	    src/zeromq4/zeromq4_$(ZEROMQ4_PKG_VERSION).dsc pkgs
+	cd $(SOURCEDIR)/zeromq4/build && dpkg-source -i -I -b .
+	mv $(SOURCEDIR)/zeromq4/zeromq4_$(ZEROMQ4_PKG_VERSION).debian.tar.gz \
+	    $(SOURCEDIR)/zeromq4/zeromq4_$(ZEROMQ4_PKG_VERSION).dsc $(BUILDRESULT)
 	touch $@
 .PRECIOUS:  $(call C_EXPAND,stamps/25.3.%.zeromq4-build-source)
 
 $(call C_EXPAND,stamps/25.3.%.zeromq4-build-source-clean): \
 stamps/25.3.%.zeromq4-build-source-clean:
 	@echo "25.3. $(CODENAME):  Clean zeromq4 source package"
-	rm -f pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION).dsc
-	rm -f pkgs/$(ZEROMQ4_TARBALL_DEBIAN_ORIG)
-	rm -f pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION).debian.tar.gz
+	rm -f $(BUILDRESULT)/zeromq4_$(ZEROMQ4_PKG_VERSION).dsc
+	rm -f $(BUILDRESULT)/$(ZEROMQ4_TARBALL_DEBIAN_ORIG)
+	rm -f $(BUILDRESULT)/zeromq4_$(ZEROMQ4_PKG_VERSION).debian.tar.gz
 	rm -f stamps/25.3.$(CODENAME).zeromq4-build-source
 $(call C_TO_CA_DEPS,stamps/25.3.%.zeromq4-build-source-clean,\
 	stamps/25.4.%.zeromq4-deps-update-chroot)
@@ -166,19 +166,19 @@ stamps/25.5.%.zeromq4-build-binary: \
 	    $(PBUILD) --build \
 	    $(PBUILD_ARGS) \
 	    --debbuildopts $(BUILDTYPE) \
-	    pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION).dsc
+	    $(BUILDRESULT)/zeromq4_$(ZEROMQ4_PKG_VERSION).dsc
 	touch $@
 .PRECIOUS: $(call CA_EXPAND,stamps/25.5.%.zeromq4-build-binary)
 
 $(call CA_EXPAND,stamps/25.5.%.zeromq4-build-binary-clean): \
 stamps/25.5.%.zeromq4-build-binary-clean:
 	@echo "25.5. $(CA):  Clean Zeromq4 binary build"
-	rm -f $(patsubst %,pkgs/%_$(ZEROMQ4_PKG_VERSION)_all.deb,\
-	    $(ZEROMQ4_PKGS_ALL))
-	rm -f $(patsubst %,pkgs/%_$(ZEROMQ4_PKG_VERSION)_$(ARCH).deb,\
-	    $(ZEROMQ4_PKGS_ARCH))
-	rm -f pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION)-$(ARCH).build
-	rm -f pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION)_$(ARCH).changes
+	rm -f $(patsubst %,$(BUILDRESULT)/%_$(ZEROMQ4_PKG_VERSION)_all.deb,\
+	    $(ZEROMQ4_$(BUILDRESULT)_ALL))
+	rm -f $(patsubst %,$(BUILDRESULT)/%_$(ZEROMQ4_PKG_VERSION)_$(ARCH).deb,\
+	    $(ZEROMQ4_$(BUILDRESULT)_ARCH))
+	rm -f $(BUILDRESULT)/zeromq4_$(ZEROMQ4_PKG_VERSION)-$(ARCH).build
+	rm -f $(BUILDRESULT)/zeromq4_$(ZEROMQ4_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/25.5-$(CA)-zeromq4-build
 $(call CA_TO_C_DEPS,stamps/25.5.%.zeromq4-build-binary-clean,\
 	stamps/25.6.%.zeromq4-ppa-clean)
@@ -193,11 +193,11 @@ stamps/25.6.%.zeromq4-ppa: \
 		stamps/25.3.%.zeromq4-build-source \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,25.6,zeromq4,\
-	    pkgs/zeromq4_$(ZEROMQ4_PKG_VERSION).dsc,\
-	    $(patsubst %,pkgs/%_$(ZEROMQ4_PKG_VERSION)_all.deb,\
+	    $(BUILDRESULT)/zeromq4_$(ZEROMQ4_PKG_VERSION).dsc,\
+	    $(patsubst %,$(BUILDRESULT)/%_$(ZEROMQ4_PKG_VERSION)_all.deb,\
 		$(ZEROMQ4_PKGS_ALL)) \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),\
-		$(patsubst %,pkgs/%_$(ZEROMQ4_PKG_VERSION)_$(a).deb,\
+		$(patsubst %,$(BUILDRESULT)/%_$(ZEROMQ4_PKG_VERSION)_$(a).deb,\
 		    $(ZEROMQ4_PKGS_ARCH))))
 
 ZEROMQ4_INDEP := stamps/25.6.%.zeromq4-ppa

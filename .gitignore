@@ -1,8 +1,13 @@
+# Ignore configuration makefile
+/Config.mk
+
 # ignore all directories except /git/ and /pbuild/
 /*/
 !/git/
 !/pbuild/
 
 # ignore stamps
-.dir-exists*
 .stamp-*
+
+# ignore emacs droppings
+*~

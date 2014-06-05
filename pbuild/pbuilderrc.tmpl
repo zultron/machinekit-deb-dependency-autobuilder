@@ -1,19 +1,35 @@
 #							-*-shell-script-*-
-# TOPDIR, ARCH and DIST should be passed in from outside
-test -z "$TOPDIR" && echo "error:  TOPDIR undefined" 1>&2 && exit 1
-test -z "$ARCH" && echo "error:  ARCH undefined" 1>&2 && exit 1
-test -z "$DIST" && echo "error:  DIST undefined" 1>&2 && exit 1
+# Template variables
+TOPDIR="@TOPDIR@"
+# Where finished packages go
+BUILDRESULT="@BUILDRESULT@"
+# Downloaded package cache
+APTCACHE="@APTCACHE@"
+# ccache directory
+CCACHEDIR="@CCACHEDIR@"
+# Where the chroot tarball lives
+CHROOTDIR="@CHROOTDIR@"
+# Where to unpack the chroot and build
+BUILDPLACE="@BUILDPLACE@"
+# Local ppa with dependent packages
+REPODIR="@REPODIR@"
+# distro-arch string, e.g. wheezy-armhf
+DISTRO_ARCH="@DISTRO_ARCH@"
+# User to run as
+BUILDUSERNAME="@PBUILDER_USER@"
 
-# For dependent pkgs
-if test -n "$INTERMEDIATE_REPO"; then
-    BINDMOUNTS="$BINDMOUNTS $TOPDIR/$INTERMEDIATE_REPO"
-    OTHERMIRROR="deb [arch=$ARCH] file://$TOPDIR/$INTERMEDIATE_REPO $DIST main"
-fi
+# Extract distro and arch
+DIST=${DISTRO_ARCH/-*/}
+ARCH=${DISTRO_ARCH/*-/}
 
-# For building modules
-if test -n "$PACKAGE_DIR"; then
-    BINDMOUNTS="$BINDMOUNTS $TOPDIR/$PACKAGE_DIR"
-fi
+# bind mount ppa directory
+BINDMOUNTS="$BINDMOUNTS $REPODIR"
+OTHERMIRROR="deb [arch=$ARCH] file://$REPODIR $DIST main"
+
+# # For building modules
+# if test -n "$PACKAGE_DIR"; then
+#     BINDMOUNTS="$BINDMOUNTS $TOPDIR/$PACKAGE_DIR"
+# fi
 
 # Other useful opts from cmdline:
 # DEBBUILDOPTS=-Tbinary-arch
@@ -35,19 +51,9 @@ APTKEYRINGS=("${APTKEYRINGS[@]}" "$TOPDIR/admin/$KEYRING")
 DISTRIBUTION=${DIST}
 
 # Base tarball
-BASETGZ="${TOPDIR}/chroots/base-${DIST}-${ARCH}.tgz"
-
-# Where to build
-BUILDPLACE="${TOPDIR}/build"
-
-# Where to place finished pkgs
-BUILDRESULT="${TOPDIR}/pkgs"
-
-# cache for packages
-APTCACHE="${TOPDIR}/aptcache"
+BASETGZ="${CHROOTDIR}/base-${DIST}-${ARCH}.tgz"
 
 # ccache
-CCACHEDIR="${TOPDIR}/ccache"
 test -d ${CCACHEDIR} || mkdir -p ${CCACHEDIR}
 
 # always log builds
@@ -60,11 +66,13 @@ HOOKDIR="${TOPDIR}/pbuild"
 # extra packages for buildroot
 EXTRA_PACKAGES="gnupg"
 if test $DIST = wheezy; then
+    # Stop repeated perl warnings about NFS, even when not on NFS
     EXTRA_PACKAGES="$EXTRA_PACKAGES,libfile-fcntllock-perl"
 fi
-if test $ARCH = armhf; then
-    EXTRA_PACKAGES="$EXTRA_PACKAGES,uboot-mkimage"
-fi
+# if test $ARCH = armhf; then
+#     # Probably can be deleted
+#     EXTRA_PACKAGES="$EXTRA_PACKAGES,uboot-mkimage"
+# fi
 
 # armhf needs qemu when not native
 if test $ARCH = armhf -a $(uname -m) != armv7l; then
@@ -103,12 +111,6 @@ else
 fi
 
 
-# Hardy fixes
-if test $DIST = hardy; then
-    # Add backports; this isn't enough to fix building for hardy
-    OTHERMIRROR="$OTHERMIRROR | deb http://archive.ubuntu.com/ubuntu hardy-backports main restricted universe multiverse"
-fi
-
 # Wheezy backports; also see the E05 hook that enables specific packages
 if test ${DIST} = wheezy; then
     OTHERMIRROR="$OTHERMIRROR | deb $MIRRORSITE wheezy-backports $COMPONENTS"
@@ -118,6 +120,6 @@ fi
 # Print diagnostics
 echo "script = $(basename $0)"
 for i in BASETGZ DISTRIBUTION APTCACHE MIRRORSITE COMPONENTS \
-    DEBOOTSTRAPOPTS[@] OTHERMIRROR BINDMOUNTS INTERMEDIATE_REPO; do
+    DEBOOTSTRAPOPTS[@] OTHERMIRROR BINDMOUNTS REPODIR; do
     eval echo "$i = \${$i}"
 done

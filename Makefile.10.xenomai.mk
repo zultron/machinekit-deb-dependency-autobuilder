@@ -59,24 +59,24 @@ stamps/10.1.1.xenomai-source-setup: \
 	@echo "===== 10.1.1. All: " \
 	    "Setting up Xenomai source ====="
 #	# Unpack source
-	rm -rf src/xenomai/build; mkdir -p src/xenomai/build
-	tar xC src/xenomai/build --strip-components=1 \
+	rm -rf $(SOURCEDIR)/xenomai/build; mkdir -p $(SOURCEDIR)/xenomai/build
+	tar xC $(SOURCEDIR)/xenomai/build --strip-components=1 \
 	    -f dist/$(XENOMAI_TARBALL)
 #	# Make clean copy of changelog for later munging
-	cp --preserve=all src/xenomai/build/debian/changelog \
-	    src/xenomai
+	cp --preserve=all $(SOURCEDIR)/xenomai/build/debian/changelog \
+	    $(SOURCEDIR)/xenomai
 #	# Link source tarball with Debian name
-	ln -f dist/$(XENOMAI_TARBALL) \
-	    src/xenomai/$(XENOMAI_TARBALL_DEBIAN_ORIG)
-	ln -f dist/$(XENOMAI_TARBALL) \
-	    pkgs/$(XENOMAI_TARBALL_DEBIAN_ORIG)
+	ln -sf $(TOPDIR)/dist/$(XENOMAI_TARBALL) \
+	    $(SOURCEDIR)/xenomai/$(XENOMAI_TARBALL_DEBIAN_ORIG)
+	cp --preserve=all dist/$(XENOMAI_TARBALL) \
+	    $(BUILDRESULT)/$(XENOMAI_TARBALL_DEBIAN_ORIG)
 	touch $@
 
 $(call C_EXPAND,stamps/10.1.1.%.xenomai-source-setup-clean): \
 stamps/10.1.1.%.xenomai-source-setup-clean: \
 		$(call C_EXPAND,stamps/10.2.%.xenomai-build-source-clean)
 	@echo "10.1.1. All:  Clean xenomai sources"
-	rm -rf src/xenomai
+	rm -rf $(SOURCEDIR)/xenomai
 XENOMAI_CLEAN_INDEP += stamps/10.1.1.%.xenomai-source-setup-clean
 
 
@@ -89,25 +89,25 @@ stamps/10.2.%.xenomai-build-source: \
 	    "Building Xenomai source package ====="
 	$(REASON)
 #	# Restore original changelog
-	cp --preserve=all src/xenomai/changelog \
-	    src/xenomai/build/debian
+	cp --preserve=all $(SOURCEDIR)/xenomai/changelog \
+	    $(SOURCEDIR)/xenomai/build/debian
 #	# Add changelog entry
-	cd src/xenomai/build && \
+	cd $(SOURCEDIR)/xenomai/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(XENOMAI_PKG_VERSION) "$(MAINTAINER)"
 #	# Build source package
-	cd src/xenomai/build && dpkg-source -i -I -b .
-	mv src/xenomai/xenomai_$(XENOMAI_PKG_VERSION).debian.tar.gz \
-	    src/xenomai/xenomai_$(XENOMAI_PKG_VERSION).dsc pkgs
+	cd $(SOURCEDIR)/xenomai/build && dpkg-source -i -I -b .
+	mv $(SOURCEDIR)/xenomai/xenomai_$(XENOMAI_PKG_VERSION).debian.tar.gz \
+	    $(SOURCEDIR)/xenomai/xenomai_$(XENOMAI_PKG_VERSION).dsc $(BUILDRESULT)
 	touch $@
 .PRECIOUS:  $(call C_EXPAND,stamps/10.2.%.xenomai-build-source)
 
 $(call C_EXPAND,stamps/10.2.%.xenomai-build-source-clean): \
 stamps/10.2.%.xenomai-build-source-clean:
 	@echo "10.2. $(CODENAME):  Clean xenomai source package"
-	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc
-	rm -f pkgs/$(XENOMAI_TARBALL_DEBIAN_ORIG)
-	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION).debian.tar.gz
+	rm -f $(BUILDRESULT)/xenomai_$(XENOMAI_PKG_VERSION).dsc
+	rm -f $(BUILDRESULT)/$(XENOMAI_TARBALL_DEBIAN_ORIG)
+	rm -f $(BUILDRESULT)/xenomai_$(XENOMAI_PKG_VERSION).debian.tar.gz
 	rm -f stamps/10.2.$(CODENAME).xenomai-build-source
 $(call C_TO_CA_DEPS,stamps/10.2.%.xenomai-build-source-clean,\
 	stamps/10.3.%.xenomai-build-binary-clean)
@@ -130,24 +130,24 @@ stamps/10.3.%.xenomai-build-binary: \
 	    "Building Xenomai binary packages ====="
 	$(REASON)
 	$(SUDO) $(PBUILD) \
-	    --build \
+	    --build  \
 	    $(PBUILD_ARGS) \
 	    --debbuildopts $(BUILDTYPE) \
-	    pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc
+	    $(BUILDRESULT)/xenomai_$(XENOMAI_PKG_VERSION).dsc
 	touch $@
 .PRECIOUS: $(call CA_EXPAND,stamps/10.3.%.xenomai-build-binary)
 
 $(call CA_EXPAND,stamps/10.3.%.xenomai-build-binary-clean): \
 stamps/10.3.%.xenomai-build-binary-clean:
 	@echo "10.3. $(CA):  Clean Xenomai binary build"
-	rm -f pkgs/libxenomai-dev_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
-	rm -f pkgs/libxenomai1_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
-	rm -f pkgs/xenomai-runtime_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
-	rm -f pkgs/xenomai-doc_$(XENOMAI_PKG_VERSION)_all.deb
-	rm -f pkgs/xenomai-kernel-source_$(XENOMAI_PKG_VERSION)_all.deb
-	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)-$(ARCH).build
-	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)_all.changes
-	rm -f pkgs/xenomai_$(XENOMAI_PKG_VERSION)_$(ARCH).changes
+	rm -f $(BUILDRESULT)/libxenomai-dev_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
+	rm -f $(BUILDRESULT)/libxenomai1_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
+	rm -f $(BUILDRESULT)/xenomai-runtime_$(XENOMAI_PKG_VERSION)_$(ARCH).deb
+	rm -f $(BUILDRESULT)/xenomai-doc_$(XENOMAI_PKG_VERSION)_all.deb
+	rm -f $(BUILDRESULT)/xenomai-kernel-source_$(XENOMAI_PKG_VERSION)_all.deb
+	rm -f $(BUILDRESULT)/xenomai_$(XENOMAI_PKG_VERSION)-$(ARCH).build
+	rm -f $(BUILDRESULT)/xenomai_$(XENOMAI_PKG_VERSION)_all.changes
+	rm -f $(BUILDRESULT)/xenomai_$(XENOMAI_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/10.3-$(CA)-xenomai-build
 $(call CA_TO_C_DEPS,stamps/10.3.%.xenomai-build-binary-clean,\
 	stamps/10.4.%.xenomai-ppa-clean)
@@ -162,13 +162,13 @@ stamps/10.4.%.xenomai-ppa: \
 		stamps/10.2.%.xenomai-build-source \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,10.4,xenomai,\
-	    pkgs/xenomai_$(XENOMAI_PKG_VERSION).dsc,\
-	    pkgs/xenomai-doc_$(XENOMAI_PKG_VERSION)_all.deb \
-	    pkgs/xenomai-kernel-source_$(XENOMAI_PKG_VERSION)_all.deb \
+	    $(BUILDRESULT)/xenomai_$(XENOMAI_PKG_VERSION).dsc,\
+	    $(BUILDRESULT)/xenomai-doc_$(XENOMAI_PKG_VERSION)_all.deb \
+	    $(BUILDRESULT)/xenomai-kernel-source_$(XENOMAI_PKG_VERSION)_all.deb \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
-		pkgs/libxenomai-dev_$(XENOMAI_PKG_VERSION)_$(a).deb \
-		pkgs/libxenomai1_$(XENOMAI_PKG_VERSION)_$(a).deb \
-		pkgs/xenomai-runtime_$(XENOMAI_PKG_VERSION)_$(a).deb)))
+		$(BUILDRESULT)/libxenomai-dev_$(XENOMAI_PKG_VERSION)_$(a).deb \
+		$(BUILDRESULT)/libxenomai1_$(XENOMAI_PKG_VERSION)_$(a).deb \
+		$(BUILDRESULT)/xenomai-runtime_$(XENOMAI_PKG_VERSION)_$(a).deb)))
 XENOMAI_INDEP := stamps/10.4.%.xenomai-ppa
 
 $(call C_EXPAND,stamps/10.4.%.xenomai-ppa-clean): \

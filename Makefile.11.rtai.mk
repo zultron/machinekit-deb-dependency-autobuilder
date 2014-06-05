@@ -91,20 +91,20 @@ stamps/11.3.rtai-source-tarball: \
 		stamps/11.1.rtai-source-checkout
 	@echo "===== 11.3. All variants:  Building RTAI source tarball ====="
 	$(REASON)
-	mkdir -p src/rtai
-	rm -f src/rtai/rtai_*.orig.tar.gz
+	mkdir -p $(SOURCEDIR)/rtai
+	rm -f $(SOURCEDIR)/rtai/rtai_*.orig.tar.gz
 	RTAI_VER=`sed -n '1 s/rtai *(\([0-9.][0-9.]*\).*/\1/p' \
 		git/rtai-deb/changelog` && \
 	git --git-dir="git/rtai/.git" archive HEAD | \
-	    gzip > src/rtai/rtai_$${RTAI_VER}.orig.tar.gz
+	    gzip > $(SOURCEDIR)/rtai/rtai_$${RTAI_VER}.orig.tar.gz
 	touch $@
 .PRECIOUS: stamps/11.3.rtai-source-tarball
 
 clean-rtai-source-tarball: \
 		clean-rtai-source-package
 	@echo "cleaning up unpacked rtai source"
-	rm -f src/rtai/rtai_*.dsc
-	rm -f src/rtai/rtai_*.tar.gz
+	rm -f $(SOURCEDIR)/rtai/rtai_*.dsc
+	rm -f $(SOURCEDIR)/rtai/rtai_*.tar.gz
 	rm -f stamps/11.3.rtai-source-tarball
 CLEAN_TARGETS += clean-rtai-source-tarball
 
@@ -114,19 +114,19 @@ stamps/11.4.rtai-source-package: \
 		stamps/11.3.rtai-source-tarball
 	@echo "===== 11.4. All variants:  Build RTAI source package ====="
 	$(REASON)
-	rm -rf src/rtai/build; mkdir -p src/rtai/build
-	rm -f src/rtai/rtai_*.dsc
-	rm -f src/rtai/rtai_*.debian.tar.gz
-	tar xzCf src/rtai/build src/rtai/rtai_*.orig.tar.gz
+	rm -rf $(SOURCEDIR)/rtai/build; mkdir -p $(SOURCEDIR)/rtai/build
+	rm -f $(SOURCEDIR)/rtai/rtai_*.dsc
+	rm -f $(SOURCEDIR)/rtai/rtai_*.debian.tar.gz
+	tar xzCf $(SOURCEDIR)/rtai/build $(SOURCEDIR)/rtai/rtai_*.orig.tar.gz
 	git --git-dir="git/rtai-deb/.git" archive --prefix=debian/ HEAD | \
-	    tar xCf src/rtai/build -
-	cd src/rtai && dpkg-source -i -I -b build
+	    tar xCf $(SOURCEDIR)/rtai/build -
+	cd $(SOURCEDIR)/rtai && dpkg-source -i -I -b build
 	touch $@
 .PRECIOUS: stamps/11.4.rtai-source-package
 
 clean-rtai-source-package: \
 		$(call CA_EXPAND,%/clean-rtai-build)
-	rm -rf src/rtai/build
+	rm -rf $(SOURCEDIR)/rtai/build
 	rm -f stamps/11.4.rtai-source-package
 CLEAN_TARGETS += clean-rtai-source-tarball
 
@@ -141,7 +141,7 @@ CLEAN_TARGETS += clean-rtai-source-tarball
 	test $(ARCH) = armhf -o $(CODENAME) = jessie || \
 	    $(SUDO) $(PBUILD) \
 		--build $(PBUILD_ARGS) \
-	        src/rtai/rtai_*.dsc
+	        $(SOURCEDIR)/rtai/rtai_*.dsc
 	touch $@
 .PRECIOUS: %/.stamp.11.5.rtai-build
 

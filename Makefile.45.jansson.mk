@@ -75,27 +75,27 @@ stamps/45.2.jansson-source-setup: \
 	@echo "===== 45.2. All: " \
 	    "Setting up Jansson source ====="
 #	# Unpack source
-	rm -rf src/jansson/build; mkdir -p src/jansson/build
-	tar xC src/jansson/build --strip-components=1 \
+	rm -rf $(SOURCEDIR)/jansson/build; mkdir -p $(SOURCEDIR)/jansson/build
+	tar xC $(SOURCEDIR)/jansson/build --strip-components=1 \
 	    -f dist/$(JANSSON_TARBALL)
 #	# Unpack debianization
 	git --git-dir="git/jansson-deb/.git" archive --prefix=debian/ HEAD \
-	    | tar xCf src/jansson/build -
+	    | tar xCf $(SOURCEDIR)/jansson/build -
 #	# Make clean copy of changelog for later munging
-	cp --preserve=all src/jansson/build/debian/changelog \
-	    src/jansson
+	cp --preserve=all $(SOURCEDIR)/jansson/build/debian/changelog \
+	    $(SOURCEDIR)/jansson
 #	# Link source tarball with Debian name
-	ln -f dist/$(JANSSON_TARBALL) \
-	    src/jansson/$(JANSSON_TARBALL_DEBIAN_ORIG)
-	ln -f dist/$(JANSSON_TARBALL) \
-	    pkgs/$(JANSSON_TARBALL_DEBIAN_ORIG)
+	ln -sf $(TOPDIR)/dist/$(JANSSON_TARBALL) \
+	    $(SOURCEDIR)/jansson/$(JANSSON_TARBALL_DEBIAN_ORIG)
+	cp --preserve=all dist/$(JANSSON_TARBALL) \
+	    $(BUILDRESULT)/$(JANSSON_TARBALL_DEBIAN_ORIG)
 	touch $@
 
 $(call C_EXPAND,stamps/45.2.%.jansson-source-setup-clean): \
 stamps/45.2.%.jansson-source-setup-clean: \
 		$(call C_EXPAND,stamps/45.3.%.jansson-build-source-clean)
 	@echo "45.2. All:  Clean jansson sources"
-	rm -rf src/jansson
+	rm -rf $(SOURCEDIR)/jansson
 JANSSON_CLEAN_INDEP += stamps/45.2.%.jansson-source-setup-clean
 
 
@@ -108,25 +108,25 @@ stamps/45.3.%.jansson-build-source: \
 	    "Building Jansson source package ====="
 	$(REASON)
 #	# Restore original changelog
-	cp --preserve=all src/jansson/changelog \
-	    src/jansson/build/debian
+	cp --preserve=all $(SOURCEDIR)/jansson/changelog \
+	    $(SOURCEDIR)/jansson/build/debian
 #	# Add changelog entry
-	cd src/jansson/build && \
+	cd $(SOURCEDIR)/jansson/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(JANSSON_PKG_VERSION) "$(MAINTAINER)"
 #	# Build source package
-	cd src/jansson/build && dpkg-source -i -I -b .
-	mv src/jansson/jansson_$(JANSSON_PKG_VERSION).debian.tar.gz \
-	    src/jansson/jansson_$(JANSSON_PKG_VERSION).dsc pkgs
+	cd $(SOURCEDIR)/jansson/build && dpkg-source -i -I -b .
+	mv $(SOURCEDIR)/jansson/jansson_$(JANSSON_PKG_VERSION).debian.tar.gz \
+	    $(SOURCEDIR)/jansson/jansson_$(JANSSON_PKG_VERSION).dsc $(BUILDRESULT)
 	touch $@
 .PRECIOUS:  $(call C_EXPAND,stamps/45.3.%.jansson-build-source)
 
 $(call C_EXPAND,stamps/45.3.%.jansson-build-source-clean): \
 stamps/45.3.%.jansson-build-source-clean:
 	@echo "45.3. $(CODENAME):  Clean jansson source package"
-	rm -f pkgs/jansson_$(JANSSON_PKG_VERSION).dsc
-	rm -f pkgs/$(JANSSON_TARBALL_DEBIAN_ORIG)
-	rm -f pkgs/jansson_$(JANSSON_PKG_VERSION).debian.tar.gz
+	rm -f $(BUILDRESULT)/jansson_$(JANSSON_PKG_VERSION).dsc
+	rm -f $(BUILDRESULT)/$(JANSSON_TARBALL_DEBIAN_ORIG)
+	rm -f $(BUILDRESULT)/jansson_$(JANSSON_PKG_VERSION).debian.tar.gz
 	rm -f stamps/45.3.$(CODENAME).jansson-build-source
 $(call C_TO_CA_DEPS,stamps/45.3.%.jansson-build-source-clean,\
 	stamps/45.5.%.jansson-build-binary-clean)
@@ -184,19 +184,19 @@ stamps/45.5.%.jansson-build-binary: \
 	    $(PBUILD) --build \
 	    $(PBUILD_ARGS) \
 	    --debbuildopts $(BUILDTYPE) \
-	    pkgs/jansson_$(JANSSON_PKG_VERSION).dsc
+	    $(BUILDRESULT)/jansson_$(JANSSON_PKG_VERSION).dsc
 	touch $@
 .PRECIOUS: $(call CA_EXPAND,stamps/45.5.%.jansson-build-binary)
 
 $(call CA_EXPAND,stamps/45.5.%.jansson-build-binary-clean): \
 stamps/45.5.%.jansson-build-binary-clean:
 	@echo "45.5. $(CA):  Clean Jansson binary build"
-	rm -f $(patsubst %,pkgs/%_$(JANSSON_PKG_VERSION)_all.deb,\
+	rm -f $(patsubst %,$(BUILDRESULT)/%_$(JANSSON_PKG_VERSION)_all.deb,\
 	    $(JANSSON_PKGS_ALL))
-	rm -f $(patsubst %,pkgs/%_$(JANSSON_PKG_VERSION)_$(ARCH).deb,\
+	rm -f $(patsubst %,$(BUILDRESULT)/%_$(JANSSON_PKG_VERSION)_$(ARCH).deb,\
 	    $(JANSSON_PKGS_ARCH))
-	rm -f pkgs/jansson_$(JANSSON_PKG_VERSION)-$(ARCH).build
-	rm -f pkgs/jansson_$(JANSSON_PKG_VERSION)_$(ARCH).changes
+	rm -f $(BUILDRESULT)/jansson_$(JANSSON_PKG_VERSION)-$(ARCH).build
+	rm -f $(BUILDRESULT)/jansson_$(JANSSON_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/45.5-$(CA)-jansson-build
 $(call CA_TO_C_DEPS,stamps/45.5.%.jansson-build-binary-clean,\
 	stamps/45.6.%.jansson-ppa-clean)
@@ -211,11 +211,11 @@ stamps/45.6.%.jansson-ppa: \
 		stamps/45.3.%.jansson-build-source \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,45.6,jansson,\
-	    pkgs/jansson_$(JANSSON_PKG_VERSION).dsc,\
-	    $(patsubst %,pkgs/%_$(JANSSON_PKG_VERSION)_all.deb,\
+	    $(BUILDRESULT)/jansson_$(JANSSON_PKG_VERSION).dsc,\
+	    $(patsubst %,$(BUILDRESULT)/%_$(JANSSON_PKG_VERSION)_all.deb,\
 		$(JANSSON_PKGS_ALL)) \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
-		$(patsubst %,pkgs/%_$(JANSSON_PKG_VERSION)_$(a).deb,\
+		$(patsubst %,$(BUILDRESULT)/%_$(JANSSON_PKG_VERSION)_$(a).deb,\
 		    $(JANSSON_PKGS_ARCH)))))
 # Only build for wheezy
 JANSSON_INDEP := stamps/45.6.%.jansson-ppa

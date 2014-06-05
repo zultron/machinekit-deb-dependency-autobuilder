@@ -61,27 +61,28 @@ stamps/20.2.libsodium-source-setup: \
 	@echo "===== 20.2. All: " \
 	    "Setting up Libsodium source ====="
 #	# Unpack source
-	rm -rf src/libsodium/build; mkdir -p src/libsodium/build
-	tar xC src/libsodium/build --strip-components=1 \
+	rm -rf $(SOURCEDIR)/libsodium/build
+	mkdir -p $(SOURCEDIR)/libsodium/build
+	tar xC $(SOURCEDIR)/libsodium/build --strip-components=1 \
 	    -f dist/$(LIBSODIUM_TARBALL)
 #	# Unpack debianization
 	git --git-dir="git/libsodium-deb/.git" archive --prefix=debian/ HEAD \
-	    | tar xCf src/libsodium/build -
+	    | tar xCf $(SOURCEDIR)/libsodium/build -
 #	# Make clean copy of changelog for later munging
-	cp --preserve=all src/libsodium/build/debian/changelog \
-	    src/libsodium
+	cp --preserve=all $(SOURCEDIR)/libsodium/build/debian/changelog \
+	    $(SOURCEDIR)/libsodium
 #	# Link source tarball with Debian name
-	ln -f dist/$(LIBSODIUM_TARBALL) \
-	    src/libsodium/$(LIBSODIUM_TARBALL_DEBIAN_ORIG)
-	ln -f dist/$(LIBSODIUM_TARBALL) \
-	    pkgs/$(LIBSODIUM_TARBALL_DEBIAN_ORIG)
+	ln -sf $(TOPDIR)/dist/$(LIBSODIUM_TARBALL) \
+	    $(SOURCEDIR)/libsodium/$(LIBSODIUM_TARBALL_DEBIAN_ORIG)
+	cp --preserve=all dist/$(LIBSODIUM_TARBALL) \
+	    $(BUILDRESULT)/$(LIBSODIUM_TARBALL_DEBIAN_ORIG)
 	touch $@
 
 $(call C_EXPAND,stamps/20.2.%.libsodium-source-setup-clean): \
 stamps/20.2.%.libsodium-source-setup-clean: \
 		$(call C_EXPAND,stamps/20.3.%.libsodium-build-source-clean)
 	@echo "20.2. All:  Clean libsodium sources"
-	rm -rf src/libsodium
+	rm -rf $(SOURCEDIR)/libsodium
 LIBSODIUM_CLEAN_INDEP += stamps/20.2.%.libsodium-source-setup-clean
 
 
@@ -94,25 +95,25 @@ stamps/20.3.%.libsodium-build-source: \
 	    "Building Libsodium source package ====="
 	$(REASON)
 #	# Restore original changelog
-	cp --preserve=all src/libsodium/changelog \
-	    src/libsodium/build/debian
+	cp --preserve=all $(SOURCEDIR)/libsodium/changelog \
+	    $(SOURCEDIR)/libsodium/build/debian
 #	# Add changelog entry
-	cd src/libsodium/build && \
+	cd $(SOURCEDIR)/libsodium/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(LIBSODIUM_PKG_VERSION) "$(MAINTAINER)"
 #	# Build source package
-	cd src/libsodium/build && dpkg-source -i -I -b .
-	mv src/libsodium/libsodium_$(LIBSODIUM_PKG_VERSION).debian.tar.gz \
-	    src/libsodium/libsodium_$(LIBSODIUM_PKG_VERSION).dsc pkgs
+	cd $(SOURCEDIR)/libsodium/build && dpkg-source -i -I -b .
+	mv $(SOURCEDIR)/libsodium/libsodium_$(LIBSODIUM_PKG_VERSION).debian.tar.gz \
+	    $(SOURCEDIR)/libsodium/libsodium_$(LIBSODIUM_PKG_VERSION).dsc $(BUILDRESULT)
 	touch $@
 .PRECIOUS:  $(call C_EXPAND,stamps/20.3.%.libsodium-build-source)
 
 $(call C_EXPAND,stamps/20.3.%.libsodium-build-source-clean): \
 stamps/20.3.%.libsodium-build-source-clean:
 	@echo "20.3. $(CODENAME):  Clean libsodium source package"
-	rm -f pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).dsc
-	rm -f pkgs/$(LIBSODIUM_TARBALL_DEBIAN_ORIG)
-	rm -f pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).debian.tar.gz
+	rm -f $(BUILDRESULT)/libsodium_$(LIBSODIUM_PKG_VERSION).dsc
+	rm -f $(BUILDRESULT)/$(LIBSODIUM_TARBALL_DEBIAN_ORIG)
+	rm -f $(BUILDRESULT)/libsodium_$(LIBSODIUM_PKG_VERSION).debian.tar.gz
 	rm -f stamps/20.3.$(CODENAME).libsodium-build-source
 $(call C_TO_CA_DEPS,stamps/20.3.%.libsodium-build-source-clean,\
 	stamps/20.4.%.libsodium-build-binary-clean)
@@ -138,7 +139,7 @@ stamps/20.4.%.libsodium-build-binary: \
 	   $(PBUILD) --build \
 	    $(PBUILD_ARGS) \
 	    --debbuildopts $(BUILDTYPE) \
-	    pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).dsc
+	    $(BUILDRESULT)/libsodium_$(LIBSODIUM_PKG_VERSION).dsc
 	touch $@
 .PRECIOUS: $(call CA_EXPAND,stamps/20.4.%.libsodium-build-binary)
 LIBSODIUM_ARCH += stamps/20.4.%.libsodium-build-binary
@@ -146,10 +147,10 @@ LIBSODIUM_ARCH += stamps/20.4.%.libsodium-build-binary
 $(call CA_EXPAND,stamps/20.4.%.libsodium-build-binary-clean): \
 stamps/20.4.%.libsodium-build-binary-clean:
 	@echo "20.4. $(CA):  Clean Libsodium binary build"
-	rm -f pkgs/libsodium-dev_$(LIBSODIUM_PKG_VERSION)_all.deb
-	rm -f pkgs/libsodium_$(LIBSODIUM_PKG_VERSION)_$(ARCH).deb
-	rm -f pkgs/libsodium_$(LIBSODIUM_PKG_VERSION)-$(ARCH).build
-	rm -f pkgs/libsodium_$(LIBSODIUM_PKG_VERSION)_$(ARCH).changes
+	rm -f $(BUILDRESULT)/libsodium-dev_$(LIBSODIUM_PKG_VERSION)_all.deb
+	rm -f $(BUILDRESULT)/libsodium_$(LIBSODIUM_PKG_VERSION)_$(ARCH).deb
+	rm -f $(BUILDRESULT)/libsodium_$(LIBSODIUM_PKG_VERSION)-$(ARCH).build
+	rm -f $(BUILDRESULT)/libsodium_$(LIBSODIUM_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/20.4-$(CA)-libsodium-build
 $(call CA_TO_C_DEPS,stamps/20.4.%.libsodium-build-binary-clean,\
 	stamps/20.5.%.libsodium-ppa-clean)
@@ -164,10 +165,10 @@ stamps/20.5.%.libsodium-ppa: \
 		stamps/20.3.%.libsodium-build-source \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,20.5,libsodium,\
-	    pkgs/libsodium_$(LIBSODIUM_PKG_VERSION).dsc,\
-	    pkgs/libsodium-dev_$(LIBSODIUM_PKG_VERSION)_all.deb \
+	    $(BUILDRESULT)/libsodium_$(LIBSODIUM_PKG_VERSION).dsc,\
+	    $(BUILDRESULT)/libsodium-dev_$(LIBSODIUM_PKG_VERSION)_all.deb \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
-		pkgs/libsodium_$(LIBSODIUM_PKG_VERSION)_$(a).deb)))
+		$(BUILDRESULT)/libsodium_$(LIBSODIUM_PKG_VERSION)_$(a).deb)))
 .PRECIOUS: $(call C_EXPAND,stamps/20.5.%.libsodium-ppa)
 LIBSODIUM_INDEP := stamps/20.5.%.libsodium-ppa
 

@@ -74,27 +74,27 @@ stamps/35.2.pyzmq-source-setup: \
 	@echo "===== 35.2. All: " \
 	    "Setting up Pyzmq source ====="
 #	# Unpack source
-	rm -rf src/pyzmq/build; mkdir -p src/pyzmq/build
-	tar xC src/pyzmq/build --strip-components=1 \
+	rm -rf $(SOURCEDIR)/pyzmq/build; mkdir -p $(SOURCEDIR)/pyzmq/build
+	tar xC $(SOURCEDIR)/pyzmq/build --strip-components=1 \
 	    -f dist/$(PYZMQ_TARBALL)
 #	# Unpack debianization
 	git --git-dir="git/pyzmq-deb/.git" archive --prefix=debian/ HEAD \
-	    | tar xCf src/pyzmq/build -
+	    | tar xCf $(SOURCEDIR)/pyzmq/build -
 #	# Make clean copy of changelog for later munging
-	cp --preserve=all src/pyzmq/build/debian/changelog \
-	    src/pyzmq
+	cp --preserve=all $(SOURCEDIR)/pyzmq/build/debian/changelog \
+	    $(SOURCEDIR)/pyzmq
 #	# Link source tarball with Debian name
-	ln -f dist/$(PYZMQ_TARBALL) \
-	    src/pyzmq/$(PYZMQ_TARBALL_DEBIAN_ORIG)
-	ln -f dist/$(PYZMQ_TARBALL) \
-	    pkgs/$(PYZMQ_TARBALL_DEBIAN_ORIG)
+	ln -sf $(TOPDIR)/dist/$(PYZMQ_TARBALL) \
+	    $(SOURCEDIR)/pyzmq/$(PYZMQ_TARBALL_DEBIAN_ORIG)
+	cp --preserve=all dist/$(PYZMQ_TARBALL) \
+	    $(BUILDRESULT)/$(PYZMQ_TARBALL_DEBIAN_ORIG)
 	touch $@
 
 $(call C_EXPAND,stamps/35.2.%.pyzmq-source-setup-clean): \
 stamps/35.2.%.pyzmq-source-setup-clean: \
 		$(call C_EXPAND,stamps/35.3.%.pyzmq-build-source-clean)
 	@echo "35.2. All:  Clean pyzmq sources"
-	rm -rf src/pyzmq
+	rm -rf $(SOURCEDIR)/pyzmq
 PYZMQ_CLEAN_INDEP += stamps/35.2.%.pyzmq-source-setup-clean
 
 
@@ -107,25 +107,25 @@ stamps/35.3.%.pyzmq-build-source: \
 	    "Building Pyzmq source package ====="
 	$(REASON)
 #	# Restore original changelog
-	cp --preserve=all src/pyzmq/changelog \
-	    src/pyzmq/build/debian
+	cp --preserve=all $(SOURCEDIR)/pyzmq/changelog \
+	    $(SOURCEDIR)/pyzmq/build/debian
 #	# Add changelog entry
-	cd src/pyzmq/build && \
+	cd $(SOURCEDIR)/pyzmq/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(PYZMQ_PKG_VERSION) "$(MAINTAINER)"
 #	# Build source package
-	cd src/pyzmq/build && dpkg-source -i -I -b .
-	mv src/pyzmq/pyzmq_$(PYZMQ_PKG_VERSION).debian.tar.gz \
-	    src/pyzmq/pyzmq_$(PYZMQ_PKG_VERSION).dsc pkgs
+	cd $(SOURCEDIR)/pyzmq/build && dpkg-source -i -I -b .
+	mv $(SOURCEDIR)/pyzmq/pyzmq_$(PYZMQ_PKG_VERSION).debian.tar.gz \
+	    $(SOURCEDIR)/pyzmq/pyzmq_$(PYZMQ_PKG_VERSION).dsc $(BUILDRESULT)
 	touch $@
 .PRECIOUS:  $(call C_EXPAND,stamps/35.3.%.pyzmq-build-source)
 
 $(call C_EXPAND,stamps/35.3.%.pyzmq-build-source-clean): \
 stamps/35.3.%.pyzmq-build-source-clean:
 	@echo "35.3. $(CODENAME):  Clean pyzmq source package"
-	rm -f pkgs/pyzmq_$(PYZMQ_PKG_VERSION).dsc
-	rm -f pkgs/$(PYZMQ_TARBALL_DEBIAN_ORIG)
-	rm -f pkgs/pyzmq_$(PYZMQ_PKG_VERSION).debian.tar.gz
+	rm -f $(BUILDRESULT)/pyzmq_$(PYZMQ_PKG_VERSION).dsc
+	rm -f $(BUILDRESULT)/$(PYZMQ_TARBALL_DEBIAN_ORIG)
+	rm -f $(BUILDRESULT)/pyzmq_$(PYZMQ_PKG_VERSION).debian.tar.gz
 	rm -f stamps/35.3.$(CODENAME).pyzmq-build-source
 $(call C_TO_CA_DEPS,stamps/35.3.%.pyzmq-build-source-clean,\
 	stamps/35.5.%.pyzmq-build-binary-clean)
@@ -183,19 +183,19 @@ stamps/35.5.%.pyzmq-build-binary: \
 	    $(PBUILD) --build \
 	    $(PBUILD_ARGS) \
 	    --debbuildopts $(BUILDTYPE) \
-	    pkgs/pyzmq_$(PYZMQ_PKG_VERSION).dsc
+	    $(BUILDRESULT)/pyzmq_$(PYZMQ_PKG_VERSION).dsc
 	touch $@
 .PRECIOUS: $(call CA_EXPAND,stamps/35.5.%.pyzmq-build-binary)
 
 $(call CA_EXPAND,stamps/35.5.%.pyzmq-build-binary-clean): \
 stamps/35.5.%.pyzmq-build-binary-clean:
 	@echo "35.5. $(CA):  Clean Pyzmq binary build"
-	rm -f $(patsubst %,pkgs/%_$(PYZMQ_PKG_VERSION)_all.deb,\
+	rm -f $(patsubst %,$(BUILDRESULT)/%_$(PYZMQ_PKG_VERSION)_all.deb,\
 	    $(PYZMQ_PKGS_ALL))
-	rm -f $(patsubst %,pkgs/%_$(PYZMQ_PKG_VERSION)_$(ARCH).deb,\
+	rm -f $(patsubst %,$(BUILDRESULT)/%_$(PYZMQ_PKG_VERSION)_$(ARCH).deb,\
 	    $(PYZMQ_PKGS_ARCH))
-	rm -f pkgs/pyzmq_$(PYZMQ_PKG_VERSION)-$(ARCH).build
-	rm -f pkgs/pyzmq_$(PYZMQ_PKG_VERSION)_$(ARCH).changes
+	rm -f $(BUILDRESULT)/pyzmq_$(PYZMQ_PKG_VERSION)-$(ARCH).build
+	rm -f $(BUILDRESULT)/pyzmq_$(PYZMQ_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/35.5-$(CA)-pyzmq-build
 $(call CA_TO_C_DEPS,stamps/35.5.%.pyzmq-build-binary-clean,\
 	stamps/35.6.%.pyzmq-ppa-clean)
@@ -210,11 +210,11 @@ stamps/35.6.%.pyzmq-ppa: \
 		stamps/35.3.%.pyzmq-build-source \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,35.6,pyzmq,\
-	    pkgs/pyzmq_$(PYZMQ_PKG_VERSION).dsc,\
-	    $(patsubst %,pkgs/%_$(PYZMQ_PKG_VERSION)_all.deb,\
+	    $(BUILDRESULT)/pyzmq_$(PYZMQ_PKG_VERSION).dsc,\
+	    $(patsubst %,$(BUILDRESULT)/%_$(PYZMQ_PKG_VERSION)_all.deb,\
 		$(PYZMQ_PKGS_ALL)) \
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),$(wildcard\
-		$(patsubst %,pkgs/%_$(PYZMQ_PKG_VERSION)_$(a).deb,\
+		$(patsubst %,$(BUILDRESULT)/%_$(PYZMQ_PKG_VERSION)_$(a).deb,\
 		    $(PYZMQ_PKGS_ARCH)))))
 PYZMQ_INDEP := stamps/35.6.%.pyzmq-ppa
 

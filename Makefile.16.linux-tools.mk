@@ -48,30 +48,31 @@ stamps/16.2.linux-tools-unpacked: \
 	@echo "===== 16.2. All variants: " \
 	    "Unpacking linux-tools source directory ====="
 	$(REASON)
-	rm -rf src/linux-tools
-	mkdir -p src/linux-tools/build
+	rm -rf $(SOURCEDIR)/linux-tools
+	mkdir -p $(SOURCEDIR)/linux-tools/build
 	git --git-dir="git/linux-tools-deb/.git" archive --prefix=debian/ HEAD \
-	    | tar xCf src/linux-tools/build -
-	cd src/linux-tools/build && debian/bin/genorig.py \
+	    | tar xCf $(SOURCEDIR)/linux-tools/build -
+	cd $(SOURCEDIR)/linux-tools/build && debian/bin/genorig.py \
 	    ../../../dist/$(LINUX_TARBALL)
-	cd src/linux-tools/build && debian/rules debian/control \
+	cd $(SOURCEDIR)/linux-tools/build && debian/rules debian/control \
 	    || true # always fails
 #	# Make copy of changelog for later munging
-	cp --preserve=all src/linux-tools/build/debian/changelog \
-	    src/linux-tools
+	cp --preserve=all $(SOURCEDIR)/linux-tools/build/debian/changelog \
+	    $(SOURCEDIR)/linux-tools
 #	# Build the source tree and clean up
-	cd src/linux-tools/build && debian/rules orig
-	cd src/linux-tools/build && debian/rules clean
+	cd $(SOURCEDIR)/linux-tools/build && debian/rules orig
+	cd $(SOURCEDIR)/linux-tools/build && debian/rules clean
 #	# Hardlink linux-tools tarball with Debian-format path name
-	ln -f src/linux-tools/orig/$(LINUX_TOOLS_TARBALL_DEBIAN_ORIG) \
-	    pkgs/$(LINUX_TOOLS_TARBALL_DEBIAN_ORIG)
+	cp --preserve=all \
+	    $(SOURCEDIR)/linux-tools/orig/$(LINUX_TOOLS_TARBALL_DEBIAN_ORIG) \
+	    $(BUILDRESULT)/$(LINUX_TOOLS_TARBALL_DEBIAN_ORIG)
 	touch $@
 
 stamps/16.2.linux-tools-unpacked-clean: \
 		$(call C_EXPAND,stamps/16.3.%.linux-tools-source-package-clean)
 	@echo "16.2.  All:  Cleaning up linux-tools unpacked sources"
-	rm -rf src/linux-tools
-	rm -f pkgs/linux-tools_$(LINUX_VERSION).orig.tar.xz
+	rm -rf $(SOURCEDIR)/linux-tools
+	rm -f $(BUILDRESULT)/linux-tools_$(LINUX_VERSION).orig.tar.xz
 	rm -f stamps/16.2.linux-tools-unpacked
 LINUX_TOOLS_CLEAN_ALL += stamps/16.2.linux-tools-unpacked-clean
 
@@ -85,24 +86,24 @@ stamps/16.3.%.linux-tools-source-package: \
 	    "Building linux-tools source package ====="
 	$(REASON)
 #	# Restore original changelog
-	cp --preserve=all src/linux-tools/changelog \
-	    src/linux-tools/build/debian
+	cp --preserve=all $(SOURCEDIR)/linux-tools/changelog \
+	    $(SOURCEDIR)/linux-tools/build/debian
 #	# Add changelog entry
-	cd src/linux-tools/build && \
+	cd $(SOURCEDIR)/linux-tools/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $(CODENAME) $(LINUX_PKG_VERSION) "$(MAINTAINER)"
 #	# create source pkg
-	cd src/linux-tools/build && dpkg-source -i -I -b .
-	mv src/linux-tools/linux-tools_$(LINUX_PKG_VERSION).debian.tar.xz \
-	    src/linux-tools/linux-tools_$(LINUX_PKG_VERSION).dsc pkgs
+	cd $(SOURCEDIR)/linux-tools/build && dpkg-source -i -I -b .
+	mv $(SOURCEDIR)/linux-tools/linux-tools_$(LINUX_PKG_VERSION).debian.tar.xz \
+	    $(SOURCEDIR)/linux-tools/linux-tools_$(LINUX_PKG_VERSION).dsc $(BUILDRESULT)
 	touch $@
 .PRECIOUS: $(call C_EXPAND,stamps/16.3.%.linux-tools-source-package)
 
 $(call C_EXPAND,stamps/16.3.%.linux-tools-source-package-clean): \
 stamps/16.3.%.linux-tools-source-package-clean:
 	@echo "16.3. $(CODENAME):  Cleaning up linux-tools source package"
-	rm -f pkgs/linux-tools_$(LINUX_PKG_VERSION).debian.tar.xz
-	rm -f pkgs/linux-tools_$(LINUX_PKG_VERSION).dsc
+	rm -f $(BUILDRESULT)/linux-tools_$(LINUX_PKG_VERSION).debian.tar.xz
+	rm -f $(BUILDRESULT)/linux-tools_$(LINUX_PKG_VERSION).dsc
 	rm -f stamps/16.3.$(CODENAME).linux-tools-source-package
 $(call C_TO_CA_DEPS,stamps/16.3.%.linux-tools-source-package-clean,\
 	stamps/16.4.%.linux-tools-build-clean)
@@ -123,16 +124,16 @@ stamps/16.4.%.linux-tools-build:
 	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) --build \
 		$(PBUILD_ARGS) \
-	        pkgs/linux-tools_$(LINUX_PKG_VERSION).dsc
+	        $(BUILDRESULT)/linux-tools_$(LINUX_PKG_VERSION).dsc
 	touch $@
 .PRECIOUS: $(call CA_EXPAND,stamps/16.4.%.linux-tools-build)
 
 stamps/16.4.%.linux-tools-build-clean:
 	@echo "16.4. $(CA):  Cleaning up linux-tools binary build"
-	rm -f pkgs/linux-tools-*_$(LINUX_PKG_VERSION)_$(ARCH).deb
-	rm -f pkgs/linux-kbuild-*_$(LINUX_PKG_VERSION)_$(ARCH).deb
-	rm -f pkgs/linux-tools_$(LINUX_PKG_VERSION)-$(ARCH).build
-	rm -f pkgs/linux-tools_$(LINUX_PKG_VERSION)_$(ARCH).changes
+	rm -f $(BUILDRESULT)/linux-tools-*_$(LINUX_PKG_VERSION)_$(ARCH).deb
+	rm -f $(BUILDRESULT)/linux-kbuild-*_$(LINUX_PKG_VERSION)_$(ARCH).deb
+	rm -f $(BUILDRESULT)/linux-tools_$(LINUX_PKG_VERSION)-$(ARCH).build
+	rm -f $(BUILDRESULT)/linux-tools_$(LINUX_PKG_VERSION)_$(ARCH).changes
 	rm -f stamps/16.4.$(CA).linux-tools-build
 # Clean up the distro PPA
 $(call CA_TO_C_DEPS,stamps/16.4.%.linux-tools-build-clean,\
@@ -146,10 +147,10 @@ stamps/16.5.%.linux-tools-ppa: \
 		stamps/16.3.%.linux-tools-source-package \
 		stamps/0.3.all.ppa-init
 	$(call BUILD_PPA,16.5,linux-tools,\
-	    pkgs/linux-tools_$(LINUX_PKG_VERSION).dsc,\
+	    $(BUILDRESULT)/linux-tools_$(LINUX_PKG_VERSION).dsc,\
 	    $(foreach a,$(call CODENAME_ARCHES,$(CODENAME)),\
-		pkgs/$(LINUX_TOOLS_PKG_NAME)_$(LINUX_PKG_VERSION)_$(a).deb \
-		pkgs/$(LINUX_KBUILD_PKG_NAME)_$(LINUX_PKG_VERSION)_$(a).deb))
+		$(BUILDRESULT)/$(LINUX_TOOLS_PKG_NAME)_$(LINUX_PKG_VERSION)_$(a).deb \
+		$(BUILDRESULT)/$(LINUX_KBUILD_PKG_NAME)_$(LINUX_PKG_VERSION)_$(a).deb))
 # This target is the main result of the linux-tools build
 LINUX_TOOLS_INDEP := stamps/16.5.%.linux-tools-ppa
 

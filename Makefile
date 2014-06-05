@@ -1,8 +1,5 @@
-
 ###################################################
-# Variables that may change
-
-HOST_ARCH = $(shell uname -m)
+# Variables that may change or be overridden in Config.mk
 
 # List of codename/arch combos to build
 #
@@ -11,24 +8,63 @@ HOST_ARCH = $(shell uname -m)
 # gcc-4.6 (4.4 available).
 #
 # Squeeze (Debian 6.0) is reportedly obsolete.
-ifeq ($(HOST_ARCH),armv7l)
-ALL_CODENAMES_ARCHES = \
-	wheezy-armhf
-else
-ALL_CODENAMES_ARCHES = \
+ALL_CODENAMES_ARCHES ?= \
 	wheezy-amd64 \
 	wheezy-i386 \
 	jessie-amd64 \
+	wheezy-armhf \
 	jessie-i386
 # Precise doesn't have gcc 4.7; using gcc 4.6 might be the cause of
 # the kernel module problems I've been finding
 	# precise-amd64 \
 	# precise-i386 \
 	#
-endif
 
 # Define this to have a deterministic chroot for step 5.4
-#A_CHROOT = wheezy-amd64
+A_CHROOT ?= wheezy-amd64
+
+# Your "Firstname Lastname <email@address>"; leave out to use git config
+#MAINTAINER = John Doe <jdoe@example.com>
+
+# Uncomment to remove dependencies on Makefile and pbuilderrc while
+# hacking this script
+DEBUG ?= yes
+
+# Directories that pbuilderrc needs
+#
+# The directory where this Makefile lives
+TOPDIR := $(shell pwd)
+# Where to place packages
+BUILDRESULT ?= $(TOPDIR)/pkgs
+# Apt package cach
+APTCACHE ?= $(TOPDIR)/aptcache
+# ccache
+CCACHEDIR ?= $(TOPDIR)/ccache
+# chroot tarball directory
+CHROOTDIR ?= $(TOPDIR)/chroots
+# Where to unpack the chroot and build
+BUILDPLACE ?= $(TOPDIR)/build
+# Where to build the Apt package repository
+REPODIR ?= $(TOPDIR)/ppa
+
+# Other directories
+#
+# Where to unpack sources
+SOURCEDIR ?= $(TOPDIR)/src
+
+# User to run as in pbuilder
+PBUILDER_USER ?= ${USER}
+
+###################################################
+# Configuration override
+
+# Override settings locally in this file
+-include Config.mk
+
+
+###################################################
+# Variables that should not change much
+# (or auto-generated)
 
 # Debian package signature keys
 UBUNTU_KEYID = 40976EAF437D05B5
@@ -36,19 +72,7 @@ DEBIAN_KEYID = 8B48AD6246925553
 KEYIDS = $(UBUNTU_KEYID) $(DEBIAN_KEYID)
 KEYSERVER = hkp://keys.gnupg.net
 
-# Your "Firstname Lastname <email@address>"; leave out to use git config
-#MAINTAINER = John Doe <jdoe@example.com>
-
-# Uncomment to remove dependencies on Makefile and pbuilderrc while
-# hacking this script
-DEBUG = yes
-
-###################################################
-# Variables that should not change much
-# (or auto-generated)
-
 # Misc paths, filenames, executables
-TOPDIR := $(shell pwd)
 SUDO := sudo
 
 KEYRING := $(TOPDIR)/admin/keyring.gpg
@@ -57,12 +81,11 @@ KEYRING := $(TOPDIR)/admin/keyring.gpg
 DEBBUILDOPTS_ARG = $(if $(DEBBUILDOPTS),--debbuildopts "$(DEBBUILDOPTS)")
 
 # pbuilder command line
-PBUILD = TOPDIR=$(TOPDIR) DIST=$(CODENAME) ARCH=$(ARCH) pbuilder
-PBUILD_ARGS = --configfile pbuild/pbuilderrc --allow-untrusted \
-	$(DEBBUILDOPTS_ARG)
-
-# A handy way to expand 'pattern-%' with all codename/arch combos
-CA_EXPAND = $(patsubst %,$(1),$(ALL_CODENAMES_ARCHES))
+BINDMOUNTS_ARG = --bindmounts "$(BINDMOUNTS)"
+PBUILD = pbuilder
+PBUILD_ARGS = --configfile admin/pbuilderrc.$(CODENAME)-$(ARCH) \
+	--allow-untrusted \
+	$(DEBBUILDOPTS_ARG) $(BINDMOUNTS_ARG)
 
 # Auto generate Maintainer: field if not set above
 MAINTAINER ?= $(shell git config user.name) <$(shell git config user.email)>
@@ -84,8 +107,9 @@ ARCHES = $(call uniq,$(foreach ca,$(ALL_CODENAMES_ARCHES),$(ARCH_$(ca))))
 CODENAME_ARCHES = $(call uniq,$(strip \
 	$(foreach ca,$(ALL_CODENAMES_ARCHES),\
 	  $(if $(findstring $(CODENAME_$(ca)),$(1)),$(ARCH_$(ca))))))
-C_EXPAND = $(patsubst %,$(1),$(CODENAMES))
-A_EXPAND = $(patsubst %,$(1),$(ARCHES))
+C_EXPAND = $(foreach i,$(1),$(patsubst %,$(i),$(CODENAMES)))
+A_EXPAND = $(foreach i,$(1),$(patsubst %,$(i),$(ARCHES)))
+CA_EXPAND = $(foreach i,$(1),$(patsubst %,$(i),$(ALL_CODENAMES_ARCHES)))
 
 # Auto-generate rules like:
 # 1.wheezy-amd64.bar: 0.wheezy.foo
@@ -94,21 +118,53 @@ A_EXPAND = $(patsubst %,$(1),$(ARCHES))
 #
 # This is handy when an arch-specific rule pattern depends on a
 # non-arch-specific rule pattern, and codename decoupling is desired
+define CA2C_DEP
+$(strip $(patsubst %,$(call STAMP$(5),$(1),$(2)),$(4)): \
+	$(foreach d,$(call STAMP$(5),$(1),$(3)),$(patsubst %,$(d),$(CODENAME_$(4)))))
+endef
+define CA2C_DEPS
+$(foreach ca,$(ALL_CODENAMES_ARCHES),\
+	$(call CA2C_DEP,$(1),$(2),$(3),$(ca)))
+endef
+define CA2C_DEPS_CLEAN
+$(foreach ca,$(ALL_CODENAMES_ARCHES),\
+	$(call CA2C_DEP,$(1),$(2),$(3),$(ca),_CLEAN))
+endef
+# Deprecated
 define CA_TO_C_DEP
 $(patsubst %,$(1),$(3)): $(foreach d,$(2),$(patsubst %,$(d),$(CODENAME_$(3))))
 endef
 define CA_TO_C_DEPS
 $(foreach ca,$(ALL_CODENAMES_ARCHES),\
-	$(eval $(call CA_TO_C_DEP,$(1),$(2),$(ca))))
+	$(call CA_TO_C_DEP,$(1),$(2),$(ca)))
 endef
+
 
 # Auto-generate rules like:
 # 1.wheezy.bar: 0.wheezy-i386.foo 0.wheezy-amd64.foo
 # ...using:
-# $(call C_TO_CA_DEPS,1.%.bar,0.%.foo)
+# $$(call C2CA_DEPS,$(1),bar,foo)
 #
 # This is handy when an indep rule pattern depends on a
 # arch rule pattern, and codename decoupling is desired
+define C2CA_DEP
+$(patsubst %,$(1),$(3)): $(strip \
+	$(foreach a,$(ARCHES),\
+	  $(if $(findstring $(3)-$(a),$(ALL_CODENAMES_ARCHES)),\
+	    $(patsubst %,$(2),$(3)-$(a)))))
+endef
+define C2CA_DEPS
+$(strip $(foreach dep,$(3),
+  $(foreach c,$(CODENAMES),\
+    $(call C2CA_DEP,\
+	$(call STAMP$(4),$(1),$(2)),\
+	$(call STAMP$(4),$(1),$(dep)),$(c)))))
+endef
+define C2CA_DEPS_CLEAN
+$(call C2CA_DEPS,$(1),$(2),$(3),_CLEAN)
+endef
+
+# deprecated
 define C_TO_CA_DEP
 $(patsubst %,$(1),$(3)): $(strip \
 	$(foreach a,$(ARCHES),\
@@ -116,8 +172,8 @@ $(patsubst %,$(1),$(3)): $(strip \
 	    $(patsubst %,$(2),$(3)-$(a)))))
 endef
 define C_TO_CA_DEPS
-$(foreach dep,$(2),\
-  $(foreach c,$(CODENAMES),$(eval $(call C_TO_CA_DEP,$(1),$(dep),$(c)))))
+$(foreach dep,$(2),
+  $(foreach c,$(CODENAMES),$(call C_TO_CA_DEP,$(1),$(dep),$(c))))
 endef
 
 # A random chroot to configure a source package in
@@ -127,8 +183,25 @@ AN_ARCH = $(ARCH_$(A_CHROOT))
 A_CODENAME = $(CODENAME_$(A_CHROOT))
 
 # The reprepro command and args
-REPREPRO = reprepro -VV \
-	-b ppa --confdir +b/conf-$(CODENAME) --dbdir +b/db-$(CODENAME)
+REPREPRO = reprepro -VV -b $(REPODIR) \
+	--confdir +b/conf-$$(CODENAME) --dbdir +b/db-$$(CODENAME)
+
+# Expand a pattern containing a source name
+# $$(call SOURCE_NAME_VAR,czmq,TARGETS_%_COMMON)
+SOURCE_NAME_VAR = $(patsubst %,$(if $(2),$(2),%),$(SOURCE_NAME_VAR_$(1)))
+
+# Lists of generated package names
+PACKAGES_ALL = $(strip $(if $($(1)_PKGS_ALL), $(patsubst %,\
+	$(BUILDRESULT)/%_$(call PKG_VERSION,$(1))_all.deb,\
+	$($(1)_PKGS_ALL))))
+
+PACKAGES_ARCH = $(strip $(if $($(1)_PKGS_ARCH),$(call A_EXPAND,\
+	$(patsubst %,$(BUILDRESULT)/%_$(call PKG_VERSION,$(1))_%.deb,\
+	$($(1)_PKGS_ARCH)))))
+
+PACKAGES_ALL_ARCH = $(strip \
+	$(call PACKAGES_ALL,$(1)) $(call PACKAGES_ARCH,$(1)))
+
 
 ###################################################
 # out-of-band checks
@@ -189,17 +262,6 @@ define CLEAN_PPA
 	    list $(CODENAME)
 endef
 
-# Update base.tgz with PPA pkgs
-define UPDATE_CHROOT
-	@echo "===== $(1). $(CA): " \
-	    "Updating pbuilder chroot with PPA packages ====="
-	$(REASON)
-	$(SUDO) INTERMEDIATE_REPO=ppa \
-	    $(PBUILD) --update --override-config \
-		$(PBUILD_ARGS)
-	touch $@
-endef
-
 # PPA help target:  print PPA contents
 $(call C_EXPAND,util-%.list-ppa): \
 util-%.list-ppa:
@@ -207,38 +269,37 @@ util-%.list-ppa:
 
 INFO_PPA_LIST_TARGET_INDEP := "util-%.list-ppa"
 INFO_PPA_LIST_DESC := "List current PPA contents for a distro"
-INFO_PPA_LIST_SECTION := info
-HELP_VARS += INFO_PPA_LIST
+HELP_VARS_UTIL += INFO_PPA_LIST
 
 
 
 ###################################################
-# 0. Basic build dependencies
+# 00. Basic build dependencies
 #
-# 0.1 Generic target for non-<codename>/<arch>-specific targets
-stamps/0.1.base-builddeps:
-	@echo "===== 0.1. All:  Initialize basic build deps ====="
-	mkdir -p git dist src stamps pkgs aptcache chroots logs
+# 00.1 Generic target for non-<codename>/<arch>-specific targets
+stamps/00.1.base-builddeps:
+	@echo "===== 00.1. All:  Initialize basic build deps ====="
+	mkdir -p git dist stamps $(BUILDRESULT) aptcache chroots logs
 	touch $@
 ifneq ($(DEBUG),yes)
 # While hacking, don't rebuild everything whenever a file is changed
-stamps/0.1.base-builddeps: \
+stamps/00.1.base-builddeps: \
 		Makefile \
 		pbuild/pbuilderrc \
 		.gitmodules
 endif
-.PRECIOUS:  stamps/0.1.base-builddeps
-INFRA_TARGETS_ALL += stamps/0.1.base-builddeps
+.PRECIOUS:  stamps/00.1.base-builddeps
+INFRA_TARGETS_ALL += stamps/00.1.base-builddeps
 
-stamps/0.1.base-builddeps-squeaky:
-	rm -f stamps/0.1.base-builddeps
-SQUEAKY_ALL += stamps/0.1.base-builddeps-squeaky
+stamps/00.1.base-builddeps-clean:
+	rm -f stamps/00.1.base-builddeps
+SQUEAKY_ALL += stamps/00.1.base-builddeps-clean
 
 
-# 0.2 Init distro ppa directories and configuration
-$(call C_EXPAND,stamps/0.2.%.ppa-init): \
-stamps/0.2.%.ppa-init:
-	@echo "===== 0.2.  $(CODENAME):  Init ppa directories ====="
+# 00.2 Init distro ppa directories and configuration
+$(call C_EXPAND,stamps/00.2.%.ppa-init): \
+stamps/00.2.%.ppa-init:
+	@echo "===== 00.2.  $(CODENAME):  Init ppa directories ====="
 	mkdir -p ppa/conf-$(CODENAME) ppa/db-$(CODENAME)
 	cat pbuild/ppa-distributions.tmpl | sed \
 		-e "s/@codename@/$(CODENAME)/g" \
@@ -246,42 +307,41 @@ stamps/0.2.%.ppa-init:
 		> ppa/conf-$(CODENAME)/distributions
 
 	touch $@
-.PRECIOUS:  $(call C_EXPAND,stamps/0.2.%.ppa-init)
+.PRECIOUS:  $(call C_EXPAND,stamps/00.2.%.ppa-init)
 
-$(call C_EXPAND,stamps/0.2.%.ppa-init-squeaky): \
-stamps/0.2.%.ppa-init-squeaky:
-	@echo "0.2. $(CODENAME):  Removing ppa directories"
+$(call C_EXPAND,stamps/00.2.%.ppa-init-clean): \
+stamps/00.2.%.ppa-init-clean:
+	@echo "00.2. $(CODENAME):  Removing ppa directories"
 	rm -rf ppa/conf-$(CODENAME) ppa/db-$(CODENAME)
 
 
-# 0.3 Init distro ppa
-stamps/0.3.all.ppa-init: \
-		$(call C_EXPAND,stamps/0.2.%.ppa-init)
-	@echo "===== 0.3.  All:  Init ppa directories ====="
+# 00.3 Init distro ppa
+stamps/00.3.all.ppa-init: \
+		$(call C_EXPAND,stamps/00.2.%.ppa-init)
+	@echo "===== 00.3.  All:  Init ppa directories ====="
 	mkdir -p ppa/dists ppa/pool
 	touch $@
-.PRECIOUS: stamps/0.3.all.ppa-init
-INFRA_TARGETS_ALL += stamps/0.3.all.ppa-init
+.PRECIOUS: stamps/00.3.all.ppa-init
+INFRA_TARGETS_ALL += stamps/00.3.all.ppa-init
 
-stamps/0.3.all.ppa-init-squeaky: \
-	$(call C_EXPAND,stamps/0.2.%.ppa-init-squeaky)
-	@echo "0.3.  All:  Remove ppa directories"
+stamps/00.3.all.ppa-init-clean: \
+	$(call C_EXPAND,stamps/00.2.%.ppa-init-clean)
+	@echo "00.3.  All:  Remove ppa directories"
 	rm -rf ppa
-SQUEAKY_ALL += stamps/0.3.all.ppa-init-squeaky
+SQUEAKY_ALL += stamps/00.3.all.ppa-init-clean
 
-PPA_INIT_TARGET_INDEP := "stamps/0.3.all.ppa-init"
+PPA_INIT_TARGET_INDEP := "stamps/00.3.all.ppa-init"
 PPA_INIT_DESC := "Create basic PPA directories and initial configuration"
-PPA_INIT_SECTION := common
-HELP_VARS += PPA_INIT
+HELP_VARS_COMMON += PPA_INIT
 
 
 ###################################################
-# 1. GPG keyring
+# 01. GPG keyring
 
-# 1.1 Download GPG keys for the various distros, needed by pbuilder
+# 01.1 Download GPG keys for the various distros, needed by pbuilder
 
-stamps/1.1.keyring-downloaded:
-	@echo "===== 1.1. All variants:  Creating GPG keyring ====="
+stamps/01.1.keyring-downloaded:
+	@echo "===== 01.1. All variants:  Creating GPG keyring ====="
 	$(REASON)
 	mkdir -p admin
 	gpg --no-default-keyring --keyring=$(KEYRING) \
@@ -289,96 +349,472 @@ stamps/1.1.keyring-downloaded:
 		--trust-model always \
 		$(KEYIDS)
 	test -f $(KEYRING) && touch $@  # otherwise, fail
-.PRECIOUS:  stamps/1.1.keyring-downloaded
-INFRA_TARGETS_ALL += stamps/1.1.keyring-downloaded
+.PRECIOUS:  stamps/01.1.keyring-downloaded
+INFRA_TARGETS_ALL += stamps/01.1.keyring-downloaded
 
-stamps/1.1.keyring-downloaded-squeaky:
-	@echo "1.1. All:  Cleaning package GPG keyring"
+stamps/01.1.keyring-downloaded-clean:
+	@echo "01.1. All:  Cleaning package GPG keyring"
 	rm -f $(KEYRING)
-	rm -f stamps/1.1.keyring-downloaded
-SQUEAKY_ALL += stamps/1.1.keyring-downloaded-squeaky
+	rm -f stamps/01.1.keyring-downloaded
+SQUEAKY_ALL += stamps/01.1.keyring-downloaded-clean
 
-KEYRING_TARGET_ALL := "stamps/1.1.keyring-downloaded"
+KEYRING_TARGET_ALL := "stamps/01.1.keyring-downloaded"
 KEYRING_DESC := "Download upstream distro GPG keys"
-KEYRING_SECTION := common
-HELP_VARS += KEYRING
+HELP_VARS_COMMON += KEYRING
 
 
 ###################################################
-# 2. Base chroot tarball
+# 02. Base chroot tarball
 
-# 2.1.  Build chroot tarball
-$(call CA_EXPAND,stamps/2.1.%.chroot-build): \
-stamps/2.1.%.chroot-build: \
-		stamps/1.1.keyring-downloaded
-	@echo "===== 2.1. $(CA):  Creating pbuilder chroot tarball ====="
+$(call CA_EXPAND,admin/pbuilderrc.%): \
+admin/pbuilderrc.%:
+	sed \
+	    -e "s,@TOPDIR@,$(TOPDIR)," \
+	    -e "s,@BUILDRESULT@,$(BUILDRESULT)," \
+	    -e "s,@APTCACHE@,$(APTCACHE)," \
+	    -e "s,@CCACHEDIR@,$(CCACHEDIR)," \
+	    -e "s,@CHROOTDIR@,$(CHROOTDIR)," \
+	    -e "s,@BUILDPLACE@,$(BUILDPLACE)," \
+	    -e "s,@REPODIR@,$(REPODIR)," \
+	    -e "s,@PBUILDER_USER@,$(PBUILDER_USER)," \
+	    -e "s,@DISTRO_ARCH@,$*," \
+	    pbuild/pbuilderrc.tmpl \
+	    > $@
+
+# 02.1.  Build chroot tarball
+$(call CA_EXPAND,stamps/02.1.%.chroot-build): \
+stamps/02.1.%.chroot-build: \
+		stamps/01.1.keyring-downloaded \
+		admin/pbuilderrc.%
+	@echo "===== 02.1. $(CA):  Creating pbuilder chroot tarball ====="
 	$(REASON)
 #	# make all the codename/i386 directories needed right here
-	mkdir -p pkgs aptcache
+	mkdir -p $(BUILDRESULT) aptcache
 #	# create the base.tgz chroot tarball
 	$(SUDO) $(PBUILD) --create \
 		$(PBUILD_ARGS)
 	touch $@
-.PRECIOUS:  $(call CA_EXPAND,stamps/2.1.%.chroot-build)
-INFRA_TARGETS_ARCH += stamps/2.1.%.chroot-build
+.PRECIOUS:  $(call CA_EXPAND,stamps/02.1.%.chroot-build)
+INFRA_TARGETS_ARCH += stamps/02.1.%.chroot-build
 
-2.1.clean.%.chroot:  stamps/2.1.%.chroot-build
-	@echo "2.1. $(CA):  Cleaning chroot tarball"
+02.1.clean.%.chroot:  stamps/02.1.%.chroot-build
+	@echo "02.1. $(CA):  Cleaning chroot tarball"
 	rm -f chroots/base-$(CA).tgz
-	rm -f stamps/2.1-$(CA)-chroot-build
-SQUEAKY_ARCH += 2.1.clean.%.chroot
+	rm -f stamps/02.1-$(CA)-chroot-build
+SQUEAKY_ARCH += 02.1.clean.%.chroot
 
 
 #
 # Log into chroot
 #
+$(call CA_EXPAND,util-%.chroot): BINDMOUNTS += $(TOPDIR)
 $(call CA_EXPAND,util-%.chroot): \
 util-%.chroot: \
-		stamps/2.1.%.chroot-build
+		stamps/02.1.%.chroot-build
 	@echo "===== Logging into $(*) pbuilder chroot ====="
 	$(REASON)
 	$(SUDO) INTERMEDIATE_REPO=ppa \
 	    $(PBUILD) --login \
-		--bindmounts $(TOPDIR) \
 		$(PBUILD_ARGS)
 .PHONY:  $(call CA_EXPAND,%.chroot)
 
 CHROOT_LOGIN_TARGET_ARCH := "util-%.chroot"
 CHROOT_LOGIN_DESC := "Log into a chroot"
-CHROOT_LOGIN_SECTION := info
-HELP_VARS += CHROOT_LOGIN
+HELP_VARS_UTIL += CHROOT_LOGIN
 
 
 
 ###################################################
-# 03.  Info targets
+# Stamp generator functions
+
+# $$(call STAMP_PAT,<index>,<subindex>,<pkg>,<pat>,<target>)
+STAMP_PAT = stamps/$(strip $(1)).$(strip $(2)).$(strip \
+	$(3))$(strip $(4)).$(strip $(5))
+# $$(call STAMP_EXPAND_PAT,<VAR>,<name>,<pat>)
+STAMP_EXPAND_PAT = $(call STAMP_PAT,\
+	$($(1)_INDEX),\
+	$(TARGET_$(1)_$(2)_INDEX),\
+	$($(1)_SOURCE_NAME),\
+	$(3),\
+	$(2))
+PAT_INDEP=.%
+PAT_ARCH=.%
+STAMP = $(call STAMP_EXPAND_PAT,$(1),$(2),$(if $(3),.$(3),$(PAT_$(TARGET_$(1)_$(2)_TYPE))))
+STAMP_EXPAND_COMMON = $(call STAMP,$(1),$(2))
+STAMP_EXPAND_INDEP = $(call C_EXPAND,$(call STAMP_EXPAND_PAT,$(1),$(2),.%))
+STAMP_EXPAND_ARCH = $(call CA_EXPAND,$(call STAMP_EXPAND_PAT,$(1),$(2),.%))
+STAMP_EXPAND = $(call STAMP_EXPAND_$(TARGET_$(1)_$(2)_TYPE),$(1),$(2))
+
+STAMP_CLEAN = $(call STAMP,$(1),$(2))-clean
+STAMP_EXPAND_CLEAN = $(patsubst %,%-clean,$(call STAMP_EXPAND,$(1),$(2)))
+
+###################################################
+# Info generator functions
+
+# $$(call INFO_ALL,<VAR>,<subindex>,<description>)
+INFO_ALL = @echo \
+	"===== $($(1)_INDEX).$(2). all:  $($(1)_SOURCE_NAME):  $(3) ====="
+# $$(call INFO_ALL,<VAR>,<subindex>,<distro>,<description>)
+INFO_INDEP = @echo \
+	"===== $($(1)_INDEX).$(2). $(3):  $($(1)_SOURCE_NAME):  $(4) ====="
+# $$(call INFO_ARCH,<VAR>,<subindex>,<distro>,<description>)
+INFO_ARCH = @echo \
+	"===== $($(1)_INDEX).$(2). $(3):  $($(1)_SOURCE_NAME):  $(4) ====="
+# $$(call INFO,<VAR>,<target>)
+INFO = @echo \
+	"===== $($(1)_INDEX).$(TARGET_$(1)_$(2)_INDEX). $(if $(3),$(3),all): "\
+	    "$($(1)_SOURCE_NAME):  $(TARGET_$(1)_$(2)_DESC) ====="
+INFO_CLEAN = @echo \
+	"===== $($(1)_INDEX).$(TARGET_$(1)_$(2)_INDEX). $(if $(3),$(3),all): "\
+	    "$($(1)_SOURCE_NAME):  Cleaning target $(2) ====="
+
+
+###################################################
+# File name generator functions
+
+PKG_VERSION = $($(1)_VERSION)-$($(1)_PKG_RELEASE)~$$(CODENAME)1
+
+DEBIAN_TARBALL_ORIG = $($(1)_SOURCE_NAME)_$($(1)_VERSION).orig.tar.$($(1)_COMPRESSION)
+DEBIAN_TARBALL = $($(1)_SOURCE_NAME)_$(call PKG_VERSION,$(1)).debian.tar.gz
+DEBIAN_DSC = $($(1)_SOURCE_NAME)_$(call PKG_VERSION,$(1)).dsc
+
+
+###################################################
+# Config variables for each target
+define TARGET_VARS
+TARGET_$(1)_checkout-submodule_INDEX := 0
+TARGET_$(1)_checkout-submodule_TYPE := COMMON
+TARGET_$(1)_checkout-submodule_DESC := Check out submodule
+TARGETS_$(1) += checkout-submodule
+
+TARGET_$(1)_tarball-download_INDEX := 1
+TARGET_$(1)_tarball-download_TYPE := COMMON
+TARGET_$(1)_tarball-download_DESC := Download tarball
+TARGETS_$(1) += tarball-download
+
+TARGET_$(1)_unpack-tarball_INDEX := 2
+TARGET_$(1)_unpack-tarball_TYPE := COMMON
+TARGET_$(1)_unpack-tarball_DESC := Unpack tarball
+TARGETS_$(1) += unpack-tarball
+
+TARGET_$(1)_debianize-source_INDEX := 3
+TARGET_$(1)_debianize-source_TYPE := COMMON
+TARGET_$(1)_debianize-source_DESC := Debianize source
+TARGETS_$(1) += debianize-source
+
+TARGET_$(1)_build-source-package_INDEX := 4
+TARGET_$(1)_build-source-package_TYPE := INDEP
+TARGET_$(1)_build-source-package_DESC := Build source package
+TARGETS_$(1) += build-source-package
+
+TARGET_$(1)_update-chroot-deps_INDEX := 5
+TARGET_$(1)_update-chroot-deps_TYPE := ARCH
+TARGET_$(1)_update-chroot-deps_DESC := Update chroot packages from PPA
+TARGETS_$(1) += update-chroot-deps
+
+TARGET_$(1)_build-binary-package_INDEX := 6
+TARGET_$(1)_build-binary-package_TYPE := ARCH
+TARGET_$(1)_build-binary-package_DESC := Build binary packages
+TARGETS_$(1) += build-binary-package
+
+TARGET_$(1)_update-ppa_INDEX := 7
+TARGET_$(1)_update-ppa_TYPE := INDEP
+TARGET_$(1)_update-ppa_DESC := Update PPA with new packages
+TARGETS_$(1) += update-ppa
+endef
+
+
+###################################################
+# xx.0. Update submodule
 #
-# These present help for humans
+# $$(call UPDATE_SUBMODULE,<VARIABLE>)
+define UPDATE_SUBMODULE
+$(call STAMP,$(1),checkout-submodule):
+	$(call INFO,$(1),checkout-submodule)
+#	# be sure the submodule has been checked out
+	test -e $($(1)_SUBMODULE)/.git || \
+	    git submodule update --init $($(1)_SUBMODULE)
+	test -e $($(1)_SUBMODULE)/.git
+	touch $$@
+.PRECIOUS: $(call STAMP,$(1),checkout-submodule)
 
-# Print arch target help
-define HELP_ARCH
-	@echo "$(patsubst %,$($(1)_TARGET_ARCH),\<distro\>-\<arch\>):	$($(1)_DESC)"
-
+$(call STAMP_CLEAN,$(1),checkout-submodule): \
+		$(call STAMP_CLEAN,$(1),debianize-source)
+	rm -f $(call STAMP,$(1),checkout-submodule)
+	touch $$@
 endef
-# Print arch-independent target help
-define HELP_INDEP
-	@echo "$(patsubst %,$($(1)_TARGET_INDEP),\<distro\>):	$($(1)_DESC)"
 
+
+###################################################
+# xx.1. Download tarball distribution
+#
+define DOWNLOAD_TARBALL
+$(call STAMP,$(1),tarball-download):
+	$(call INFO,$(1),tarball-download)
+	mkdir -p dist
+	wget $($(1)_URL)/$($(1)_TARBALL) -O dist/$($(1)_TARBALL)
+	touch $$@
+.PRECIOUS: $(call STAMP,$(1),tarball-download)
+
+$(call STAMP_CLEAN,$(1),tarball-download): \
+		$(call STAMP_CLEAN,$(1),unpack-tarball)
+	$(call INFO_CLEAN,$(1),tarball-download)
+	rm -f dist/$($(1)_TARBALL)
+	rm -f $(call STAMP,$(1),tarball-download)
+$(1)_SQUEAKY_ALL += $(call STAMP_CLEAN,$(1),tarball-download)
 endef
-# Print arch- and distro-independent target help
-define HELP_ALL
-	@echo "$($(1)_TARGET_ALL):	$($(1)_DESC)"
 
+
+###################################################
+# xx.2. Unpack tarball
+define UNPACK_TARBALL
+$(call STAMP,$(1),unpack-tarball): \
+		$(call STAMP,$(1),checkout-submodule) \
+		$(call STAMP,$(1),tarball-download)
+	$(call INFO,$(1),unpack-tarball)
+	rm -rf $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
+	mkdir -p $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
+	tar xC $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build --strip-components=1 \
+	    -f dist/$($(1)_TARBALL)
+	touch $$@
+
+$(call STAMP_CLEAN,$(1),unpack-tarball): \
+		$(call STAMP_CLEAN,$(1),debianize-source)
+	$(call INFO_CLEAN,$(1),unpack-tarball)
+	rm -rf $(SOURCEDIR)/$($(1)_SOURCE_NAME)
+	rm -f $(call STAMP,$(1),unpack-tarball)
+$(1)_CLEAN_COMMON += \
+	$(call STAMP_CLEAN,$(1),unpack-tarball)
 endef
 
-help:
-	$(foreach var,$(HELP_VARS),\
-	    $(if $($(var)_TARGET_INDEP),\
-		$(call HELP_INDEP,$(var)),\
-	    $(if $($(var)_TARGET_ARCH),\
-		$(call HELP_ARCH,$(var)),\
-		$(call HELP_ALL,$(var)))))
-.PHONY: help
+
+###################################################
+# xx.3. Debianize source
+define DEBIANIZE_SOURCE
+$(call STAMP,$(1),debianize-source): \
+		$(call STAMP,$(1),checkout-submodule) \
+		$(call STAMP,$(1),unpack-tarball)
+	$(call INFO,$(1),debianize-source)
+#	# Unpack debianization
+	mkdir -p $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
+	git --git-dir="$($(1)_SUBMODULE)/.git" archive --prefix=debian/ HEAD \
+	    | tar xCf $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build -
+#	# Make clean copy of changelog for later munging
+	cp --preserve=all \
+	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian/changelog \
+	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)
+#	# Link source tarball with Debian name
+	ln -sf $(TOPDIR)/dist/$($(1)_TARBALL) \
+	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL_ORIG,$(1))
+#	# Copy Debian tarball to package directory
+	cp --preserve=all dist/$($(1)_TARBALL) \
+	    $(BUILDRESULT)/$(call DEBIAN_TARBALL_ORIG,$(1))
+	touch $$@
+
+$(call STAMP_CLEAN,$(1),debianize-source): \
+		$(call STAMP_EXPAND_CLEAN,$(1),build-source-package)
+	$(call INFO_CLEAN,$(1),debianize-source)
+	rm -rf $(SOURCEDIR)/$($(1)_SOURCE_NAME)
+	rm -f $(call STAMP,$(1),debianize-source)
+	rm -f $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL_ORIG,$(1))
+	rm -f $(BUILDRESULT)/$(call DEBIAN_TARBALL_ORIG,$(1))
+$(1)_CLEAN_COMMON += \
+	$(call STAMP_CLEAN,$(1),debianize-source)
+endef
+
+
+###################################################
+# xx.4. Build source package for each distro
+define BUILD_SOURCE_PACKAGE
+$(call STAMP_EXPAND,$(1),build-source-package): \
+$(call STAMP,$(1),build-source-package): \
+		$(call STAMP,$(1),unpack-tarball) \
+		$(call STAMP,$(1),debianize-source)
+	$(call INFO,$(1),build-source-package,$$(CODENAME))
+#	# Restore original changelog
+	cp --preserve=all $(SOURCEDIR)/$($(1)_SOURCE_NAME)/changelog \
+	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian
+#	# Add changelog entry
+	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && \
+	    $(TOPDIR)/pbuild/tweak-pkg.sh \
+	    $$(CODENAME) $(call PKG_VERSION,$(1)) "$$(MAINTAINER)"
+#	# Build source package
+	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && dpkg-source -i -I -b .
+	mv $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL,$(1)) \
+	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_DSC,$(1)) \
+	    $(BUILDRESULT)
+	touch $$@
+.PRECIOUS: $(call STAMP_EXPAND,$(1),build-source-package)
+
+$(call STAMP_EXPAND_CLEAN,$(1),build-source-package): \
+$(call STAMP_CLEAN,$(1),build-source-package):
+	$(call INFO_CLEAN,$(1),build-source-package)
+	rm -f $(BUILDRESULT)/$(call DEBIAN_DSC,$(1))
+	rm -f $(BUILDRESULT)/$(call DEBIAN_TARBALL_ORIG,$(1))
+	rm -f $(BUILDRESULT)/$(call DEBIAN_TARBALL,$(1))
+	rm -f $(call STAMP,$(1),build-source-package)
+$(call C2CA_DEPS_CLEAN,$(1),build-source-package,build-binary-package)
+$(1)_CLEAN_INDEP += $(call STAMP_CLEAN,$(1),build-source-package)
+endef
+
+
+###################################################
+# xx.5. Update chroot with locally-built dependent packages
+#
+# This is optional; intended for packages depending on other packages
+# built here
+define UPDATE_CHROOT_DEPS
+ifneq ($($(1)_DEPS_ARCH)$($(1)_DEPS_INDEP)$($(1)_DEPS),)
+
+$(call CA_TO_C_DEPS,\
+	$(call STAMP,$(1),update-chroot-deps),\
+	$($(1)_DEPS_INDEP))
+$(call STAMP_EXPAND,$(1),update-chroot-deps): \
+$(call STAMP,$(1),update-chroot-deps): \
+		$($(1)_DEPS)
+	$(call INFO_ARCH,$(1),5,$$(CA),Update chroot packages from PPA)
+	$(SUDO) $(PBUILD) \
+	    --update --override-config \
+	    $$(PBUILD_ARGS)
+	touch $$@
+.PRECIOUS: $(call STAMP_EXPAND,$(1),update-chroot-deps)
+
+# Binary package build dependent on chroot update
+$(1)_CHROOT_UPDATE_DEP := $(call STAMP,$(1),update-chroot-deps)
+
+$(call STAMP_EXPAND,$(1),update-chroot-deps-clean): \
+$(call STAMP,$(1),update-chroot-deps-clean): \
+		$(call STAMP_CLEAN,$(1),build-binary-package)
+	$(call INFO_ARCH,$(1),5,$$(CA),Mark chroot as needing update)
+	rm -f $(call STAMP,$(1),update-chroot-deps)
+# Cleaning this cleans up all (non-squeaky) arch and indep artifacts
+$(1)_CLEAN_ARCH += $(call STAMP_CLEAN,$(1),update-chroot-deps)
+endif # package deps defined
+endef
+
+
+###################################################
+# xx.6. Build binary packages for each distro/arch
+#
+define BUILD_BINARY_PACKAGE
+#   Only build binary-indep packages once:
+$(call STAMP,$(1),build-binary-package): \
+	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-B)
+
+# Depends on the source package build
+$(call CA2C_DEPS,$(1),build-binary-package,build-source-package)
+
+$(call STAMP_EXPAND,$(1),build-binary-package): \
+$(call STAMP,$(1),build-binary-package): \
+		stamps/02.1.%.chroot-build \
+		$($(1)_CHROOT_UPDATE_DEP)
+	$(call INFO,$(1),build-binary-package,$$(CA))
+	$(SUDO) $(PBUILD) --build \
+	    $$(PBUILD_ARGS) \
+	    --debbuildopts $$(BUILDTYPE) \
+	    $(BUILDRESULT)/$(call DEBIAN_DSC,$(1))
+	touch $$@
+.PRECIOUS: $(call STAMP_EXPAND,$(1),build-binary-package)
+
+$(call STAMP_EXPAND_CLEAN,$(1),build-binary-package): \
+$(call STAMP_CLEAN,$(1),build-binary-package):
+	$(call INFO_CLEAN,$(1),build-binary-package,$$(CA))
+	rm -f $(patsubst %,$(BUILDRESULT)/%_$(call PKG_VERSION,$(1))_all.deb,\
+	    $($(1)_PKGS_ALL)) \
+	    $(patsubst %,$(BUILDRESULT)/%_$(call PKG_VERSION,$(1))_$$(ARCH).deb,\
+	    $($(1)_PKGS_ARCH))
+	rm -f $(BUILDRESULT)/$($(1)_SOURCE_NAME)_$(call PKG_VERSION,$(1))-$$(ARCH).build
+	rm -f $(BUILDRESULT)/$($(1)_SOURCE_NAME)_$(call PKG_VERSION,$(1))_$$(ARCH).changes
+	rm -f $(call STAMP,$(1),build-binary-package,$$(CA))
+$(call CA2C_DEPS_CLEAN,$(1),build-binary-package,update-ppa)
+$(1)_CLEAN_ARCH += $(call STAMP_CLEAN,$(1),build-binary-package)
+endef
+
+
+###################################################
+# xx.7. Add packages to the PPA for each distro
+
+define UPDATE_PPA
+# Depends on binary package builds for all arches
+$(call C2CA_DEPS,$(1),update-ppa,build-binary-package)
+# $(1)
+$(call STAMP_EXPAND,$(1),update-ppa):\
+$(call STAMP,$(1),update-ppa):\
+		$(call STAMP,$(1),build-source-package) \
+		stamps/00.3.all.ppa-init
+	$(call INFO,$(1),update-ppa,$$(CODENAME))
+#	# Remove packages if they exist
+	$(REPREPRO) \
+	    removesrc $$(CODENAME) $($(1)_SOURCE_NAME)
+#	# Add source package
+	$(REPREPRO) -C main \
+	    includedsc $$(CODENAME) $(BUILDRESULT)/$(call DEBIAN_DSC,$(1))
+#	# Add binary packages
+	$(REPREPRO) -C main \
+	    includedeb $$(CODENAME) \
+	    $(call PACKAGES_ALL_ARCH,$(1))
+	touch $$@
+.PRECIOUS: $(call STAMP_EXPAND,$(1),update-ppa)
+
+$(1)_INDEP := $(call STAMP,$(1),update-ppa)
+
+$(call STAMP_EXPAND_CLEAN,$(1),update-ppa): \
+$(call STAMP_CLEAN,$(1),update-ppa):
+	$(call INFO_CLEAN,$(1),update-ppa)
+	rm -f $(call STAMP,$(1),update-ppa,$$(CODENAME))
+$(1)_CLEAN_INDEP += $(call STAMP_CLEAN,$(1),update-ppa)
+endef
+
+
+###################################################
+# xx.8. Wrap up
+
+define ADD_HOOKS
+# Cleaning
+$(call C_EXPAND,clean-$($(1)_SOURCE_NAME)-%): \
+clean-$($(1)_SOURCE_NAME)-%: \
+	$($(1)_CLEAN_INDEP) $(foreach t,$($(1)_CLEAN_ARCH),$(patsubst %,$(t),$(patsubst %,\%-%,$(ARCHES))))
+
+# Hook builds into final builds, if configured
+FINAL_DEPS_INDEP += $($(1)_INDEP)
+SQUEAKY_ALL += $($(1)_SQUEAKY_ALL)
+CLEAN_INDEP += $($(1)_CLEAN_INDEP)
+PACKAGES += $(1)
+SOURCE_NAME_VAR_$($(1)_SOURCE_NAME) = $(1)
+
+# Convenience target
+$($(1)_SOURCE_NAME):  $(call C_EXPAND,$($(1)_INDEP))
+$(1)_TARGET_ALL := "$($(1)_SOURCE_NAME)"
+$(1)_DESC := "Convenience:  Build $($(1)_SOURCE_NAME) packages for all distros"
+HELP_VARS_PACKAGE += $(1)
+endef
+
+
+###################################################
+# xx.9. The whole enchilada
+
+define STANDARD_BUILD
+# xx.0. Update submodule
+$(call UPDATE_SUBMODULE,CZMQ)
+# xx.1. Download tarball distribution
+$(call DOWNLOAD_TARBALL,CZMQ)
+# xx.2. Unpack tarball
+$(call UNPACK_TARBALL,CZMQ)
+# xx.3. Debianize source
+$(call DEBIANIZE_SOURCE,CZMQ)
+# xx.4. Build source package for each distro
+$(call BUILD_SOURCE_PACKAGE,CZMQ)
+# xx.5. Update chroot with locally-built dependent packages
+# This is only built if package deps are defined
+$(call UPDATE_CHROOT_DEPS,CZMQ)
+# xx.6. Build binary packages for each distro/arch
+$(call BUILD_BINARY_PACKAGE,CZMQ)
+# xx.7. Add packages to the PPA for each distro
+$(call UPDATE_PPA,CZMQ)
+# xx.7. Wrap up
+$(call ADD_HOOKS,CZMQ)
+endef
+
 
 ###################################################
 # Include package build makefiles
@@ -411,8 +847,83 @@ infra: \
 
 INFRA_TARGET_ALL := "infra"
 INFRA_DESC := "Convenience:  Build all common infra \(chroots, etc.\)"
-INFRA_SECTION := common
-HELP_VARS += INFRA
+HELP_VARS_COMMON += INFRA
+
+###################################################
+# 91.  Help targets
+#
+# These present help for humans
+
+# Print arch target help
+define HELP_ARCH
+	@echo "	$(patsubst %,$($(1)_TARGET_ARCH),\<distro\>-\<arch\>):"
+	@echo "			$($(1)_DESC)"
+
+endef
+# Print arch-independent target help
+define HELP_INDEP
+	@echo "	$(patsubst %,$($(1)_TARGET_INDEP),\<distro\>):"
+	@echo "			$($(1)_DESC)"
+
+endef
+# Print arch- and distro-independent target help
+define HELP_ALL
+	@echo "	$($(1)_TARGET_ALL):"
+	@echo "			$($(1)_DESC)"
+
+endef
+# Print help for a particular section
+define HELP_SECTION
+	@echo "$(1) TARGETS:"
+	$(foreach var,$(HELP_VARS_$(1)),\
+	    $(if $($(var)_TARGET_INDEP),\
+		$(call HELP_INDEP,$(var)),\
+	    $(if $($(var)_TARGET_ARCH),\
+		$(call HELP_ARCH,$(var)),\
+		$(call HELP_ALL,$(var)))))
+endef
+
+help:
+	$(foreach sec,UTIL COMMON PACKAGE,$(call HELP_SECTION,$(sec)))
+.PHONY: help
+
+# Help for a package
+# $$(call PACKAGE_TARGET_HELP,CZMQ,update-ppa,INDEP)
+define ECHO
+	@echo "$(1)"
+endef
+define PACKAGE_TARGET_HELP
+	$(foreach t,$(call STAMP_EXPAND,$(1),$(2)),$(call ECHO,	$(t)))
+	@echo "			$(TARGET_$(1)_$(2)_DESC)"
+
+endef
+define PACKAGE_HELP
+	$(foreach t,$($(call SOURCE_NAME_VAR,$(1),TARGETS_%)),\
+	    $(call PACKAGE_TARGET_HELP,$(SOURCE_NAME_VAR_$(1)),$(t),COMMON))
+endef
+$(foreach p,$(PACKAGES),help-$($(p)_SOURCE_NAME)): \
+help-%:
+	@echo "targets for package $*:"
+	$(call PACKAGE_HELP,$*)
+
+$(info $(call PACKAGE_HELP,CZMQ))
+
+###################################################
+# 98. Pbuilder config utilities
+
+$(call C_EXPAND,util-%.pbuilderrc): \
+util-%.pbuilderrc:
+	@echo TOPDIR=$(TOPDIR)
+	@echo BUILDRESULT=$(BUILDRESULT)
+	@echo APTCACHE=$(APTCACHE)
+	@echo CCACHEDIR=$(CCACHEDIR)
+	@echo CHROOTDIR=$(CHROOTDIR)
+	@echo BUILDPLACE=$(BUILDPLACE)
+	@echo REPODIR=$(REPODIR)
+
+PBUILDERRC_TARGET_ALL := "util-%.pbuilderrc"
+PBUILDERRC_DESC := "Output variables needed in a distro pbuilderrc"
+HELP_VARS_COMMON += PBUILDERRC
 
 ###################################################
 # 99. Final Targets
