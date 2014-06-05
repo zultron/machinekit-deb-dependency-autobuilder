@@ -819,7 +819,7 @@ endef
 ###################################################
 # Include package build makefiles
 
--include $(wildcard Makefile.*.mk)
+-include $(wildcard Makefiles/Makefile.*.mk)
 
 
 ###################################################
