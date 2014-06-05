@@ -1,10 +1,11 @@
 # Ignore configuration makefile
 /Config.mk
 
-# ignore all directories except /git/ and /pbuild/
+# ignore all directories except /git/, /pbuild/, /Makefiles/
 /*/
 !/git/
 !/pbuild/
+!/Makefiles/
 
 # ignore stamps
 .stamp-*
