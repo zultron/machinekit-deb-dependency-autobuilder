@@ -38,14 +38,6 @@ LIBWEBSOCKETS_URL = http://git.libwebsockets.org/cgi-bin/cgit/libwebsockets/snap
 # Tarball name
 LIBWEBSOCKETS_TARBALL := libwebsockets-$(LIBWEBSOCKETS_GIT_REV).tar.gz
 
-# Dependencies on other locally-built packages
-#
-# Arch- and distro-dependent targets
-LIBWEBSOCKETS_DEPS_ARCH = 
-# Arch-independent (but distro-dependent) targets
-LIBWEBSOCKETS_DEPS_INDEP = 
-# Targets built for all distros and arches
-LIBWEBSOCKETS_DEPS = 
 
 ###################################################
 # Do the standard build for this package

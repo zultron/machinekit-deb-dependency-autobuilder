@@ -36,6 +36,8 @@ A_CHROOT ?= wheezy-amd64
 # Uncomment to remove dependencies on Makefile and pbuilderrc while
 # hacking this script
 DEBUG ?= yes
+# Uncomment to print reasons a target is being built/rebuilt
+DEBUG_DEPS ?= yes
 
 # Directories that pbuilderrc needs
 #
@@ -111,24 +113,32 @@ C_EXPAND = $(foreach i,$(1),$(patsubst %,$(i),$(CODENAMES)))
 A_EXPAND = $(foreach i,$(1),$(patsubst %,$(i),$(ARCHES)))
 CA_EXPAND = $(foreach i,$(1),$(patsubst %,$(i),$(ALL_CODENAMES_ARCHES)))
 
-# Auto-generate rules like:
-# 1.wheezy-amd64.bar: 0.wheezy.foo
-# ...using:
-# $(call CA_TO_C_DEPS,1.%.bar,0.%.foo)
+# $(call CA2C_DEPS,bar,foo)
+# generates rules like:
+# stamps/1.wheezy-amd64.bar: stamps/0.wheezy.foo
 #
 # This is handy when an arch-specific rule pattern depends on a
 # non-arch-specific rule pattern, and codename decoupling is desired
 define CA2C_DEP
-$(strip $(patsubst %,$(call STAMP$(5),$(1),$(2)),$(4)): \
-	$(foreach d,$(call STAMP$(5),$(1),$(3)),$(patsubst %,$(d),$(CODENAME_$(4)))))
+$(strip $(patsubst %,$(call STAMP$(6),$(1),$(2)),$(5)): \
+	$(foreach d,$(call STAMP$(6),$(3),$(4)),$(patsubst %,$(d),$(CODENAME_$(5)))))
 endef
 define CA2C_DEPS
 $(foreach ca,$(ALL_CODENAMES_ARCHES),\
-	$(call CA2C_DEP,$(1),$(2),$(3),$(ca)))
+	$(call CA2C_DEP,$(1),$(2),$(1),$(3),$(ca)))
 endef
 define CA2C_DEPS_CLEAN
 $(foreach ca,$(ALL_CODENAMES_ARCHES),\
-	$(call CA2C_DEP,$(1),$(2),$(3),$(ca),_CLEAN))
+	$(call CA2C_DEP,$(1),$(2),$(1),$(3),$(ca),_CLEAN))
+endef
+# Set a dependency on another package being in the PPA
+define CA2C_PPA_DEP
+$(call CA2C_DEP,$(1),update-chroot-deps,$(SOURCE_NAME_VAR_$(2)),update-ppa,$(3))
+
+endef
+define CA2C_PPA_DEPS
+$(foreach d,$(2),$(foreach ca,$(ALL_CODENAMES_ARCHES),\
+	$(call CA2C_PPA_DEP,$(1),$(d),$(ca))))
 endef
 # Deprecated
 define CA_TO_C_DEP
@@ -211,15 +221,6 @@ ifeq ($(shell /bin/ls /usr/sbin/pbuilder 2>/dev/null),)
   $(error /usr/sbin/pbuilder does not exist)
 endif
 
-
-###################################################
-# Debugging
-
-REASON = @if test -f $@; then \
- echo "   == re-making '$@' for dependency '$?' ==";\
- else \
-   echo "   == making non-existent '$@' for dependency '$?' =="; \
- fi
 
 ###################################################
 # Default rule
@@ -451,22 +452,24 @@ STAMP_EXPAND_CLEAN = $(patsubst %,%-clean,$(call STAMP_EXPAND,$(1),$(2)))
 ###################################################
 # Info generator functions
 
-# $$(call INFO_ALL,<VAR>,<subindex>,<description>)
-INFO_ALL = @echo \
-	"===== $($(1)_INDEX).$(2). all:  $($(1)_SOURCE_NAME):  $(3) ====="
-# $$(call INFO_ALL,<VAR>,<subindex>,<distro>,<description>)
-INFO_INDEP = @echo \
-	"===== $($(1)_INDEX).$(2). $(3):  $($(1)_SOURCE_NAME):  $(4) ====="
-# $$(call INFO_ARCH,<VAR>,<subindex>,<distro>,<description>)
-INFO_ARCH = @echo \
-	"===== $($(1)_INDEX).$(2). $(3):  $($(1)_SOURCE_NAME):  $(4) ====="
-# $$(call INFO,<VAR>,<target>)
-INFO = @echo \
-	"===== $($(1)_INDEX).$(TARGET_$(1)_$(2)_INDEX). $(if $(3),$(3),all): "\
-	    "$($(1)_SOURCE_NAME):  $(TARGET_$(1)_$(2)_DESC) ====="
-INFO_CLEAN = @echo \
-	"===== $($(1)_INDEX).$(TARGET_$(1)_$(2)_INDEX). $(if $(3),$(3),all): "\
-	    "$($(1)_SOURCE_NAME):  Cleaning target $(2) ====="
+# $$(call INFO,<VAR>,<target>,[<description>])
+#   where <scope> is typically $$(CA) or $$(CODENAME)
+#
+# echoes <index>. <scope>:  <package>:  <description>
+define INFO
+	@echo "====="\
+	    "$($(1)_INDEX).$(TARGET_$(1)_$(2)_INDEX)." \
+	    "$(if $(findstring $(TARGET_$(1)_$(2)_TYPE),COMMON),all,$$(CA)): " \
+	    "$($(1)_SOURCE_NAME): " \
+	    "$(if $(3),$(3),$(TARGET_$(1)_$(2)_DESC))" \
+	    "====="
+ifneq ($(DEBUG_DEPS),)
+ifeq ($(3),)
+	@echo "   == making $$(if $$?,,absent )'$$@' $$(if $$?,for '$$?' )=="
+endif
+endif
+endef
+INFO_CLEAN = $(call INFO,$(1),$(2),Cleaning target $(2))
 
 
 ###################################################
@@ -507,7 +510,7 @@ TARGET_$(1)_build-source-package_TYPE := INDEP
 TARGET_$(1)_build-source-package_DESC := Build source package
 TARGETS_$(1) += build-source-package
 
-ifneq ($($(1)_DEPS_ARCH)$($(1)_DEPS_INDEP)$($(1)_DEPS),)
+ifneq ($($(1)_PACKAGE_DEPS),)
 TARGET_$(1)_update-chroot-deps_INDEX := 5
 TARGET_$(1)_update-chroot-deps_TYPE := ARCH
 TARGET_$(1)_update-chroot-deps_DESC := Update chroot packages from PPA
@@ -635,7 +638,7 @@ $(call STAMP_EXPAND,$(1),build-source-package): \
 $(call STAMP,$(1),build-source-package): \
 		$(call STAMP,$(1),unpack-tarball) \
 		$(call STAMP,$(1),debianize-source)
-	$(call INFO,$(1),build-source-package,$$(CODENAME))
+	$(call INFO,$(1),build-source-package)
 #	# Restore original changelog
 	cp --preserve=all $(SOURCEDIR)/$($(1)_SOURCE_NAME)/changelog \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian
@@ -669,15 +672,16 @@ define UPDATE_CHROOT_DEPS
 #
 # This is optional; intended for packages depending on other packages
 # built here
-ifneq ($($(1)_DEPS_ARCH)$($(1)_DEPS_INDEP)$($(1)_DEPS),)
+ifneq ($($(1)_PACKAGE_DEPS),)
 
-$(call CA_TO_C_DEPS,\
-	$(call STAMP,$(1),update-chroot-deps),\
-	$($(1)_DEPS_INDEP))
+# Set dependency on dependent packages' presence in the PPA
+# CA2C_PPA_DEPS,$(1),$($(1)_PACKAGE_DEPS)
+$(call CA2C_PPA_DEPS,$(1),$($(1)_PACKAGE_DEPS))
+
 $(call STAMP_EXPAND,$(1),update-chroot-deps): \
 $(call STAMP,$(1),update-chroot-deps): \
 		$($(1)_DEPS)
-	$(call INFO_ARCH,$(1),5,$$(CA),Update chroot packages from PPA)
+	$(call INFO,$(1),update-chroot-deps)
 	$(SUDO) $(PBUILD) \
 	    --update --override-config \
 	    $$(PBUILD_ARGS)
@@ -685,12 +689,18 @@ $(call STAMP,$(1),update-chroot-deps): \
 .PRECIOUS: $(call STAMP_EXPAND,$(1),update-chroot-deps)
 
 # Binary package build dependent on chroot update
-$(1)_CHROOT_UPDATE_DEP := $(call STAMP,$(1),update-chroot-deps)
+$(call STAMP_EXPAND,$(1),build-binary-package): \
+$(call STAMP,$(1),build-binary-package): $(call STAMP,$(1),update-chroot-deps)
 
-$(call STAMP_EXPAND,$(1),update-chroot-deps-clean): \
-$(call STAMP,$(1),update-chroot-deps-clean): \
+# PPA status dependent on other package PPA status
+$(foreach p,$($(1)_PACKAGE_DEPS),\
+$(call STAMP_EXPAND,$(1),update-ppa): \
+$(call STAMP,$(1),update-ppa): $(call STAMP,$(SOURCE_NAME_VAR_$(p)),update-ppa))
+
+$(call STAMP_EXPAND_CLEAN,$(1),update-chroot-deps): \
+$(call STAMP_CLEAN,$(1),update-chroot-deps): \
 		$(call STAMP_CLEAN,$(1),build-binary-package)
-	$(call INFO_ARCH,$(1),5,$$(CA),Mark chroot as needing update)
+	$(call INFO_CLEAN,$(1),update-chroot-deps)
 	rm -f $(call STAMP,$(1),update-chroot-deps)
 # Cleaning this cleans up all (non-squeaky) arch and indep artifacts
 $(1)_CLEAN_ARCH += $(call STAMP_CLEAN,$(1),update-chroot-deps)
@@ -711,9 +721,8 @@ $(call CA2C_DEPS,$(1),build-binary-package,build-source-package)
 
 $(call STAMP_EXPAND,$(1),build-binary-package): \
 $(call STAMP,$(1),build-binary-package): \
-		stamps/02.1.%.chroot-build \
-		$($(1)_CHROOT_UPDATE_DEP)
-	$(call INFO,$(1),build-binary-package,$$(CA))
+		stamps/02.1.%.chroot-build
+	$(call INFO,$(1),build-binary-package)
 	$(SUDO) $(PBUILD) --build \
 	    $$(PBUILD_ARGS) \
 	    --debbuildopts $$(BUILDTYPE) \
@@ -723,7 +732,7 @@ $(call STAMP,$(1),build-binary-package): \
 
 $(call STAMP_EXPAND_CLEAN,$(1),build-binary-package): \
 $(call STAMP_CLEAN,$(1),build-binary-package):
-	$(call INFO_CLEAN,$(1),build-binary-package,$$(CA))
+	$(call INFO_CLEAN,$(1),build-binary-package)
 	rm -f $(patsubst %,$(BUILDRESULT)/%_$(call PKG_VERSION,$(1))_all.deb,\
 	    $($(1)_PKGS_ALL)) \
 	    $(patsubst %,$(BUILDRESULT)/%_$(call PKG_VERSION,$(1))_$$(ARCH).deb,\
@@ -742,12 +751,12 @@ define UPDATE_PPA
 
 # Depends on binary package builds for all arches
 $(call C2CA_DEPS,$(1),update-ppa,build-binary-package)
-# $(1)
+
 $(call STAMP_EXPAND,$(1),update-ppa):\
 $(call STAMP,$(1),update-ppa):\
 		$(call STAMP,$(1),build-source-package) \
 		stamps/00.3.all.ppa-init
-	$(call INFO,$(1),update-ppa,$$(CODENAME))
+	$(call INFO,$(1),update-ppa)
 #	# Remove packages if they exist
 	$(REPREPRO) \
 	    removesrc $$(CODENAME) $($(1)_SOURCE_NAME)

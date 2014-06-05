@@ -17,7 +17,7 @@ ZEROMQ4_VERSION = 4.0.4
 ZEROMQ4_SOURCE_NAME := zeromq4
 
 # Index
-ZEROMQ4_INDEX := 35
+ZEROMQ4_INDEX := 25
 
 # Submodule name
 ZEROMQ4_SUBMODULE := git/zeromq4-deb
@@ -36,12 +36,7 @@ ZEROMQ4_TARBALL := zeromq-$(ZEROMQ4_VERSION).tar.$(ZEROMQ4_COMPRESSION)
 
 # Dependencies on other locally-built packages
 #
-# Arch- and distro-dependent targets
-ZEROMQ4_DEPS_ARCH = 
-# Arch-independent (but distro-dependent) targets
-ZEROMQ4_DEPS_INDEP = libsodium
-# Targets built for all distros and arches
-ZEROMQ4_DEPS = 
+ZEROMQ4_PACKAGE_DEPS = libsodium
 
 
 ###################################################

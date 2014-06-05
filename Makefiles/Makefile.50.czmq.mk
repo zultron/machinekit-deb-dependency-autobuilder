@@ -38,12 +38,7 @@ CZMQ_TARBALL := czmq-$(CZMQ_VERSION).tar.$(CZMQ_COMPRESSION)
 
 # Dependencies on other locally-built packages
 #
-# Arch- and distro-dependent targets
-CZMQ_DEPS_ARCH = 
-# Arch-independent (but distro-dependent) targets
-CZMQ_DEPS_INDEP = $(ZEROMQ4_INDEP) $(LIBSODIUM_INDEP)
-# Targets built for all distros and arches
-CZMQ_DEPS = 
+CZMQ_PACKAGE_DEPS = zeromq4 libsodium
 
 
 ###################################################

@@ -38,11 +38,7 @@ PYZMQ_TARBALL := v$(PYZMQ_VERSION).tar.$(PYZMQ_COMPRESSION)
 # Dependencies on other locally-built packages
 #
 # Arch- and distro-dependent targets
-PYZMQ_DEPS_ARCH = 
-# Arch-independent (but distro-dependent) targets
-PYZMQ_DEPS_INDEP = $(ZEROMQ4_INDEP) $(CYTHON_INDEP)
-# Targets built for all distros and arches
-PYZMQ_DEPS = 
+PYZMQ_PACKAGE_DEPS = zeromq4
 
 
 ###################################################

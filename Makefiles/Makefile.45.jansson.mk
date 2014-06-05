@@ -36,15 +36,6 @@ JANSSON_URL = http://www.digip.org/jansson/releases
 # Tarball name
 JANSSON_TARBALL := jansson-$(JANSSON_VERSION).tar.$(JANSSON_COMPRESSION)
 
-# Dependencies on other locally-built packages
-#
-# Arch- and distro-dependent targets
-JANSSON_DEPS_ARCH = 
-# Arch-independent (but distro-dependent) targets
-JANSSON_DEPS_INDEP = 
-# Targets built for all distros and arches
-JANSSON_DEPS = 
-
 
 ###################################################
 # Do the standard build for this package
