@@ -48,11 +48,12 @@ RTAI_TARBALL := rtai-$(RTAI_VERSION).tar.$(RTAI_COMPRESSION)
 #
 ifneq ($(RTAI_FEATURESETS),)
 # Linux package depends on Rtai
-LINUX_PACKAGE_DEPS = rtai
-
-# Build-dep for kernel build
-RTAI_LINUX_KERNEL_SOURCE_DEPS := rtai-source
+LINUX_PACKAGE_DEPS += rtai
+LINUX_SOURCE_PACKAGE_DEPS += rtai-source
 endif
+
+# Pass featureset list to Linux package
+LINUX_FEATURESET_PKGS += RTAI
 
 
 ###################################################

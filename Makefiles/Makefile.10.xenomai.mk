@@ -47,12 +47,13 @@ XENOMAI_TARBALL := xenomai-$(XENOMAI_VERSION).tar.$(XENOMAI_COMPRESSION)
 # Dependencies on other locally-built packages
 #
 ifneq ($(XENOMAI_FEATURESETS),)
-# Linux package depends on Xenomai
-LINUX_PACKAGE_DEPS = xenomai
-
-# Build-dep for kernel build
-XENOMAI_LINUX_KERNEL_SOURCE_DEPS := xenomai-kernel-source
+# Actually, the Linux *source* package depends on Xenomai
+LINUX_PACKAGE_DEPS += xenomai
+LINUX_SOURCE_PACKAGE_DEPS += xenomai-kernel-source
 endif
+
+# Pass featureset list to Linux package
+LINUX_FEATURESET_PKGS += XENOMAI
 
 
 ###################################################

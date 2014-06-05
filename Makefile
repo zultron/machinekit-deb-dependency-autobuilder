@@ -85,7 +85,8 @@ DEBBUILDOPTS_ARG = $(if $(DEBBUILDOPTS),--debbuildopts "$(DEBBUILDOPTS)")
 # pbuilder command line
 BINDMOUNTS_ARG = --bindmounts "$(BINDMOUNTS)"
 PBUILD = pbuilder
-PBUILD_ARGS = --configfile admin/pbuilderrc.$(CODENAME)-$(ARCH) \
+PBUILD_ARGS = --configfile \
+	admin/pbuilderrc.$(if $(CODENAME),$(CODENAME)-$(ARCH),$(A_CHROOT)) \
 	--allow-untrusted \
 	$(DEBBUILDOPTS_ARG) $(BINDMOUNTS_ARG)
 
@@ -205,6 +206,10 @@ PACKAGES_ARCH = $(strip $(if $($(1)_PKGS_ARCH),$(call A_EXPAND,\
 PACKAGES_ALL_ARCH = $(strip \
 	$(call PACKAGES_ALL,$(1)) $(call PACKAGES_ARCH,$(1)))
 
+# Debugging:  tell why a package is being remade
+REASON_PAT = @echo "   == making $$(if $$?,,absent )'$$@' $$(if $$?,for '$$?' )=="
+REASON = @echo "   == making $(if $?,,absent )'$@' $(if $?,for '$?' )=="
+
 
 ###################################################
 # out-of-band checks
@@ -275,12 +280,17 @@ stamps/00.1.base-builddeps:
 	@echo "===== 00.1. All:  Initialize basic build deps ====="
 	mkdir -p git dist stamps $(BUILDRESULT) aptcache chroots logs
 	touch $@
-ifneq ($(DEBUG),yes)
+ifeq ($(DEBUG),)
 # While hacking, don't rebuild everything whenever a file is changed
 stamps/00.1.base-builddeps: \
 		Makefile \
-		pbuild/pbuilderrc \
+		pbuild/linux-unpacked-chroot-script.sh \
 		.gitmodules
+# Don't rebuild chroots if these change when hacking
+CHROOT_DEPS = \
+	stamps/01.1.keyring-downloaded \
+	pbuild/pbuilderrc.tmpl \
+	admin/pbuilderrc.%
 endif
 .PRECIOUS:  stamps/00.1.base-builddeps
 INFRA_TARGETS_ALL += stamps/00.1.base-builddeps
@@ -292,8 +302,9 @@ SQUEAKY_ALL += stamps/00.1.base-builddeps-clean
 
 # 00.2 Init distro ppa directories and configuration
 $(call C_EXPAND,stamps/00.2.%.ppa-init): \
-stamps/00.2.%.ppa-init:
+stamps/00.2.%.ppa-init: $(CHROOT_DEPS)
 	@echo "===== 00.2.  $(CODENAME):  Init ppa directories ====="
+	$(REASON)
 	mkdir -p ppa/conf-$(CODENAME) ppa/db-$(CODENAME)
 	cat pbuild/ppa-distributions.tmpl | sed \
 		-e "s/@codename@/$(CODENAME)/g" \
@@ -360,8 +371,13 @@ HELP_VARS_COMMON += KEYRING
 ###################################################
 # 02. Base chroot tarball
 
-$(call CA_EXPAND,admin/pbuilderrc.%): \
-admin/pbuilderrc.%:
+# 02.1.  Build chroot tarball
+$(call CA_EXPAND,stamps/02.1.%.chroot-build): \
+stamps/02.1.%.chroot-build: \
+		$(CHROOT_DEPS)
+	@echo "===== 02.1. $(CA):  Creating pbuilder chroot tarball ====="
+	$(REASON)
+#	# render the pbuilderrc template
 	sed \
 	    -e "s,@TOPDIR@,$(TOPDIR)," \
 	    -e "s,@BUILDRESULT@,$(BUILDRESULT)," \
@@ -370,18 +386,11 @@ admin/pbuilderrc.%:
 	    -e "s,@CHROOTDIR@,$(CHROOTDIR)," \
 	    -e "s,@BUILDPLACE@,$(BUILDPLACE)," \
 	    -e "s,@REPODIR@,$(REPODIR)," \
+	    -e "s,@SOURCEDIR@,$(SOURCEDIR)," \
 	    -e "s,@PBUILDER_USER@,$(PBUILDER_USER)," \
 	    -e "s,@DISTRO_ARCH@,$*," \
 	    pbuild/pbuilderrc.tmpl \
-	    > $@
-
-# 02.1.  Build chroot tarball
-$(call CA_EXPAND,stamps/02.1.%.chroot-build): \
-stamps/02.1.%.chroot-build: \
-		stamps/01.1.keyring-downloaded \
-		admin/pbuilderrc.%
-	@echo "===== 02.1. $(CA):  Creating pbuilder chroot tarball ====="
-	$(REASON)
+		> admin/pbuilderrc.$$(CA)
 #	# make all the codename/i386 directories needed right here
 	mkdir -p $(BUILDRESULT) aptcache
 #	# create the base.tgz chroot tarball
@@ -415,7 +424,6 @@ util-%.chroot: \
 CHROOT_LOGIN_TARGET_ARCH := "util-%.chroot"
 CHROOT_LOGIN_DESC := "Log into a chroot"
 HELP_VARS_UTIL += CHROOT_LOGIN
-
 
 
 ###################################################
@@ -458,7 +466,7 @@ define INFO
 	    "====="
 ifneq ($(DEBUG_DEPS),)
 ifeq ($(3),)
-	@echo "   == making $$(if $$?,,absent )'$$@' $$(if $$?,for '$$?' )=="
+	$(REASON_PAT)
 endif
 endif
 endef
@@ -471,7 +479,7 @@ INFO_CLEAN = $(call INFO,$(1),$(2),Cleaning target $(2))
 PKG_VERSION = $($(1)_VERSION)-$($(1)_PKG_RELEASE)~$$(CODENAME)1
 
 DEBIAN_TARBALL_ORIG = $($(1)_SOURCE_NAME)_$($(1)_VERSION).orig.tar.$($(1)_COMPRESSION)
-DEBIAN_TARBALL = $($(1)_SOURCE_NAME)_$(call PKG_VERSION,$(1)).debian.tar.gz
+DEBIAN_TARBALL = $($(1)_SOURCE_NAME)_$(call PKG_VERSION,$(1)).debian.tar.$(if $($(1)_DEBIAN_COMPRESSION),$($(1)_DEBIAN_COMPRESSION),gz)
 DEBIAN_DSC = $($(1)_SOURCE_NAME)_$(call PKG_VERSION,$(1)).dsc
 
 
@@ -498,17 +506,24 @@ TARGET_$(1)_debianize-source_TYPE := COMMON
 TARGET_$(1)_debianize-source_DESC := Debianize source
 TARGETS_$(1) += debianize-source
 
-TARGET_$(1)_build-source-package_INDEX := 4
-TARGET_$(1)_build-source-package_TYPE := INDEP
-TARGET_$(1)_build-source-package_DESC := Build source package
-TARGETS_$(1) += build-source-package
-
 ifneq ($($(1)_PACKAGE_DEPS),)
 TARGET_$(1)_update-chroot-deps_INDEX := 5
 TARGET_$(1)_update-chroot-deps_TYPE := ARCH
 TARGET_$(1)_update-chroot-deps_DESC := Update chroot packages from PPA
 TARGETS_$(1) += update-chroot-deps
 endif
+
+ifneq ($($(1)_CHROOT_COMMAND),)
+TARGET_$(1)_configure-source-package_INDEX := 8
+TARGET_$(1)_configure-source-package_TYPE := COMMON
+TARGET_$(1)_configure-source-package_DESC := Configure package in chroot
+TARGETS_$(1) += configure-source-package
+endif
+
+TARGET_$(1)_build-source-package_INDEX := 4
+TARGET_$(1)_build-source-package_TYPE := INDEP
+TARGET_$(1)_build-source-package_DESC := Build source package
+TARGETS_$(1) += build-source-package
 
 TARGET_$(1)_build-binary-package_INDEX := 6
 TARGET_$(1)_build-binary-package_TYPE := ARCH
@@ -611,7 +626,7 @@ endif
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian/changelog \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)
 #	# Link source tarball with Debian name
-	ln -sf $(TOPDIR)/dist/$($(1)_TARBALL) \
+	cp -f $(TOPDIR)/dist/$($(1)_TARBALL) \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL_ORIG,$(1))
 #	# Copy Debian tarball to package directory
 	cp --preserve=all dist/$($(1)_TARBALL) \
@@ -621,48 +636,12 @@ endif
 $(call STAMP_CLEAN,$(1),debianize-source): \
 		$(call STAMP_EXPAND_CLEAN,$(1),build-source-package)
 	$(call INFO_CLEAN,$(1),debianize-source)
-	rm -rf $(SOURCEDIR)/$($(1)_SOURCE_NAME)
+	rm -rf $(SOURCEDIR)/$($(1)_SOURCE_NAME)/debian
 	rm -f $(call STAMP,$(1),debianize-source)
 	rm -f $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL_ORIG,$(1))
 	rm -f $(BUILDRESULT)/$(call DEBIAN_TARBALL_ORIG,$(1))
 $(1)_CLEAN_COMMON += \
 	$(call STAMP_CLEAN,$(1),debianize-source)
-endef
-
-
-define BUILD_SOURCE_PACKAGE
-###################################################
-# xx.4. Build source package for each distro
-
-$(call STAMP_EXPAND,$(1),build-source-package): \
-$(call STAMP,$(1),build-source-package): \
-		$(call STAMP,$(1),unpack-tarball) \
-		$(call STAMP,$(1),debianize-source)
-	$(call INFO,$(1),build-source-package)
-#	# Restore original changelog
-	cp --preserve=all $(SOURCEDIR)/$($(1)_SOURCE_NAME)/changelog \
-	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian
-#	# Add changelog entry
-	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && \
-	    $(TOPDIR)/pbuild/tweak-pkg.sh \
-	    $$(CODENAME) $(call PKG_VERSION,$(1)) "$$(MAINTAINER)"
-#	# Build source package
-	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && dpkg-source -i -I -b .
-	mv $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL,$(1)) \
-	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_DSC,$(1)) \
-	    $(BUILDRESULT)
-	touch $$@
-.PRECIOUS: $(call STAMP_EXPAND,$(1),build-source-package)
-
-$(call STAMP_EXPAND_CLEAN,$(1),build-source-package): \
-$(call STAMP_CLEAN,$(1),build-source-package):
-	$(call INFO_CLEAN,$(1),build-source-package)
-	rm -f $(BUILDRESULT)/$(call DEBIAN_DSC,$(1))
-	rm -f $(BUILDRESULT)/$(call DEBIAN_TARBALL_ORIG,$(1))
-	rm -f $(BUILDRESULT)/$(call DEBIAN_TARBALL,$(1))
-	rm -f $(call STAMP,$(1),build-source-package)
-$(call C2CA_DEPS_CLEAN,$(1),build-source-package,build-binary-package)
-$(1)_CLEAN_INDEP += $(call STAMP_CLEAN,$(1),build-source-package)
 endef
 
 
@@ -706,6 +685,78 @@ $(call STAMP_CLEAN,$(1),update-chroot-deps): \
 # Cleaning this cleans up all (non-squeaky) arch and indep artifacts
 $(1)_CLEAN_ARCH += $(call STAMP_CLEAN,$(1),update-chroot-deps)
 endif # package deps defined
+endef
+
+
+define CONFIGURE_SOURCE_PACKAGE
+###################################################
+# xx.8. Configure package source
+
+# This is only added to those packages needing an extra configuration step
+ifneq ($($(1)_CHROOT_COMMAND),)
+# This has to be done in a chroot with the featureset packages
+$(call STAMP,$(1),configure-source-package): \
+		$(patsubst %,$(call STAMP,$(1),update-chroot-deps),$(A_CHROOT))
+	$(call INFO,$(1),configure-source-package)
+#	# Configure the package in a chroot
+	$(SUDO) $(PBUILD) --execute \
+		--bindmounts $(SOURCEDIR) \
+		$(PBUILD_ARGS) $($(1)_CHROOT_COMMAND)
+	touch $$@
+.PRECIOUS: $(call STAMP,$(1),configure-source-package)
+
+# Source package build depends on source package configuration
+$(call STAMP_EXPAND,$(1),build-source-package): \
+	$(call STAMP,$(1),configure-source-package)
+
+$(call STAMP_CLEAN,$(1),configure-source-package): \
+		$(call STAMP_EXPAND_CLEAN,$(1),build-source-package)
+	$(call INFO_CLEAN,$(1),configure-source-package)
+	rm -f $(call STAMP,$(1),configure-source-package)
+CLEAN_COMMON += $(call STAMP_CLEAN,$(1),configure-source-package)
+
+# Cleaning debian source should clean this, too
+$(call STAMP_CLEAN,$(1),debianize-source): \
+	$(call STAMP_CLEAN,$(1),configure-source-package)
+endif
+endef
+
+
+define BUILD_SOURCE_PACKAGE
+###################################################
+# xx.4. Build source package for each distro
+
+$(call STAMP_EXPAND,$(1),build-source-package): \
+$(call STAMP,$(1),build-source-package): \
+		$(call STAMP,$(1),unpack-tarball) \
+		$(call STAMP,$(1),debianize-source)
+	$(call INFO,$(1),build-source-package)
+#	# Restore original changelog
+	cp --preserve=all $(SOURCEDIR)/$($(1)_SOURCE_NAME)/changelog \
+	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian
+#	# Add changelog entry
+	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && \
+	    $(TOPDIR)/pbuild/tweak-pkg.sh \
+	    $$(CODENAME) $(call PKG_VERSION,$(1)) "$$(MAINTAINER)"
+#	# Build source package
+	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && make -f debian/rules clean \
+		|| true
+	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && dpkg-source -i -I -b .
+	mv $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL,$(1)) \
+	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_DSC,$(1)) \
+	    $(BUILDRESULT)
+	touch $$@
+.PRECIOUS: $(call STAMP_EXPAND,$(1),build-source-package)
+
+$(call STAMP_EXPAND_CLEAN,$(1),build-source-package): \
+$(call STAMP_CLEAN,$(1),build-source-package):
+	$(call INFO_CLEAN,$(1),build-source-package)
+	rm -f $(BUILDRESULT)/$(call DEBIAN_DSC,$(1))
+	rm -f $(BUILDRESULT)/$(call DEBIAN_TARBALL_ORIG,$(1))
+	rm -f $(BUILDRESULT)/$(call DEBIAN_TARBALL,$(1))
+	rm -f $(call STAMP,$(1),build-source-package)
+$(call C2CA_DEPS_CLEAN,$(1),build-source-package,build-binary-package)
+$(1)_CLEAN_INDEP += $(call STAMP_CLEAN,$(1),build-source-package)
 endef
 
 
@@ -821,8 +872,9 @@ $(call UPDATE_SUBMODULE,$(1))
 $(call DOWNLOAD_TARBALL,$(1))
 $(call UNPACK_TARBALL,$(1))
 $(call DEBIANIZE_SOURCE,$(1))
-$(call BUILD_SOURCE_PACKAGE,$(1))
+$(call CONFIGURE_SOURCE_PACKAGE,$(1))
 $(call UPDATE_CHROOT_DEPS,$(1))
+$(call BUILD_SOURCE_PACKAGE,$(1))
 $(call BUILD_BINARY_PACKAGE,$(1))
 $(call UPDATE_PPA,$(1))
 $(call ADD_HOOKS,$(1))

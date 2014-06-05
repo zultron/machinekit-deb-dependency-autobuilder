@@ -1,6 +1,6 @@
 #							-*-shell-script-*-
 # Template variables
-TOPDIR="@TOPDIR@"
+export TOPDIR="@TOPDIR@"
 # Where finished packages go
 BUILDRESULT="@BUILDRESULT@"
 # Downloaded package cache
@@ -17,6 +17,8 @@ REPODIR="@REPODIR@"
 DISTRO_ARCH="@DISTRO_ARCH@"
 # User to run as
 BUILDUSERNAME="@PBUILDER_USER@"
+# Source directory (passed to scripts)
+export SOURCEDIR="@SOURCEDIR@"
 
 # Extract distro and arch
 DIST=${DISTRO_ARCH/-*/}

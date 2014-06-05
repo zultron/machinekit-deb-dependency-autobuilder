@@ -15,7 +15,7 @@ shell() {
 }
 trap shell ERR
 
-cd ${TOPDIR}/src/linux/build
+cd ${SOURCEDIR}/linux/build
 
 # Read list of build deps and disabled featuresets from command line
 BUILD_DEPS=
