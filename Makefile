@@ -140,14 +140,6 @@ define CA2C_PPA_DEPS
 $(foreach d,$(2),$(foreach ca,$(ALL_CODENAMES_ARCHES),\
 	$(call CA2C_PPA_DEP,$(1),$(d),$(ca))))
 endef
-# Deprecated
-define CA_TO_C_DEP
-$(patsubst %,$(1),$(3)): $(foreach d,$(2),$(patsubst %,$(d),$(CODENAME_$(3))))
-endef
-define CA_TO_C_DEPS
-$(foreach ca,$(ALL_CODENAMES_ARCHES),\
-	$(call CA_TO_C_DEP,$(1),$(2),$(ca)))
-endef
 
 
 # Auto-generate rules like:
@@ -173,6 +165,7 @@ endef
 define C2CA_DEPS_CLEAN
 $(call C2CA_DEPS,$(1),$(2),$(3),_CLEAN)
 endef
+
 
 # deprecated
 define C_TO_CA_DEP
@@ -533,6 +526,7 @@ define UPDATE_SUBMODULE
 ###################################################
 # xx.0. Update submodule
 #
+ifneq ($($(1)_SUBMODULE),)
 # $$(call UPDATE_SUBMODULE,<VARIABLE>)
 $(call STAMP,$(1),checkout-submodule):
 	$(call INFO,$(1),checkout-submodule)
@@ -547,6 +541,7 @@ $(call STAMP_CLEAN,$(1),checkout-submodule): \
 		$(call STAMP_CLEAN,$(1),debianize-source)
 	rm -f $(call STAMP,$(1),checkout-submodule)
 	touch $$@
+endif
 endef
 
 
@@ -575,7 +570,6 @@ define UNPACK_TARBALL
 # xx.2. Unpack tarball
 #
 $(call STAMP,$(1),unpack-tarball): \
-		$(call STAMP,$(1),checkout-submodule) \
 		$(call STAMP,$(1),tarball-download)
 	$(call INFO,$(1),unpack-tarball)
 	rm -rf $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
@@ -598,14 +592,20 @@ define DEBIANIZE_SOURCE
 ###################################################
 # xx.3. Debianize source
 
+# Some packages include Debianization and need no submodule
+ifneq ($($(1)_SUBMODULE),)
+$(call STAMP,$(1),debianize-source): $(call STAMP,$(1),checkout-submodule)
+endif
+
 $(call STAMP,$(1),debianize-source): \
-		$(call STAMP,$(1),checkout-submodule) \
 		$(call STAMP,$(1),unpack-tarball)
 	$(call INFO,$(1),debianize-source)
+ifneq ($($(1)_SUBMODULE),)
 #	# Unpack debianization
 	mkdir -p $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
 	git --git-dir="$($(1)_SUBMODULE)/.git" archive --prefix=debian/ HEAD \
 	    | tar xCf $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build -
+endif
 #	# Make clean copy of changelog for later munging
 	cp --preserve=all \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian/changelog \
@@ -692,10 +692,11 @@ $(call STAMP,$(1),update-chroot-deps): \
 $(call STAMP_EXPAND,$(1),build-binary-package): \
 $(call STAMP,$(1),build-binary-package): $(call STAMP,$(1),update-chroot-deps)
 
-# PPA status dependent on other package PPA status
-$(foreach p,$($(1)_PACKAGE_DEPS),\
-$(call STAMP_EXPAND,$(1),update-ppa): \
-$(call STAMP,$(1),update-ppa): $(call STAMP,$(SOURCE_NAME_VAR_$(p)),update-ppa))
+# # PPA status dependent on other package PPA status
+# Is this necessary?  Anyway it's broken.
+# $(foreach p,$($(1)_PACKAGE_DEPS),\
+# $(call STAMP_EXPAND,$(1),update-ppa): \
+# $(call STAMP,$(1),update-ppa): $(call STAMP,$(SOURCE_NAME_VAR_$(p)),update-ppa))
 
 $(call STAMP_EXPAND_CLEAN,$(1),update-chroot-deps): \
 $(call STAMP_CLEAN,$(1),update-chroot-deps): \

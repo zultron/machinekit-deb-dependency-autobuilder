@@ -45,3 +45,5 @@ CZMQ_PACKAGE_DEPS = zeromq4 libsodium
 # Do the standard build for this package
 $(eval $(call TARGET_VARS,CZMQ))
 $(eval $(call STANDARD_BUILD,CZMQ))
+# Debugging
+#$(info $(call STANDARD_BUILD,CZMQ))
