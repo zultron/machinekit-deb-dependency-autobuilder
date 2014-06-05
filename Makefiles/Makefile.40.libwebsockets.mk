@@ -1,7 +1,5 @@
 ###################################################
 # 40. libwebsockets build rules
-#
-# Included by Makefile.main.libwebsockets.mk
 
 ###################################################
 # Variables that may change
