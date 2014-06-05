@@ -1,4 +1,11 @@
 ###################################################
+# Configuration override
+
+# Override settings locally in this file
+-include Config.mk
+
+
+###################################################
 # Variables that may change or be overridden in Config.mk
 
 # List of codename/arch combos to build
@@ -54,13 +61,6 @@ SOURCEDIR ?= $(TOPDIR)/src
 
 # User to run as in pbuilder
 PBUILDER_USER ?= ${USER}
-
-###################################################
-# Configuration override
-
-# Override settings locally in this file
--include Config.mk
-
 
 ###################################################
 # Variables that should not change much
@@ -704,7 +704,7 @@ define BUILD_BINARY_PACKAGE
 #
 #   Only build binary-indep packages once:
 $(call STAMP,$(1),build-binary-package): \
-	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-B)
+	BUILDTYPE = $$(if $$(findstring $$(ARCH),$(AN_ARCH)),-b,-B)
 
 # Depends on the source package build
 $(call CA2C_DEPS,$(1),build-binary-package,build-source-package)
