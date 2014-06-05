@@ -48,6 +48,5 @@ CZMQ_DEPS =
 
 ###################################################
 # Do the standard build for this package
-#$$(call STANDARD_BUILD,CZMQ)
 $(eval $(call TARGET_VARS,CZMQ))
 $(eval $(call STANDARD_BUILD,CZMQ))

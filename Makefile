@@ -507,10 +507,12 @@ TARGET_$(1)_build-source-package_TYPE := INDEP
 TARGET_$(1)_build-source-package_DESC := Build source package
 TARGETS_$(1) += build-source-package
 
+ifneq ($($(1)_DEPS_ARCH)$($(1)_DEPS_INDEP)$($(1)_DEPS),)
 TARGET_$(1)_update-chroot-deps_INDEX := 5
 TARGET_$(1)_update-chroot-deps_TYPE := ARCH
 TARGET_$(1)_update-chroot-deps_DESC := Update chroot packages from PPA
 TARGETS_$(1) += update-chroot-deps
+endif
 
 TARGET_$(1)_build-binary-package_INDEX := 6
 TARGET_$(1)_build-binary-package_TYPE := ARCH
@@ -524,11 +526,11 @@ TARGETS_$(1) += update-ppa
 endef
 
 
+define UPDATE_SUBMODULE
 ###################################################
 # xx.0. Update submodule
 #
 # $$(call UPDATE_SUBMODULE,<VARIABLE>)
-define UPDATE_SUBMODULE
 $(call STAMP,$(1),checkout-submodule):
 	$(call INFO,$(1),checkout-submodule)
 #	# be sure the submodule has been checked out
@@ -545,10 +547,10 @@ $(call STAMP_CLEAN,$(1),checkout-submodule): \
 endef
 
 
+define DOWNLOAD_TARBALL
 ###################################################
 # xx.1. Download tarball distribution
 #
-define DOWNLOAD_TARBALL
 $(call STAMP,$(1),tarball-download):
 	$(call INFO,$(1),tarball-download)
 	mkdir -p dist
@@ -565,9 +567,10 @@ $(1)_SQUEAKY_ALL += $(call STAMP_CLEAN,$(1),tarball-download)
 endef
 
 
+define UNPACK_TARBALL
 ###################################################
 # xx.2. Unpack tarball
-define UNPACK_TARBALL
+#
 $(call STAMP,$(1),unpack-tarball): \
 		$(call STAMP,$(1),checkout-submodule) \
 		$(call STAMP,$(1),tarball-download)
@@ -588,9 +591,10 @@ $(1)_CLEAN_COMMON += \
 endef
 
 
+define DEBIANIZE_SOURCE
 ###################################################
 # xx.3. Debianize source
-define DEBIANIZE_SOURCE
+
 $(call STAMP,$(1),debianize-source): \
 		$(call STAMP,$(1),checkout-submodule) \
 		$(call STAMP,$(1),unpack-tarball)
@@ -623,9 +627,10 @@ $(1)_CLEAN_COMMON += \
 endef
 
 
+define BUILD_SOURCE_PACKAGE
 ###################################################
 # xx.4. Build source package for each distro
-define BUILD_SOURCE_PACKAGE
+
 $(call STAMP_EXPAND,$(1),build-source-package): \
 $(call STAMP,$(1),build-source-package): \
 		$(call STAMP,$(1),unpack-tarball) \
@@ -658,12 +663,12 @@ $(1)_CLEAN_INDEP += $(call STAMP_CLEAN,$(1),build-source-package)
 endef
 
 
+define UPDATE_CHROOT_DEPS
 ###################################################
 # xx.5. Update chroot with locally-built dependent packages
 #
 # This is optional; intended for packages depending on other packages
 # built here
-define UPDATE_CHROOT_DEPS
 ifneq ($($(1)_DEPS_ARCH)$($(1)_DEPS_INDEP)$($(1)_DEPS),)
 
 $(call CA_TO_C_DEPS,\
@@ -693,10 +698,10 @@ endif # package deps defined
 endef
 
 
+define BUILD_BINARY_PACKAGE
 ###################################################
 # xx.6. Build binary packages for each distro/arch
 #
-define BUILD_BINARY_PACKAGE
 #   Only build binary-indep packages once:
 $(call STAMP,$(1),build-binary-package): \
 	BUILDTYPE = $(if $(findstring $(ARCH),$(AN_ARCH)),-b,-B)
@@ -731,10 +736,10 @@ $(1)_CLEAN_ARCH += $(call STAMP_CLEAN,$(1),build-binary-package)
 endef
 
 
+define UPDATE_PPA
 ###################################################
 # xx.7. Add packages to the PPA for each distro
 
-define UPDATE_PPA
 # Depends on binary package builds for all arches
 $(call C2CA_DEPS,$(1),update-ppa,build-binary-package)
 # $(1)
@@ -766,14 +771,15 @@ $(1)_CLEAN_INDEP += $(call STAMP_CLEAN,$(1),update-ppa)
 endef
 
 
+define ADD_HOOKS
 ###################################################
 # xx.8. Wrap up
 
-define ADD_HOOKS
 # Cleaning
 $(call C_EXPAND,clean-$($(1)_SOURCE_NAME)-%): \
 clean-$($(1)_SOURCE_NAME)-%: \
-	$($(1)_CLEAN_INDEP) $(foreach t,$($(1)_CLEAN_ARCH),$(patsubst %,$(t),$(patsubst %,\%-%,$(ARCHES))))
+	$($(1)_CLEAN_INDEP) \
+	$(foreach t,$($(1)_CLEAN_ARCH),$(patsubst %,$(t),$(patsubst %,\%-%,$(ARCHES))))
 
 # Hook builds into final builds, if configured
 FINAL_DEPS_INDEP += $($(1)_INDEP)
@@ -782,37 +788,34 @@ CLEAN_INDEP += $($(1)_CLEAN_INDEP)
 PACKAGES += $(1)
 SOURCE_NAME_VAR_$($(1)_SOURCE_NAME) = $(1)
 
-# Convenience target
-$($(1)_SOURCE_NAME):  $(call C_EXPAND,$($(1)_INDEP))
+# <package> and <package>-<distro> target, update-ppa by default
+$(1)_DEFAULT_TARGET =  update-ppa
+# 
+$(call C_EXPAND,$($(1)_SOURCE_NAME)-%): \
+$($(1)_SOURCE_NAME)-%: $(call STAMP,$(1),$(if \
+	$($(1)_DEFAULT_TARGET),$($(1)_DEFAULT_TARGET),update-ppa))
+$($(1)_SOURCE_NAME):  $(call STAMP_EXPAND,$(1),$(if \
+	$($(1)_DEFAULT_TARGET),$($(1)_DEFAULT_TARGET),update-ppa))
 $(1)_TARGET_ALL := "$($(1)_SOURCE_NAME)"
-$(1)_DESC := "Convenience:  Build $($(1)_SOURCE_NAME) packages for all distros"
+$(1)_DESC := "Build $($(1)_SOURCE_NAME) packages for all distros"
 HELP_VARS_PACKAGE += $(1)
 endef
 
 
 ###################################################
+#
 # xx.9. The whole enchilada
 
 define STANDARD_BUILD
-# xx.0. Update submodule
-$(call UPDATE_SUBMODULE,CZMQ)
-# xx.1. Download tarball distribution
-$(call DOWNLOAD_TARBALL,CZMQ)
-# xx.2. Unpack tarball
-$(call UNPACK_TARBALL,CZMQ)
-# xx.3. Debianize source
-$(call DEBIANIZE_SOURCE,CZMQ)
-# xx.4. Build source package for each distro
-$(call BUILD_SOURCE_PACKAGE,CZMQ)
-# xx.5. Update chroot with locally-built dependent packages
-# This is only built if package deps are defined
-$(call UPDATE_CHROOT_DEPS,CZMQ)
-# xx.6. Build binary packages for each distro/arch
-$(call BUILD_BINARY_PACKAGE,CZMQ)
-# xx.7. Add packages to the PPA for each distro
-$(call UPDATE_PPA,CZMQ)
-# xx.7. Wrap up
-$(call ADD_HOOKS,CZMQ)
+$(call UPDATE_SUBMODULE,$(1))
+$(call DOWNLOAD_TARBALL,$(1))
+$(call UNPACK_TARBALL,$(1))
+$(call DEBIANIZE_SOURCE,$(1))
+$(call BUILD_SOURCE_PACKAGE,$(1))
+$(call UPDATE_CHROOT_DEPS,$(1))
+$(call BUILD_BINARY_PACKAGE,$(1))
+$(call UPDATE_PPA,$(1))
+$(call ADD_HOOKS,$(1))
 endef
 
 
@@ -906,7 +909,6 @@ help-%:
 	@echo "targets for package $*:"
 	$(call PACKAGE_HELP,$*)
 
-$(info $(call PACKAGE_HELP,CZMQ))
 
 ###################################################
 # 98. Pbuilder config utilities
