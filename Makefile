@@ -120,9 +120,12 @@ CA_EXPAND = $(foreach i,$(1),$(patsubst %,$(i),$(ALL_CODENAMES_ARCHES)))
 #
 # This is handy when an arch-specific rule pattern depends on a
 # non-arch-specific rule pattern, and codename decoupling is desired
+#
+# LEAVE THE TRAILING SPACE
 define CA2C_DEP
 $(strip $(patsubst %,$(call STAMP$(6),$(1),$(2)),$(5)): \
 	$(foreach d,$(call STAMP$(6),$(3),$(4)),$(patsubst %,$(d),$(CODENAME_$(5)))))
+
 endef
 define CA2C_DEPS
 $(foreach ca,$(ALL_CODENAMES_ARCHES),\
@@ -150,18 +153,21 @@ endef
 #
 # This is handy when an indep rule pattern depends on a
 # arch rule pattern, and codename decoupling is desired
+#
+# LEAVE THE TRAILING SPACE
 define C2CA_DEP
-$(patsubst %,$(1),$(3)): $(strip \
+$(strip $(patsubst %,$(1),$(3)): \
 	$(foreach a,$(ARCHES),\
 	  $(if $(findstring $(3)-$(a),$(ALL_CODENAMES_ARCHES)),\
 	    $(patsubst %,$(2),$(3)-$(a)))))
+
 endef
 define C2CA_DEPS
-$(strip $(foreach dep,$(3),
+$(foreach dep,$(3),
   $(foreach c,$(CODENAMES),\
     $(call C2CA_DEP,\
 	$(call STAMP$(4),$(1),$(2)),\
-	$(call STAMP$(4),$(1),$(dep)),$(c)))))
+	$(call STAMP$(4),$(1),$(dep)),$(c))))
 endef
 define C2CA_DEPS_CLEAN
 $(call C2CA_DEPS,$(1),$(2),$(3),_CLEAN)
@@ -170,14 +176,15 @@ endef
 
 # deprecated
 define C_TO_CA_DEP
-$(patsubst %,$(1),$(3)): $(strip \
+$(strip $(patsubst %,$(1),$(3)): \
 	$(foreach a,$(ARCHES),\
 	  $(if $(findstring $(3)-$(a),$(ALL_CODENAMES_ARCHES)),\
 	    $(patsubst %,$(2),$(3)-$(a)))))
+
 endef
 define C_TO_CA_DEPS
-$(foreach dep,$(2),
-  $(foreach c,$(CODENAMES),$(call C_TO_CA_DEP,$(1),$(dep),$(c))))
+$(foreach dep,$(2),\
+$(foreach c,$(CODENAMES),$(call C_TO_CA_DEP,$(1),$(dep),$(c))))
 endef
 
 # A random chroot to configure a source package in
@@ -1044,7 +1051,8 @@ $(call CA_EXPAND,%.clean): \
 .PHONY:  $(call CA_EXPAND,%.clean)
 
 # distro targets
-$(call C_TO_CA_DEPS,%.clean,%.clean)
+$(eval $(call C_TO_CA_DEPS,%.clean,%.clean))
+
 $(call C_EXPAND,%.clean): \
 %.clean: \
 	$(CLEAN_INDEP)
