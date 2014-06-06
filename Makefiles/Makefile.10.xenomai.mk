@@ -59,6 +59,32 @@ LINUX_FEATURESET_PKGS += XENOMAI
 ###################################################
 # Do the standard build for this package
 $(eval $(call TARGET_VARS,XENOMAI))
+
+ifeq ($(DEBUG_PACKAGE),)
+ifeq ($(DEBUG_INFO),xenomai)
+$(info $(call STANDARD_BUILD,XENOMAI))
+endif
 $(eval $(call STANDARD_BUILD,XENOMAI))
-# Debugging
-#$(info $(call STANDARD_BUILD,XENOMAI))
+
+else # Debugging
+ifeq ($(DEBUG_PACKAGE),xenomai)
+$(info # doing debuggery:  DEBUG_STAGE = $(DEBUG_STAGE))
+debuggery:
+ifeq ($(DEBUG_STAGE),)
+	@echo In debuggery stage 0
+#	# Re-run twice:
+	@echo Running debuggery stage 1, render rules into /tmp/makefile.debug
+	$(MAKE) -s debuggery DEBUG_STAGE=1 > /tmp/makefile.debug
+	@echo Remaking '$(TARGET)' including /tmp/makefile.debug
+	$(MAKE) $(TARGET) DEBUG_STAGE=2
+endif # Debuggery stage 0
+ifeq ($(DEBUG_STAGE),1)
+$(info # Output from debuggery of $(DEBUG_PACKAGE))
+$(info $(call STANDARD_BUILD,XENOMAI))
+endif # Debuggery stage 1
+ifeq ($(DEBUG_STAGE),2)
+$(info *** Including debuggery rules from /tmp/makefile.debug ***)
+-include /tmp/makefile.debug
+endif # Debuggery stage 2
+endif # Debuggery in this package
+endif # Debuggery
