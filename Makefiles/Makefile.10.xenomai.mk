@@ -8,8 +8,8 @@
 #
 # Enable/disable Xenomai builds by moving into the DISABLED list
 XENOMAI_FEATURESETS := \
-    xenomai.x86 \
-    xenomai.beaglebone
+    $(if $(filter amd64 i386,$(ARCHES)),xenomai.x86) \
+    $(if $(filter armhf,$(ARCHES)),xenomai.beaglebone)
 
 XENOMAI_FEATURESETS_DISABLED := \
     # xenomai.x86 \

@@ -183,8 +183,11 @@ endef
 # A random chroot to configure a source package in
 # (The kernel configuration depends on packages being installed)
 A_CHROOT ?= $(wordlist 1,1,$(ALL_CODENAMES_ARCHES))
-AN_ARCH = $(ARCH_$(A_CHROOT))
 A_CODENAME = $(CODENAME_$(A_CHROOT))
+# Arch to build indep packages with
+BUILD_INDEP_ARCH = $(ARCH_$(A_CHROOT))
+# Arches NOT to build indep packages with
+BUILD_ARCH_ARCHES = $(filter-out $(ARCH_$(A_CHROOT)),$(ARCHES))
 
 # The reprepro command and args
 REPREPRO = reprepro -VV -b $(REPODIR) \
@@ -227,49 +230,25 @@ all:
 .PHONY:  all
 
 ###################################################
-# PPA rules (reusable)
-
-# generate a PPA including all packages build thus far
-# (call BUILD_PPA,<index>,<src-pkg>,<pkg.dsc>,<pkg.deb> ...)
-define BUILD_PPA
-	@echo "===== $(1). $(CODENAME):  Adding $(2) packages to PPA ====="
-	$(REASON)
-#	# Remove packages if they exist
-	$(REPREPRO) \
-	    removesrc $(CODENAME) $(2)
-#	# Add source package
-	$(REPREPRO) -C main \
-	    includedsc $(CODENAME) $(3)
-#	# Add binary packages
-	$(REPREPRO) -C main \
-	    includedeb $(CODENAME) $(4)
-	touch $@
-endef
+# PPA rules
 
 # list a PPA's packages for a distro
-define LIST_PPA
-	@echo "===== $(1). $(CODENAME):  Listing $(2) PPA ====="
-	$(REASON)
-	$(REPREPRO) \
-	    list $(CODENAME)
-endef
-# Clean a PPA's packages for a distro
-define CLEAN_PPA
-	@echo "===== $(1). $(CODENAME):  Listing $(2) PPA ====="
-	$(REASON)
-	$(REPREPRO) \
-	    list $(CODENAME)
-endef
-
 # PPA help target:  print PPA contents
+define LIST_PPA
+# This has to be in a 'define' list to handle the double-$ stuff
+# needed by later targets using REPREPRO
 $(call C_EXPAND,util-%.list-ppa): \
 util-%.list-ppa:
-	$(call LIST_PPA,info,$(CODENAME))
+	@echo "===== $$(CODENAME):  Listing PPA ====="
+	$(REASON)
+	$(REPREPRO) \
+	    list $$(CODENAME)
+endef
+$(eval $(call LIST_PPA))
 
 INFO_PPA_LIST_TARGET_INDEP := "util-%.list-ppa"
 INFO_PPA_LIST_DESC := "List current PPA contents for a distro"
 HELP_VARS_UTIL += INFO_PPA_LIST
-
 
 
 ###################################################
@@ -278,7 +257,7 @@ HELP_VARS_UTIL += INFO_PPA_LIST
 # 00.1 Generic target for non-<codename>/<arch>-specific targets
 stamps/00.1.base-builddeps:
 	@echo "===== 00.1. All:  Initialize basic build deps ====="
-	mkdir -p git dist stamps $(BUILDRESULT) aptcache chroots logs
+	mkdir -p git dist stamps $(BUILDRESULT) chroots logs
 	touch $@
 ifeq ($(DEBUG),)
 # While hacking, don't rebuild everything whenever a file is changed
@@ -458,6 +437,7 @@ STAMP_EXPAND_CLEAN = $(patsubst %,%-clean,$(call STAMP_EXPAND,$(1),$(2)))
 #
 # echoes <index>. <scope>:  <package>:  <description>
 define INFO
+	@echo
 	@echo "====="\
 	    "$($(1)_INDEX).$(TARGET_$(1)_$(2)_INDEX)." \
 	    "$(if $(findstring $(TARGET_$(1)_$(2)_TYPE),COMMON),all,$$(CA)): " \
@@ -506,6 +486,7 @@ TARGET_$(1)_debianize-source_TYPE := COMMON
 TARGET_$(1)_debianize-source_DESC := Debianize source
 TARGETS_$(1) += debianize-source
 
+
 ifneq ($($(1)_PACKAGE_DEPS),)
 TARGET_$(1)_update-chroot-deps_INDEX := 5
 TARGET_$(1)_update-chroot-deps_TYPE := ARCH
@@ -513,10 +494,13 @@ TARGET_$(1)_update-chroot-deps_DESC := Update chroot packages from PPA
 TARGETS_$(1) += update-chroot-deps
 endif
 
-ifneq ($($(1)_CHROOT_COMMAND),)
+$(1)_HAVE_SOURCE_PACKAGE_CONFIGURE := $(strip \
+	$($(1)_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND) \
+	$($(1)_SOURCE_PACKAGE_CONFIGURE_COMMAND))
+ifneq ($(1)_HAVE_SOURCE_PACKAGE_CONFIGURE,)
 TARGET_$(1)_configure-source-package_INDEX := 8
 TARGET_$(1)_configure-source-package_TYPE := COMMON
-TARGET_$(1)_configure-source-package_DESC := Configure package in chroot
+TARGET_$(1)_configure-source-package_DESC := Configure source package
 TARGETS_$(1) += configure-source-package
 endif
 
@@ -564,18 +548,43 @@ define DOWNLOAD_TARBALL
 ###################################################
 # xx.1. Download tarball distribution
 #
+ifeq ($($(1)_TARBALL_PACKAGE),)
+# Download a tarball
 $(call STAMP,$(1),tarball-download):
 	$(call INFO,$(1),tarball-download)
 	mkdir -p dist
 	wget $($(1)_URL)/$($(1)_TARBALL) -O dist/$($(1)_TARBALL)
 	touch $$@
+
+else
+# Use the same tarball as another package
+$(1)_TARBALL_TARGET := \
+	$(call STAMP,$(SOURCE_NAME_VAR_$($(1)_TARBALL_PACKAGE)),tarball-download)
+$(call STAMP,$(1),tarball-download): \
+		$($(1)_TARBALL_TARGET)
+	$(call INFO,$(1),tarball-download,\
+		Using tarball from package $($(1)_TARBALL_PACKAGE))
+	test -e dist/$($(1)_TARBALL)
+	touch $$@
+endif
+
 .PRECIOUS: $(call STAMP,$(1),tarball-download)
 
 $(call STAMP_CLEAN,$(1),tarball-download): \
 		$(call STAMP_CLEAN,$(1),unpack-tarball)
 	$(call INFO_CLEAN,$(1),tarball-download)
-	rm -f dist/$($(1)_TARBALL)
 	rm -f $(call STAMP,$(1),tarball-download)
+ifeq ($($(1)_TARBALL_TARGET),)
+	rm -f dist/$($(1)_TARBALL)
+else
+
+# Hook into other package's clean target
+$(call STAMP_CLEAN,$($(1)_TARBALL_TARGET),tarball-download): \
+	$(call STAMP_CLEAN,$(1),tarball-download)
+endif
+
+# Tarball downloads cost time and bandwidth, and are infrequent; only
+# clean squeaky
 $(1)_SQUEAKY_ALL += $(call STAMP_CLEAN,$(1),tarball-download)
 endef
 
@@ -691,19 +700,38 @@ endef
 define CONFIGURE_SOURCE_PACKAGE
 ###################################################
 # xx.8. Configure package source
-
+#
 # This is only added to those packages needing an extra configuration step
-ifneq ($($(1)_CHROOT_COMMAND),)
-# This has to be done in a chroot with the featureset packages
+ifneq ($($(1)_HAVE_SOURCE_PACKAGE_CONFIGURE),)
+
+ifneq ($($(1)_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND),)
+# Configure source package in a chroot with dependent package
+# installed
 $(call STAMP,$(1),configure-source-package): \
 		$(patsubst %,$(call STAMP,$(1),update-chroot-deps),$(A_CHROOT))
 	$(call INFO,$(1),configure-source-package)
 #	# Configure the package in a chroot
 	$(SUDO) $(PBUILD) --execute \
 		--bindmounts $(SOURCEDIR) \
-		$(PBUILD_ARGS) $($(1)_CHROOT_COMMAND)
+		$(PBUILD_ARGS) $($(1)_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND)
 	touch $$@
+endif
+
+ifneq ($($(1)_SOURCE_PACKAGE_CONFIGURE_COMMAND),)
+# Configure source package normally
+$(call STAMP,$(1),configure-source-package):
+	$(call INFO,$(1),configure-source-package)
+#	# Configure the source package
+	$($(1)_SOURCE_PACKAGE_CONFIGURE_COMMAND)
+	touch $$@
+endif
+
+# Common code for source package configuration
 .PRECIOUS: $(call STAMP,$(1),configure-source-package)
+
+# Also depends on debianization
+$(call STAMP,$(1),configure-source-package): \
+	$(call STAMP,$(1),debianize-source)
 
 # Source package build depends on source package configuration
 $(call STAMP_EXPAND,$(1),build-source-package): \
@@ -766,7 +794,7 @@ define BUILD_BINARY_PACKAGE
 #
 #   Only build binary-indep packages once:
 $(call STAMP,$(1),build-binary-package): \
-	BUILDTYPE = $$(if $$(findstring $$(ARCH),$(AN_ARCH)),-b,-B)
+	BUILDTYPE = $$(if $$(findstring $$(ARCH),$(BUILD_INDEP_ARCH)),-b,-B)
 
 # Depends on the source package build
 $(call CA2C_DEPS,$(1),build-binary-package,build-source-package)
@@ -834,7 +862,7 @@ endef
 
 define ADD_HOOKS
 ###################################################
-# xx.8. Wrap up
+# xx.9. Wrap up
 
 # Cleaning
 $(call C_EXPAND,clean-$($(1)_SOURCE_NAME)-%): \

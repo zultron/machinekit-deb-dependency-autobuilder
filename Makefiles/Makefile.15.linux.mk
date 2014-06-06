@@ -42,7 +42,6 @@ LINUX_PKG_COMMON_EXTENSIONS := $(LINUX_FEATURESETS_ENABLED)
 LINUX_PKG_ARCH_EXTENSIONS := \
 	$(foreach e,$(LINUX_PKG_COMMON_EXTENSIONS),\
 	    $(patsubst %,$(e)-%,$(foreach a,$(ARCHES),$(ARCH_FLAVOR_MAP_$(a)))))
-$(info LINUX_PKG_ARCH_EXTENSIONS = $(LINUX_PKG_ARCH_EXTENSIONS))
 
 # Source name
 LINUX_SOURCE_NAME := linux
@@ -64,9 +63,9 @@ LINUX_PKGS_ARCH := \
 
 # Misc paths, filenames, executables
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
-LINUX_COMPRESSION = xz
-# This one package likes to use xz compression for the Debian tarball
-LINUX_DEBIAN_COMPRESSION = xz
+LINUX_COMPRESSION := xz
+# This package likes to use xz compression for the Debian tarball
+LINUX_DEBIAN_COMPRESSION := xz
 
 # Tarball name
 LINUX_TARBALL := linux-$(LINUX_VERSION).tar.$(LINUX_COMPRESSION)
@@ -81,7 +80,7 @@ LINUX_TARBALL := linux-$(LINUX_VERSION).tar.$(LINUX_COMPRESSION)
 # install
 LINUX_KERNEL_FEATURESETS_DISABLED := \
 	$(foreach fs,$(LINUX_FEATURESET_PKGS),$($(fs)_FEATURESETS_DISABLED))
-LINUX_CHROOT_COMMAND := \
+LINUX_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND := \
 		pbuild/linux-unpacked-chroot-script.sh \
 		    -d "$(LINUX_KERNEL_FEATURESETS_DISABLED)" \
 		    -b "$(LINUX_SOURCE_PACKAGE_DEPS)"
