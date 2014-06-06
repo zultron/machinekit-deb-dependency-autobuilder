@@ -530,9 +530,9 @@ ifneq ($($(1)_SUBMODULE),)
 $(call STAMP,$(1),checkout-submodule):
 	$(call INFO,$(1),checkout-submodule)
 #	# be sure the submodule has been checked out
-	test -e $($(1)_SUBMODULE)/.git || \
+	test -e $$($(1)_SUBMODULE)/.git || \
 	    git submodule update --init $($(1)_SUBMODULE)
-	test -e $($(1)_SUBMODULE)/.git
+	test -e $$($(1)_SUBMODULE)/.git
 	touch $$@
 .PRECIOUS: $(call STAMP,$(1),checkout-submodule)
 
