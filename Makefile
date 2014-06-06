@@ -918,7 +918,9 @@ $(call CA2C_DEPS,$(1),build-binary-package,update-ppa-source)
 
 $(call STAMP_EXPAND,$(1),build-binary-package): \
 $(call STAMP,$(1),build-binary-package): \
-		stamps/02.1.%.chroot-build
+		stamps/02.1.%.chroot-build \
+		$$(foreach dep,$$($(1)_PACKAGE_DEPS),\
+		    $$(call STAMP,$$(SOURCE_NAME_VAR_$$(dep)),update-ppa))
 	$(call INFO,$(1),build-binary-package)
 	mkdir -p $(BUILDRESULT)
 	$(SUDO) $(PBUILD) --build \
