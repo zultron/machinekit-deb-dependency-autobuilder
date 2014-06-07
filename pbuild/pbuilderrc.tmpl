@@ -13,6 +13,8 @@ CHROOTDIR="@CHROOTDIR@"
 BUILDPLACE="@BUILDPLACE@"
 # Local ppa with dependent packages
 REPODIR="@REPODIR@"
+# Directory for misc. things; keyring is here
+MISCDIR="@MISCDIR@"
 # distro-arch string, e.g. wheezy-armhf
 DISTRO_ARCH="@DISTRO_ARCH@"
 # User to run as
@@ -47,7 +49,7 @@ UBUNTU_MIRROR="ftp.ubuntu.com"
 
 # Keyring file
 KEYRING=keyring.gpg
-APTKEYRINGS=("${APTKEYRINGS[@]}" "$TOPDIR/admin/$KEYRING")
+APTKEYRINGS=("${APTKEYRINGS[@]}" "$MISCDIR/$KEYRING")
 
 # Distribution
 DISTRIBUTION=${DIST}
@@ -86,7 +88,7 @@ DEBOOTSTRAPOPTS=(
     "${DEBOOTSTRAPOPTS[@]}"
     "--arch=${ARCH}"
     "--include=$EXTRA_PACKAGES"
-    "--keyring=${TOPDIR}/admin/${KEYRING}"
+    "--keyring=${MISCDIR}/${KEYRING}"
 )
 
 # set arch for create mode

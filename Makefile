@@ -33,22 +33,42 @@ A_CHROOT ?= wheezy-amd64
 # Your "Firstname Lastname <email@address>"; leave out to use git config
 #MAINTAINER = John Doe <jdoe@example.com>
 
+# User to run as in pbuilder
+PBUILDER_USER ?= ${USER}
+
 # Uncomment to remove dependencies on Makefile and pbuilderrc while
 # hacking this script
 DEBUG ?= yes
 # Uncomment to print reasons a target is being built/rebuilt
 DEBUG_DEPS ?= yes
 
-# Directories that pbuilderrc needs
+###################################################
+# Directories
 #
-# The common directory where this Makefile lives
+# The top 'make' directory
+#
+# This directory is shared by all builds; by default, shared pieces
+# are kept under this directory
 TOPDIR := $(shell pwd)
-# Where to build things not common to all codenames and arches; this
-# can be overridden in Config.mk to separate builds into e.g. fast
-# storage
+# Where to build the Apt package repository
+REPODIR ?= $(TOPDIR)/ppa
+# Where to download source tarballs
+DISTDIR ?= $(TOPDIR)/dist
+# Where apt keyring and rendered pbuilderrc templates live
+MISCDIR ?= $(TOPDIR)/admin
+
+
+# The top non-shared directory
+#
+# Build artifacts not shared between codenames and arches can be built
+# in a separate directory by overriding in Config.mk.  This can be
+# useful e.g. to run builds on fast storage.
+#
+# NOTE: This is not suited to running on tmpfs.  If these disappear,
+# later updates to the builds will break.
 PRIVATE_DIR ?= $(TOPDIR)
-# If a separate PRIVATE_DIR is set, make it available in the chroot by
-# adding it to BINDMOUNTS
+# If PRIVATE_DIR is set separately from TOPDIR, make it available in
+# the chroot by adding it to BINDMOUNTS
 ifneq ($(TOPDIR),$(PRIVATE_DIR))
 BINDMOUNTS := $(PRIVATE_DIR)
 endif
@@ -62,16 +82,8 @@ CCACHEDIR ?= $(PRIVATE_DIR)/ccache
 CHROOTDIR ?= $(PRIVATE_DIR)/chroots
 # Where to unpack the chroot and build
 BUILDPLACE ?= $(PRIVATE_DIR)/build
-# Where to build the Apt package repository
-REPODIR ?= $(TOPDIR)/ppa
-
-# Other directories
-#
 # Where to unpack sources
 SOURCEDIR ?= $(PRIVATE_DIR)/src
-
-# User to run as in pbuilder
-PBUILDER_USER ?= ${USER}
 
 ###################################################
 # Variables that should not change much
@@ -87,7 +99,7 @@ KEYSERVER = hkp://keys.gnupg.net
 # Misc paths, filenames, executables
 SUDO := sudo -n
 
-KEYRING := $(TOPDIR)/admin/keyring.gpg
+KEYRING := $(MISCDIR)/keyring.gpg
 
 # Pass any 'DEBBUILDOPTS=foo' arg into dpkg-buildpackage
 DEBBUILDOPTS_ARG = $(if $(DEBBUILDOPTS),--debbuildopts "$(DEBBUILDOPTS)")
@@ -98,7 +110,7 @@ BINDMOUNTS_ARG = --bindmounts "$(BINDMOUNTS)"
 endif
 PBUILD = pbuilder
 PBUILD_ARGS = --configfile \
-	admin/pbuilderrc.$(if $(CODENAME),$(CODENAME)-$(ARCH),$(A_CHROOT)) \
+	$(MISCDIR)/pbuilderrc.$(if $(CODENAME),$(CODENAME)-$(ARCH),$(A_CHROOT)) \
 	--allow-untrusted \
 	$(DEBBUILDOPTS_ARG) $(BINDMOUNTS_ARG)
 
@@ -371,7 +383,7 @@ stamps/00.1.base-builddeps: \
 # Don't rebuild chroots if these change when hacking
 CHROOT_DEPS = \
 	pbuild/pbuilderrc.tmpl \
-	admin/pbuilderrc.%
+	$(MISCDIR)/pbuilderrc.%
 endif
 
 # Other deps, in variables
@@ -391,11 +403,11 @@ $(call C_EXPAND,stamps/00.2.%.ppa-init): \
 stamps/00.2.%.ppa-init: $(CHROOT_DEPS)
 	@echo "===== 00.2.  $(CODENAME):  Init ppa directories ====="
 	$(REASON_PAT)
-	mkdir -p ppa/conf-$(CODENAME) ppa/db-$(CODENAME)
+	mkdir -p $(REPODIR)/conf-$(CODENAME) $(REPODIR)/db-$(CODENAME)
 	cat pbuild/ppa-distributions.tmpl | sed \
 		-e "s/@codename@/$(CODENAME)/g" \
 		-e "s/@arch@/$(call CODENAME_ARCHES,$(CODENAME))/g" \
-		> ppa/conf-$(CODENAME)/distributions
+		> $(REPODIR)/conf-$(CODENAME)/distributions
 	$(REPREPRO) export $(CODENAME)
 
 	touch $$@
@@ -406,13 +418,13 @@ $(eval $(call INIT_PPA))
 $(call C_EXPAND,stamps/00.2.%.ppa-init-clean): \
 stamps/00.2.%.ppa-init-clean:
 	@echo "00.2. $(CODENAME):  Removing ppa directories"
-	rm -rf ppa/conf-$(CODENAME) ppa/db-$(CODENAME)
+	rm -rf $(REPODIR)/conf-$(CODENAME) $(REPODIR)/db-$(CODENAME)
 
 # 00.3 Init distro ppa
 stamps/00.3.all.ppa-init: \
 		$(call C_EXPAND,stamps/00.2.%.ppa-init)
 	@echo "===== 00.3.  All:  Init ppa directories ====="
-	mkdir -p ppa/dists ppa/pool
+	mkdir -p $(REPODIR)/dists $(REPODIR)/pool
 	touch $@
 .PRECIOUS: stamps/00.3.all.ppa-init
 INFRA_TARGETS_ALL += stamps/00.3.all.ppa-init
@@ -420,7 +432,7 @@ INFRA_TARGETS_ALL += stamps/00.3.all.ppa-init
 stamps/00.3.all.ppa-init-clean: \
 	$(call C_EXPAND,stamps/00.2.%.ppa-init-clean)
 	@echo "00.3.  All:  Remove ppa directories"
-	rm -rf ppa
+	rm -rf $(REPODIR)
 SQUEAKY_ALL += stamps/00.3.all.ppa-init-clean
 
 PPA_INIT_TARGET_INDEP := "stamps/00.3.all.ppa-init"
@@ -436,7 +448,7 @@ HELP_VARS_COMMON += PPA_INIT
 stamps/01.1.keyring-downloaded:
 	@echo "===== 01.1. All variants:  Creating GPG keyring ====="
 	$(REASON)
-	mkdir -p admin
+	mkdir -p $(MISCDIR)
 	gpg --no-default-keyring --keyring=$(KEYRING) \
 		--keyserver=$(KEYSERVER) --recv-keys \
 		--trust-model always \
@@ -468,7 +480,7 @@ stamps/02.1.%.chroot-build: \
 	@echo "===== 02.1. $(CA):  Creating pbuilder chroot tarball ====="
 	$(REASON)
 #	# render the pbuilderrc template
-	mkdir -p admin
+	mkdir -p $(MISCDIR)
 	sed \
 	    -e "s,@TOPDIR@,$(TOPDIR)," \
 	    -e "s,@BUILDRESULT@,$(BUILDRESULT)," \
@@ -478,10 +490,11 @@ stamps/02.1.%.chroot-build: \
 	    -e "s,@BUILDPLACE@,$(BUILDPLACE)," \
 	    -e "s,@REPODIR@,$(REPODIR)," \
 	    -e "s,@SOURCEDIR@,$(SOURCEDIR)," \
+	    -e "s,@MISCDIR@,$(MISCDIR)," \
 	    -e "s,@PBUILDER_USER@,$(PBUILDER_USER)," \
 	    -e "s,@DISTRO_ARCH@,$*," \
 	    pbuild/pbuilderrc.tmpl \
-		> admin/pbuilderrc.$(CA)
+		> $(MISCDIR)/pbuilderrc.$(CA)
 #	# make all needed directories
 	mkdir -p $(BUILDRESULT) $(APTCACHE) $(CHROOTDIR)
 #	# create the base.tgz chroot tarball
@@ -507,7 +520,7 @@ util-%.chroot: \
 		stamps/02.1.%.chroot-build
 	@echo "===== Logging into $(*) pbuilder chroot ====="
 	$(REASON)
-	$(SUDO) INTERMEDIATE_REPO=ppa \
+	$(SUDO) INTERMEDIATE_REPO=$(REPODIR) \
 	    $(PBUILD) --login \
 		$(PBUILD_ARGS)
 .PHONY:  $(call CA_EXPAND,%.chroot)
@@ -645,8 +658,8 @@ ifeq ($($(1)_TARBALL_PACKAGE),)
 # Download a tarball
 $(call STAMP,$(1),tarball-download):
 	$(call INFO,$(1),tarball-download)
-	mkdir -p dist
-	wget $($(1)_URL)/$($(1)_TARBALL) -O dist/$($(1)_TARBALL)
+	mkdir -p $(DISTDIR)
+	wget $($(1)_URL)/$($(1)_TARBALL) -O $(DISTDIR)/$($(1)_TARBALL)
 	mkdir -p $$(dir $$@) && touch $$@
 
 else
@@ -657,7 +670,7 @@ $(call STAMP,$(1),tarball-download): \
 		$($(1)_TARBALL_TARGET)
 	$(call INFO,$(1),tarball-download,\
 		Using tarball from package $($(1)_TARBALL_PACKAGE))
-	test -e dist/$($(1)_TARBALL)
+	test -e $(DISTDIR)/$($(1)_TARBALL)
 	touch $$@
 endif
 
@@ -668,7 +681,7 @@ $(call STAMP_CLEAN,$(1),tarball-download): \
 	$(call INFO_CLEAN,$(1),tarball-download)
 	rm -f $(call STAMP,$(1),tarball-download)
 ifeq ($($(1)_TARBALL_TARGET),)
-	rm -f dist/$($(1)_TARBALL)
+	rm -f $(DISTDIR)/$($(1)_TARBALL)
 else
 
 # Hook into other package's clean target
@@ -692,7 +705,7 @@ $(call STAMP,$(1),unpack-tarball): \
 	rm -rf $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
 	mkdir -p $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
 	tar xC $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build --strip-components=1 \
-	    -f dist/$($(1)_TARBALL)
+	    -f $(DISTDIR)/$($(1)_TARBALL)
 	touch $$@
 
 $(call STAMP_CLEAN,$(1),unpack-tarball): \
@@ -728,11 +741,11 @@ endif
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian/changelog \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)
 #	# Link source tarball with Debian name
-	cp -f $(TOPDIR)/dist/$($(1)_TARBALL) \
+	cp -f $(DISTDIR)/$($(1)_TARBALL) \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL_ORIG,$(1))
 #	# Copy Debian tarball to package directory
 	mkdir -p $(BUILDRESULT)
-	cp --preserve=all dist/$($(1)_TARBALL) \
+	cp --preserve=all $(DISTDIR)/$($(1)_TARBALL) \
 	    $(BUILDRESULT)/$(call DEBIAN_TARBALL_ORIG,$(1))
 	touch $$@
 
@@ -858,11 +871,14 @@ $(call STAMP,$(1),build-source-package): \
 	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && \
 	    $(TOPDIR)/pbuild/tweak-pkg.sh \
 	    $$(CODENAME) $(call PKG_VERSION,$(1),$$(CODENAME)) "$$(MAINTAINER)"
-
+ifneq ($$($(1)_SOURCE_PACKAGE_CONFIGURE_COMMAND),)
 	@echo Cleaning source package
 	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && \
 		dpkg-buildpackage -d -Tclean
+endif
 	@echo Building source package
+	ln -sf $(DISTDIR)/$$($(1)_TARBALL) \
+	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL_ORIG,$(1))
 	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && dpkg-source -i -I -b .
 	touch $$@
 .PRECIOUS: $(call STAMP_EXPAND,$(1),build-source-package)

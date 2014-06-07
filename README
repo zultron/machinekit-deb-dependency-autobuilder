@@ -21,10 +21,10 @@ submodules for each package.
 ---------------------------
 Prerequisites:
 
-The pbuilder, reprepro and quilt packages must be installed, in
-addition to the usual kernel development environment.
+The pbuilder, reprepro, quilt and autotools-dev packages must be
+installed, in addition to the usual kernel development environment.
 
-    apt-get install pbuilder reprepro quilt
+    apt-get install pbuilder reprepro quilt autotools-dev
 
 ---------------------------
 Restricting build list:
