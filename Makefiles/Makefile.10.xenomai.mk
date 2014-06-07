@@ -17,8 +17,9 @@ XENOMAI_FEATURESETS_DISABLED := \
 
 # Give the Linux rules a mapping of featureset -> flavors for the
 # funky pkg name extensions
-LINUX_FEATURESET_ARCH_MAP.xenomai.x86 = amd64 686-pae
-LINUX_FEATURESET_ARCH_MAP.xenomai.beaglebone = omap
+LINUX_FEATURESET_ARCH_MAP.xenomai.x86.amd64 = amd64
+LINUX_FEATURESET_ARCH_MAP.xenomai.x86.i386 = 686-pae
+LINUX_FEATURESET_ARCH_MAP.xenomai.beaglebone.armhf = omap
 
 # Xenomai package
 XENOMAI_PKG_RELEASE = 0.1mk

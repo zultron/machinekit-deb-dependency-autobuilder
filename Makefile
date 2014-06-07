@@ -303,17 +303,19 @@ REPREPRO_ARCH_$(BUILD_INDEP_ARCH) := $(BUILD_INDEP_ARCH)|all
 # List of packages for a particular arch for reprepro
 # Includes binary-indep packages for BUILD_INDEP_ARCH
 # $$(call REPREPRO_PKGS,XENOMAI,amd64)
-REPREPRO_PKGS = $($(1)_PKGS_ARCH) \
-	$(if $(findstring $(2),$(BUILD_INDEP_ARCH)),$($(1)_PKGS_ALL))
+REPREPRO_PKGS = $(strip $($(1)_PKGS_ARCH) $($(1)_PKGS_ARCH_$(2)) \
+	$(if $(findstring $(2),$(BUILD_INDEP_ARCH)),$($(1)_PKGS_ALL)))
 
 # Lists of generated package paths
 PACKAGES_ALL = $(strip $(if $($(1)_PKGS_ALL), $(patsubst %,\
 	$(BUILDRESULT)/%_$(call PKG_VERSION,$(1),$(2))_all.deb,\
 	$($(1)_PKGS_ALL))))
 
-PACKAGES_ARCH = $(strip $(if $($(1)_PKGS_ARCH),\
+# List of all build-arch packages
+# $$(call PACKAGES_ARCH,<name>,<codename>,<arch>)
+PACKAGES_ARCH = $(strip \
 	$(patsubst %,$(BUILDRESULT)/%_$(call PKG_VERSION,$(1),$(2))_$(3).deb,\
-	$($(1)_PKGS_ARCH))))
+	    $($(1)_PKGS_ARCH) $($(1)_PKGS_ARCH_$(3))))
 
 # List of package paths for a particular arch for adding to reprepro
 # Includes binary-indep packages for BUILD_INDEP_ARCH

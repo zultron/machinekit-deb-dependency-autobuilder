@@ -26,24 +26,6 @@ LINUX_VERSION = 3.8.13
 # Variables that should not change much
 # (or auto-generated)
 
-# This package appends part of the Linux version and an 'abi name' to
-# all binary package names
-LINUX_SUBVER := $(shell echo $(LINUX_VERSION) | sed 's/\.[0-9]*$$//')
-LINUX_PKG_EXTENSION := $(LINUX_SUBVER)-$(LINUX_PKG_RELEASE)
-#
-# It also appends the featureset name to the linux-headers-common
-# package, and that plus flavor name to linux-image and linux-headers
-# packages
-ARCH_FLAVOR_MAP_x86 = amd64 686-pae
-ARCH_FLAVOR_MAP_armhf = omap
-LINUX_FEATURESETS_ENABLED := \
-	$(foreach p,$(LINUX_FEATURESET_PKGS),$($(p)_FEATURESETS))
-LINUX_PKG_COMMON_EXTENSIONS := $(LINUX_FEATURESETS_ENABLED)
-LINUX_PKG_ARCH_EXTENSIONS := \
-	$(foreach fs,$(LINUX_FEATURESETS_ENABLED),\
-	    $(foreach flav,$(LINUX_FEATURESET_ARCH_MAP.$(fs)),$(fs)-$(flav)))
-
-
 # Source name
 LINUX_SOURCE_NAME := linux
 
@@ -53,14 +35,29 @@ LINUX_INDEX := 15
 # Submodule name:
 LINUX_SUBMODULE := git/kernel-rt-deb
 
-# Packages; will be suffixed by _<pkg_version>_<arch>.deb
-LINUX_PKGS_ALL := 
-LINUX_PKGS_ARCH := $(strip \
-	$(foreach e,$(LINUX_PKG_ARCH_EXTENSIONS),\
-	    linux-image-$(LINUX_PKG_EXTENSION)-$(e) \
-	    linux-headers-$(LINUX_PKG_EXTENSION)-$(e)) \
-	$(foreach e,$(LINUX_PKG_COMMON_EXTENSIONS),\
-	    linux-headers-$(LINUX_PKG_EXTENSION)-common-$(e)))
+# This package appends part of the Linux version and an 'abi name' to
+# all binary package names
+LINUX_SUBVER := $(shell echo $(LINUX_VERSION) | sed 's/\.[0-9]*$$//')
+LINUX_PKG_EXTENSION := $(LINUX_SUBVER)-$(LINUX_PKG_RELEASE)
+#
+# It also appends the featureset name to the linux-headers-common
+# package, and that plus flavor name to linux-image and linux-headers
+# packages
+LINUX_FEATURESETS_ENABLED := \
+	$(foreach p,$(LINUX_FEATURESET_PKGS),$($(p)_FEATURESETS))
+#
+# Finally, linux package names include the flavor, so a separate list
+# needs to be generated for each arch
+define LINUX_PKGS_ARCH_GEN
+LINUX_PKGS_ARCH_$(1) := \
+	$(foreach fs,$(LINUX_FEATURESETS_ENABLED),\
+	    $(foreach flav,$(LINUX_FEATURESET_ARCH_MAP.$(fs).$(1)),\
+		linux-image-$(LINUX_PKG_EXTENSION)-$(fs)-$(flav) \
+		linux-headers-$(LINUX_PKG_EXTENSION)-$(fs)-$(flav) \
+		linux-headers-$(LINUX_PKG_EXTENSION)-common-$(fs)))
+
+endef
+$(foreach a,amd64 i386 armhf,$(eval $(call LINUX_PKGS_ARCH_GEN,$(a))))
 
 # Misc paths, filenames, executables
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
@@ -83,8 +80,8 @@ LINUX_KERNEL_FEATURESETS_DISABLED := \
 	$(foreach fs,$(LINUX_FEATURESET_PKGS),$($(fs)_FEATURESETS_DISABLED))
 LINUX_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND := \
 		pbuild/linux-unpacked-chroot-script.sh \
-		    -d "$(LINUX_KERNEL_FEATURESETS_DISABLED)" \
-		    -b "$(LINUX_SOURCE_PACKAGE_DEPS)"
+		    -d "$(strip $(LINUX_KERNEL_FEATURESETS_DISABLED))" \
+		    -b "$(strip $(LINUX_SOURCE_PACKAGE_DEPS))"
 
 
 ###################################################
