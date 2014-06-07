@@ -48,8 +48,6 @@ LINUX_TOOLS_TARBALL_PACKAGE = linux
 LINUX_TOOLS_DEBIAN_COMPRESSION = xz
 
 # Dependencies on other locally-built packages
-#
-# These are added in the respective packages' Makefiles
 LINUX_TOOLS_PACKAGE_DEPS = linux
 
 # The source package needs to be configured with the below command
