@@ -28,7 +28,7 @@ ALL_CODENAMES_ARCHES ?= \
 	#
 
 # Define this to have a deterministic chroot for step 5.4
-A_CHROOT ?= wheezy-amd64
+#BUILD_ARCH_CHROOT ?= wheezy-amd64
 
 # Your "Firstname Lastname <email@address>"; leave out to use git config
 #MAINTAINER = John Doe <jdoe@example.com>
@@ -55,7 +55,7 @@ REPODIR ?= $(TOPDIR)/ppa
 # Where to download source tarballs
 DISTDIR ?= $(TOPDIR)/dist
 # Where apt keyring and rendered pbuilderrc templates live
-MISCDIR ?= $(TOPDIR)/admin
+MISCDIR ?= $(TOPDIR)/misc
 
 
 # The top non-shared directory
@@ -110,7 +110,7 @@ BINDMOUNTS_ARG = --bindmounts "$(BINDMOUNTS)"
 endif
 PBUILD = pbuilder
 PBUILD_ARGS = --configfile \
-	$(MISCDIR)/pbuilderrc.$(if $(CODENAME),$(CODENAME)-$(ARCH),$(A_CHROOT)) \
+	$(MISCDIR)/pbuilderrc.$(if $(CODENAME),$(CODENAME)-$(ARCH),$(BUILD_ARCH_CHROOT)) \
 	--allow-untrusted \
 	$(DEBBUILDOPTS_ARG) $(BINDMOUNTS_ARG)
 
@@ -153,12 +153,12 @@ CA_EXPAND = $(foreach i,$(1),$(patsubst %,$(i),$(ALL_CODENAMES_ARCHES)))
 
 # A random chroot to configure a source package in
 # (The kernel configuration depends on packages being installed)
-A_CHROOT ?= $(wordlist 1,1,$(ALL_CODENAMES_ARCHES))
-BUILD_INDEP_CODENAME = $(shell echo $(A_CHROOT) | sed 's/-.*//')
+BUILD_ARCH_CHROOT ?= $(wordlist 1,1,$(ALL_CODENAMES_ARCHES))
+BUILD_INDEP_CODENAME = $(shell echo $(BUILD_ARCH_CHROOT) | sed 's/-.*//')
 # Arch to build indep packages with
-BUILD_INDEP_ARCH = $(shell echo $(A_CHROOT) | sed 's/.*-//')
+BUILD_INDEP_ARCH = $(shell echo $(BUILD_ARCH_CHROOT) | sed 's/.*-//')
 # Arches NOT to build indep packages with
-BUILD_ARCH_ARCHES = $(filter-out $(ARCH_$(A_CHROOT)),$(ARCHES))
+BUILD_ARCH_ARCHES = $(filter-out $(ARCH_$(BUILD_ARCH_CHROOT)),$(ARCHES))
 
 ###################################################
 # Stamp generator functions
@@ -188,10 +188,10 @@ STAMP_EXPAND_ARCH = $(call CA_EXPAND,$(call STAMP_EXPAND_PAT,$(1),$(2),.%))
 STAMP_EXPAND = $(call STAMP_EXPAND_$(TARGET_$(1)_$(2)_TYPE),$(1),$(2))
 
 # Like STAMP_EXPAND, but expands only the BUILD_INDEP codename-arch
-STAMP_INDEP_CA = $(patsubst %,$(call STAMP,$(1),$(2)),$(A_CHROOT))
+STAMP_INDEP_CA = $(patsubst %,$(call STAMP,$(1),$(2)),$(BUILD_ARCH_CHROOT))
 # Like STAMP_EXPAND, but expands only non-BUILD_INDEP codename-arches
 STAMP_ARCH_CA = $(patsubst %,$(call STAMP,$(1),$(2)),\
-	$(filter-out $(A_CHROOT),$(ALL_CODENAMES_ARCHES)))
+	$(filter-out $(BUILD_ARCH_CHROOT),$(ALL_CODENAMES_ARCHES)))
 
 # Like above, but append '-clean' to stamp names
 STAMP_CLEAN = $(call STAMP,$(1),$(2))-clean

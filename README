@@ -3,9 +3,9 @@ dependencies for Debian armhf, amd64 and i386
 
 Current list of packages:
 
-- Xenomai and RT kernel
+- Xenomai 2.6.3 and matching Linux 3.8.13 kernel (RTAI in future)
+  - linux-tools 3.8 to match the kernel
 - ZeroMQ, czmq, pyzmq, libsodium
-  - For wheezy, the cython dependency
 - libwebsockets
 - jansson
 
@@ -21,8 +21,8 @@ submodules for each package.
 ---------------------------
 Prerequisites:
 
-The pbuilder, reprepro, quilt and autotools-dev packages must be
-installed, in addition to the usual kernel development environment.
+The pbuilder, reprepro and quilt packages must be installed, in
+addition to the usual kernel development environment.
 
     apt-get install pbuilder reprepro quilt autotools-dev
 
