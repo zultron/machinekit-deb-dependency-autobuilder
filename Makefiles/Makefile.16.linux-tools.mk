@@ -60,6 +60,4 @@ LINUX_TOOLS_SOURCE_PACKAGE_CONFIGURE_COMMAND := \
 ###################################################
 # Do the standard build for this package
 $(eval $(call TARGET_VARS,LINUX_TOOLS))
-$(eval $(call STANDARD_BUILD,LINUX_TOOLS))
-# Debugging
-#$(info $(call STANDARD_BUILD,LINUX_TOOLS))
+$(eval $(call DEBUG_BUILD,LINUX_TOOLS))

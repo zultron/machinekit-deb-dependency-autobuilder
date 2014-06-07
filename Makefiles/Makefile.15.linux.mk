@@ -40,8 +40,9 @@ LINUX_FEATURESETS_ENABLED := \
 	$(foreach p,$(LINUX_FEATURESET_PKGS),$($(p)_FEATURESETS))
 LINUX_PKG_COMMON_EXTENSIONS := $(LINUX_FEATURESETS_ENABLED)
 LINUX_PKG_ARCH_EXTENSIONS := \
-	$(foreach e,$(LINUX_PKG_COMMON_EXTENSIONS),\
-	    $(patsubst %,$(e)-%,$(foreach a,$(ARCHES),$(ARCH_FLAVOR_MAP_$(a)))))
+	$(foreach fs,$(LINUX_FEATURESETS_ENABLED),\
+	    $(foreach flav,$(LINUX_FEATURESET_ARCH_MAP.$(fs)),$(fs)-$(flav)))
+
 
 # Source name
 LINUX_SOURCE_NAME := linux
@@ -54,12 +55,12 @@ LINUX_SUBMODULE := git/kernel-rt-deb
 
 # Packages; will be suffixed by _<pkg_version>_<arch>.deb
 LINUX_PKGS_ALL := 
-LINUX_PKGS_ARCH := \
+LINUX_PKGS_ARCH := $(strip \
 	$(foreach e,$(LINUX_PKG_ARCH_EXTENSIONS),\
 	    linux-image-$(LINUX_PKG_EXTENSION)-$(e) \
 	    linux-headers-$(LINUX_PKG_EXTENSION)-$(e)) \
 	$(foreach e,$(LINUX_PKG_COMMON_EXTENSIONS),\
-	    linux-headers-$(LINUX_PKG_EXTENSION)-common-$(e))
+	    linux-headers-$(LINUX_PKG_EXTENSION)-common-$(e)))
 
 # Misc paths, filenames, executables
 LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
@@ -89,6 +90,4 @@ LINUX_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND := \
 ###################################################
 # Do the standard build for this package
 $(eval $(call TARGET_VARS,LINUX))
-$(eval $(call STANDARD_BUILD,LINUX))
-# Debugging
-#$(info $(call STANDARD_BUILD,LINUX))
+$(eval $(call DEBUG_BUILD,LINUX))

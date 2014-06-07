@@ -44,6 +44,4 @@ PYZMQ_PACKAGE_DEPS = zeromq4
 ###################################################
 # Do the standard build for this package
 $(eval $(call TARGET_VARS,PYZMQ))
-$(eval $(call STANDARD_BUILD,PYZMQ))
-# Debugging
-#$(info $(call STANDARD_BUILD,PYZMQ))
+$(eval $(call DEBUG_BUILD,PYZMQ))

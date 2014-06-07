@@ -37,6 +37,4 @@ LIBSODIUM_TARBALL := libsodium-$(LIBSODIUM_VERSION).tar.$(LIBSODIUM_COMPRESSION)
 ###################################################
 # Do the standard build for this package
 $(eval $(call TARGET_VARS,LIBSODIUM))
-$(eval $(call STANDARD_BUILD,LIBSODIUM))
-# Debugging
-#$(info $(call STANDARD_BUILD,LIBSODIUM))
+$(eval $(call DEBUG_BUILD,LIBSODIUM))

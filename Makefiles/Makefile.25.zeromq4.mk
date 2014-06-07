@@ -42,6 +42,4 @@ ZEROMQ4_PACKAGE_DEPS = libsodium
 ###################################################
 # Do the standard build for this package
 $(eval $(call TARGET_VARS,ZEROMQ4))
-$(eval $(call STANDARD_BUILD,ZEROMQ4))
-# Debugging
-#$(info $(call STANDARD_BUILD,ZEROMQ4))
+$(eval $(call DEBUG_BUILD,ZEROMQ4))

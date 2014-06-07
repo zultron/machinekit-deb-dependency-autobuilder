@@ -40,6 +40,4 @@ JANSSON_TARBALL := jansson-$(JANSSON_VERSION).tar.$(JANSSON_COMPRESSION)
 ###################################################
 # Do the standard build for this package
 $(eval $(call TARGET_VARS,JANSSON))
-$(eval $(call STANDARD_BUILD,JANSSON))
-# Debugging
-#$(info $(call STANDARD_BUILD,JANSSON))
+$(eval $(call DEBUG_BUILD,JANSSON))

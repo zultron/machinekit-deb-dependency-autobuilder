@@ -15,6 +15,11 @@ XENOMAI_FEATURESETS_DISABLED := \
     # xenomai.x86 \
     # xenomai.beaglebone
 
+# Give the Linux rules a mapping of featureset -> flavors for the
+# funky pkg name extensions
+LINUX_FEATURESET_ARCH_MAP.xenomai.x86 = amd64 686-pae
+LINUX_FEATURESET_ARCH_MAP.xenomai.beaglebone = omap
+
 # Xenomai package
 XENOMAI_PKG_RELEASE = 0.1mk
 XENOMAI_VERSION = 2.6.3
@@ -59,32 +64,4 @@ LINUX_FEATURESET_PKGS += XENOMAI
 ###################################################
 # Do the standard build for this package
 $(eval $(call TARGET_VARS,XENOMAI))
-
-ifeq ($(DEBUG_PACKAGE),)
-ifeq ($(DEBUG_INFO),xenomai)
-$(info $(call STANDARD_BUILD,XENOMAI))
-endif
-$(eval $(call STANDARD_BUILD,XENOMAI))
-
-else # Debugging
-ifeq ($(DEBUG_PACKAGE),xenomai)
-$(info # doing debuggery:  DEBUG_STAGE = $(DEBUG_STAGE))
-debuggery:
-ifeq ($(DEBUG_STAGE),)
-	@echo In debuggery stage 0
-#	# Re-run twice:
-	@echo Running debuggery stage 1, render rules into /tmp/makefile.debug
-	$(MAKE) -s debuggery DEBUG_STAGE=1 > /tmp/makefile.debug
-	@echo Remaking '$(TARGET)' including /tmp/makefile.debug
-	$(MAKE) $(TARGET) DEBUG_STAGE=2
-endif # Debuggery stage 0
-ifeq ($(DEBUG_STAGE),1)
-$(info # Output from debuggery of $(DEBUG_PACKAGE))
-$(info $(call STANDARD_BUILD,XENOMAI))
-endif # Debuggery stage 1
-ifeq ($(DEBUG_STAGE),2)
-$(info *** Including debuggery rules from /tmp/makefile.debug ***)
--include /tmp/makefile.debug
-endif # Debuggery stage 2
-endif # Debuggery in this package
-endif # Debuggery
+$(eval $(call DEBUG_BUILD,XENOMAI))

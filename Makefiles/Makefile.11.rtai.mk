@@ -59,6 +59,4 @@ LINUX_FEATURESET_PKGS += RTAI
 ###################################################
 # Do the standard build for this package
 #$(eval $(call TARGET_VARS,RTAI))
-#$(eval $(call STANDARD_BUILD,RTAI))
-# Debugging
-#$(info $(call STANDARD_BUILD,RTAI))
+#$(eval $(call DEBUG_BUILD,RTAI))

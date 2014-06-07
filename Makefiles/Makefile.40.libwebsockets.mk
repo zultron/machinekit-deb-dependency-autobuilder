@@ -42,6 +42,4 @@ LIBWEBSOCKETS_TARBALL := libwebsockets-$(LIBWEBSOCKETS_GIT_REV).tar.gz
 ###################################################
 # Do the standard build for this package
 $(eval $(call TARGET_VARS,LIBWEBSOCKETS))
-$(eval $(call STANDARD_BUILD,LIBWEBSOCKETS))
-# Debugging
-#$(info $(call STANDARD_BUILD,LIBWEBSOCKETS))
+$(eval $(call DEBUG_BUILD,LIBWEBSOCKETS))
