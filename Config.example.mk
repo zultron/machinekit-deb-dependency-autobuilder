@@ -25,7 +25,11 @@ endif
 
 # A codename+arch for building arch-independent artifacts; one will be
 # selected randomly if this isn't set
-#BUILD_ARCH_CHROOT = wheezy-amd64
+#
+# For the above split-config, this MUST be defined, or an update on
+# one side won't be seen by the update on the other side, and will be
+# remade, causing a lot of unnecessary building.
+BUILD_ARCH_CHROOT = wheezy-amd64
 
 # Set the package maintainer name for updating source packages
 MAINTAINER := John Doe <jdoe@example.com>
