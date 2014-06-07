@@ -341,9 +341,19 @@ endif
 
 all:
 .PHONY:  all
-ALL_TARGET_INDEP := "all"
-ALL_DESC := "Make all packages for all codenames and arches"
-HELP_VARS_PACKAGE += ALL
+ALL_TARGET_INDEP := all
+ALL_DESC := Make all packages for all codenames and arches
+HELP_VARS_COMMON += ALL
+
+# Define main help items here so they come first in 'make help' list
+HELP_PACKAGE_TARGET_INDEP := help-\<package\>
+HELP_PACKAGE_DESC := Help for all targets related to a package
+HELP_VARS_COMMON += HELP_PACKAGE
+
+HELP_CLEAN_TARGET_INDEP := clean
+HELP_CLEAN_DESC := Clean all packages (not downloads/chroots/caches)
+HELP_VARS_COMMON += HELP_CLEAN
+
 
 ###################################################
 # PPA rules
@@ -362,8 +372,8 @@ util-%.list-ppa:
 endef
 $(eval $(call LIST_PPA))
 
-INFO_PPA_LIST_TARGET_INDEP := "util-%.list-ppa"
-INFO_PPA_LIST_DESC := "List current PPA contents for a distro"
+INFO_PPA_LIST_TARGET_INDEP := util-\<distro\>.list-ppa
+INFO_PPA_LIST_DESC := List current PPA contents for a distro
 HELP_VARS_UTIL += INFO_PPA_LIST
 
 
@@ -435,10 +445,6 @@ stamps/00.3.all.ppa-init-clean: \
 	rm -rf $(REPODIR)
 SQUEAKY_ALL += stamps/00.3.all.ppa-init-clean
 
-PPA_INIT_TARGET_INDEP := "stamps/00.3.all.ppa-init"
-PPA_INIT_DESC := "Create basic PPA directories and initial configuration"
-HELP_VARS_COMMON += PPA_INIT
-
 
 ###################################################
 # 01. GPG keyring
@@ -465,8 +471,11 @@ stamps/01.1.keyring-downloaded-clean:
 	rm -f stamps/01.1.keyring-downloaded
 SQUEAKY_ALL += stamps/01.1.keyring-downloaded-clean
 
-KEYRING_TARGET_ALL := "stamps/01.1.keyring-downloaded"
-KEYRING_DESC := "Download upstream distro GPG keys"
+keyring: stamps/01.1.keyring-downloaded
+.PHONY: keyring
+
+KEYRING_TARGET_ALL := keyring
+KEYRING_DESC := Download upstream distro GPG keys
 HELP_VARS_COMMON += KEYRING
 
 
@@ -525,8 +534,8 @@ util-%.chroot: \
 		$(PBUILD_ARGS)
 .PHONY:  $(call CA_EXPAND,%.chroot)
 
-CHROOT_LOGIN_TARGET_ARCH := "util-%.chroot"
-CHROOT_LOGIN_DESC := "Log into a chroot"
+CHROOT_LOGIN_TARGET_ARCH := util-\<distro-arch\>.chroot
+CHROOT_LOGIN_DESC := Log into a chroot
 HELP_VARS_UTIL += CHROOT_LOGIN
 
 
@@ -1004,6 +1013,26 @@ define ADD_HOOKS
 ###################################################
 # xx.9. Wrap up
 
+# Hook builds into final builds, if configured
+FINAL_DEPS_ARCH += $$($(1)_ARCH)
+SQUEAKY_ALL += $$($(1)_SQUEAKY_ALL)
+CLEAN_INDEP += $$($(1)_CLEAN_INDEP)
+PACKAGES += $(1)
+SOURCE_NAME_VAR_$($(1)_SOURCE_NAME) = $(1)
+
+# Build targets
+# <package> and <package>-<distro> target, update-ppa by default
+$(1)_DEFAULT_TARGET =  update-ppa
+# 
+$(call C_EXPAND,$($(1)_SOURCE_NAME)-%): \
+$($(1)_SOURCE_NAME)-%: $(call STAMP,$(1),$(if \
+	$($(1)_DEFAULT_TARGET),$($(1)_DEFAULT_TARGET),update-ppa))
+$($(1)_SOURCE_NAME):  $(call STAMP_EXPAND,$(1),$(if \
+	$($(1)_DEFAULT_TARGET),$($(1)_DEFAULT_TARGET),update-ppa))
+$(1)_TARGET_ALL := $($(1)_SOURCE_NAME)
+$(1)_DESC := Build $($(1)_SOURCE_NAME) packages for all distros
+HELP_VARS_PACKAGE += $(1)
+
 # Cleaning
 $(call CA_EXPAND,$($(1)_SOURCE_NAME)-%-clean): \
 $$($(1)_SOURCE_NAME)-%-clean: \
@@ -1016,24 +1045,6 @@ $$($(1)_SOURCE_NAME)-%-clean: \
 $($(1)_SOURCE_NAME)-clean: \
 	$(call C_EXPAND,$($(1)_SOURCE_NAME)-%-clean)
 
-# Hook builds into final builds, if configured
-FINAL_DEPS_ARCH += $$($(1)_ARCH)
-SQUEAKY_ALL += $$($(1)_SQUEAKY_ALL)
-CLEAN_INDEP += $$($(1)_CLEAN_INDEP)
-PACKAGES += $(1)
-SOURCE_NAME_VAR_$($(1)_SOURCE_NAME) = $(1)
-
-# <package> and <package>-<distro> target, update-ppa by default
-$(1)_DEFAULT_TARGET =  update-ppa
-# 
-$(call C_EXPAND,$($(1)_SOURCE_NAME)-%): \
-$($(1)_SOURCE_NAME)-%: $(call STAMP,$(1),$(if \
-	$($(1)_DEFAULT_TARGET),$($(1)_DEFAULT_TARGET),update-ppa))
-$($(1)_SOURCE_NAME):  $(call STAMP_EXPAND,$(1),$(if \
-	$($(1)_DEFAULT_TARGET),$($(1)_DEFAULT_TARGET),update-ppa))
-$(1)_TARGET_ALL := "$($(1)_SOURCE_NAME)"
-$(1)_DESC := "Build $($(1)_SOURCE_NAME) packages for all distros"
-HELP_VARS_PACKAGE += $(1)
 endef
 
 
@@ -1119,46 +1130,35 @@ infra: \
 	all.infra
 .PHONY: infra
 
-INFRA_TARGET_ALL := "infra"
-INFRA_DESC := "Convenience:  Build all common infra \(chroots, etc.\)"
-HELP_VARS_COMMON += INFRA
+# Haven't used this in a while
+# INFRA_TARGET_ALL := "infra"
+# INFRA_DESC := "Convenience:  Build all common infra \(chroots, etc.\)"
+# HELP_VARS_COMMON += INFRA
 
 ###################################################
 # 91.  Help targets
 #
 # These present help for humans
 
-# Print arch target help
-define HELP_ARCH
-	@echo "	$(patsubst %,$($(1)_TARGET_ARCH),\<distro\>-\<arch\>):"
-	@echo "			$($(1)_DESC)"
-
-endef
-# Print arch-independent target help
-define HELP_INDEP
-	@echo "	$(patsubst %,$($(1)_TARGET_INDEP),\<distro\>):"
-	@echo "			$($(1)_DESC)"
-
-endef
-# Print arch- and distro-independent target help
-define HELP_ALL
-	@echo "	$($(1)_TARGET_ALL):"
-	@echo "			$($(1)_DESC)"
+# Print help line
+define HELP_ITEM
+	@printf "    %-25s  %s\n" $($(1)_TARGET_$(2)) "$($(1)_DESC)"
 
 endef
 # Print help for a particular section
 define HELP_SECTION
+	@echo
 	@echo "$(1) TARGETS:"
 	$(foreach var,$(HELP_VARS_$(1)),\
 	    $(if $($(var)_TARGET_INDEP),\
-		$(call HELP_INDEP,$(var)),\
+		$(call HELP_ITEM,$(var),INDEP),\
 	    $(if $($(var)_TARGET_ARCH),\
-		$(call HELP_ARCH,$(var)),\
-		$(call HELP_ALL,$(var)))))
+		$(call HELP_ITEM,$(var),ARCH),\
+		$(call HELP_ITEM,$(var),ALL))))
 endef
 
 help:
-	$(foreach sec,UTIL COMMON PACKAGE,$(call HELP_SECTION,$(sec)))
+	$(foreach sec,COMMON PACKAGE UTIL,$(call HELP_SECTION,$(sec)))
 .PHONY: help
 
 # Help for a package
@@ -1168,8 +1168,9 @@ define ECHO
 
 endef
 define PACKAGE_TARGET_HELP
-	$(foreach t,$(call STAMP_EXPAND,$(1),$(2)),$(call ECHO,	$(t)))
-	@echo "			$(TARGET_$(1)_$(2)_DESC)"
+	$(foreach t,$(strip $(call STAMP_EXPAND,$(1),$(2))),\
+	    $(call ECHO,    $(t)))
+	@echo "        $(TARGET_$(1)_$(2)_DESC)"
 
 endef
 define PACKAGE_HELP
@@ -1195,9 +1196,10 @@ util-%.pbuilderrc:
 	@echo BUILDPLACE=$(BUILDPLACE)
 	@echo REPODIR=$(REPODIR)
 
-PBUILDERRC_TARGET_ALL := "util-%.pbuilderrc"
-PBUILDERRC_DESC := "Output variables needed in a distro pbuilderrc"
-HELP_VARS_COMMON += PBUILDERRC
+# Haven't used this in a while
+# PBUILDERRC_TARGET_ALL := "util-%.pbuilderrc"
+# PBUILDERRC_DESC := "Output variables needed in a distro pbuilderrc"
+# HELP_VARS_COMMON += PBUILDERRC
 
 ###################################################
 # 99. Final Targets

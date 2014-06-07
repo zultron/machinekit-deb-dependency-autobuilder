@@ -18,13 +18,10 @@ submodules for each package.
     git clone --recursive \
         https://github.com/zultron/machinekit-deb-dependency-autobuilder.git
 
----------------------------
-Prerequisites:
-
 The pbuilder, reprepro and quilt packages must be installed, in
 addition to the usual kernel development environment.
 
-    apt-get install pbuilder reprepro quilt autotools-dev
+    apt-get install pbuilder reprepro quilt
 
 ---------------------------
 Restricting build list:
@@ -33,62 +30,47 @@ NOTE: It is advised to trim the build list to save build time, even if
 explicitly supplying a <codename>-<arch> target.
 
 If only a subset of codenames or arches is needed, restrict them by
-trimming the 'CODENAMES' and 'ARCHES' variables in the Makefile.
+trimming the 'ALL_CODENAMES_ARCHES' variable in the Makefile.
 
-For example, to build only Wheezy and Jessie amd64 kernels:
-
-    ARCHES = amd64               # i386 removed
-    CODENAMES = wheezy jessie    # precise removed
+Copy the Config.example.mk to Config.mk and edit it for your needs.
 
 ---------------------------
 Targets:
 
-all:  (Default target)  Build all <codename>-<arch> combos
-
-help:  Print some help
-
-clean:  Clean up all targets that can be easily regenerated
-
-squeaky-clean: Clean up all targets that are expensive to repace,
-    including downloaded tarballs, git submodules, apt and C caches,
-    and chroots.
-
-<codename>.all:  e.g. wheezy.all
-    Build all packages for the specified distro
-
-<codename>-<arch>.chroot:  e.g. jessie-amd64.chroot
-    Set up and log into a chroot
-
-<codename>-<arch>.clean:
-    Remove build artifacts specific to that codename/arch; leave
-    common artifacts
-
-Codename is one of wheezy, jessie, precise
-
-Arch is one of amd64, i386
+Use 'make help' to get a list of targets.
 
 Most simply, just run 'make' to build all packages for all
 <codename>-<arch> combos.
 
-To pass in options to dpkg-buildpackage, use e.g.
+To pass in options to dpkg-buildpackage, esp. parallel make to speed
+up kernel builds, use e.g.
 
     make DEBBUILDOPTS=-j16
 
+Resulting packages will be in the `ppa/` directory.
+
 ---------------------------
-What it does
+Build flow
 
-For each <codename>-<arch> combo:
-- Downloads sources, checks out git repos, builds gpg keyring
-- Creates a base pbuilder chroot tarball
-- Builds the Xenomai and RTAI packages
-- Builds a local PPA with the Xenomai and RTAI packages needed for the
-  kernel build
-- Updates the pbuilder chroot tarball with the new PPA
-- Builds the Xenomai and RTAI kernel packages
-  - The RTAI package builds RTAI modules, included in the kernel
-- Builds the linux-tools package
-- Updates the local PPA with all packages
+The basic flow to build a package is:
+- Build a chroot tarball, if needed
+- Download sources and packaging
+- Set up Debianized source directory
+- Optionally configure the source package
+  - Optionally in a chroot, with dependent packages installed (kernel)
+- Build source packages for each distro
+- Add source packages to PPA
+- If there's a dependency on another package, update the chroot from the PPA
+- Build binary packages for each arch
+- Update the PPA with the binary packages
 
-Package results go into pkgs.
-
-PPAs go into ppa.
+Some packages depend on each other packages; here's a list of all deps:
+- xenomai
+  - linux
+    - linux-tools
+- libsodium
+  - zeromq4
+    - czmq
+    - pyzmq
+- libwebsockets
+- jansson

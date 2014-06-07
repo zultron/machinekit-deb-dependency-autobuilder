@@ -5,6 +5,10 @@
 # native architecture.  This is necessary for zeromq4, which tickles a
 # bug in QEMU and fails unit tests in an emulated environment.
 
+# The followings lists may be used to trim the codenames (distros) and
+# architectures.  Because this takes a lot of time and disk space to
+# build, this is highly advised!
+
 # Use the host architecture to restrict the list of builds
 HOST_ARCH = $(shell uname -m)
 # ARM builds
