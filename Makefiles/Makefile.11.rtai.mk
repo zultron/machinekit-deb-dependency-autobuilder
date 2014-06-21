@@ -39,10 +39,9 @@ RTAI_PKGS_ALL := rtai-doc python-rtai
 RTAI_PKGS_ARCH := rtai librtai1 librtai-dev rtai-source 
 
 # Misc paths, filenames, executables
-RTAI_URL = ???  # FIXME
 RTAI_COMPRESSION = bz2
-
 RTAI_TARBALL := rtai-$(RTAI_VERSION).tar.$(RTAI_COMPRESSION)
+RTAI_URL = ???  # FIXME
 
 # Dependencies on other locally-built packages
 #

@@ -33,10 +33,9 @@ LIBWEBSOCKETS_PKGS_ARCH := libwebsockets3 libwebsockets-dev \
 
 # Misc paths, filenames, executables
 LIBWEBSOCKETS_COMPRESSION = gz
-LIBWEBSOCKETS_URL = http://git.libwebsockets.org/cgi-bin/cgit/libwebsockets/snapshot
-
-# Tarball name
 LIBWEBSOCKETS_TARBALL := libwebsockets-$(LIBWEBSOCKETS_GIT_REV).tar.gz
+LIBWEBSOCKETS_URL = \
+	http://git.libwebsockets.org/cgi-bin/cgit/libwebsockets/snapshot/$(LIBWEBSOCKETS_TARBALL)
 
 
 ###################################################

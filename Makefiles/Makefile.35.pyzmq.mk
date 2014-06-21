@@ -30,10 +30,8 @@ PYZMQ_PKGS_ARCH := python-zmq  python-zmq-dbg \
 
 # Misc paths, filenames, executables
 PYZMQ_COMPRESSION = gz
-PYZMQ_URL = https://github.com/zeromq/pyzmq/archive
-
-# Tarball name
 PYZMQ_TARBALL := v$(PYZMQ_VERSION).tar.$(PYZMQ_COMPRESSION)
+PYZMQ_URL = https://github.com/zeromq/pyzmq/archive/$(PYZMQ_TARBALL)
 
 # Dependencies on other locally-built packages
 #

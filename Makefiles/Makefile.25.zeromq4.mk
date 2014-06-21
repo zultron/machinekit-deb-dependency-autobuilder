@@ -28,10 +28,8 @@ ZEROMQ4_PKGS_ARCH := libzmq4 libzmq4-dev libzmq4-dbg
 
 # Misc paths, filenames, executables
 ZEROMQ4_COMPRESSION = gz
-ZEROMQ4_URL = http://download.zeromq.org
-
-# Tarball name
 ZEROMQ4_TARBALL := zeromq-$(ZEROMQ4_VERSION).tar.$(ZEROMQ4_COMPRESSION)
+ZEROMQ4_URL = http://download.zeromq.org/$(ZEROMQ4_TARBALL)
 
 
 # Dependencies on other locally-built packages

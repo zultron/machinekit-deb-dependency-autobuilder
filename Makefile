@@ -134,11 +134,6 @@ CODENAME_$(1) := $(shell echo $(1) | sed 's/-.*//')
 endef
 $(foreach ca,$(ALL_CODENAMES_ARCHES),$(eval $(call setca,$(ca))))
 
-# Set $(CODENAME) and $(ARCH) for all stamps/x.y.%.foo targets
-stamps/% clean-% util-%: ARCH = $(ARCH_$*)
-stamps/% clean-% util-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$(CA))
-stamps/% clean-% util-%: CA = $(*)
-
 # Lists of codenames and arches
 CODENAMES = $(call uniq,$(foreach ca,$(ALL_CODENAMES_ARCHES),$(CODENAME_$(ca))))
 ARCHES = $(call uniq,$(foreach ca,$(ALL_CODENAMES_ARCHES),$(ARCH_$(ca))))
@@ -159,6 +154,11 @@ BUILD_INDEP_CODENAME = $(shell echo $(BUILD_ARCH_CHROOT) | sed 's/-.*//')
 BUILD_INDEP_ARCH = $(shell echo $(BUILD_ARCH_CHROOT) | sed 's/.*-//')
 # Arches NOT to build indep packages with
 BUILD_ARCH_ARCHES = $(filter-out $(ARCH_$(BUILD_ARCH_CHROOT)),$(ARCHES))
+
+# Set $(CODENAME) and $(ARCH) for all stamps/x.y.%.foo targets
+stamps/% clean-% util-%: ARCH = $(if $(ARCH_$*),$(ARCH_$*),$(BUILD_INDEP_ARCH))
+stamps/% clean-% util-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$(CA))
+stamps/% clean-% util-%: CA = $(*)
 
 ###################################################
 # Stamp generator functions
@@ -327,7 +327,7 @@ REPREPRO_PACKAGE_PATHS = \
 
 # Given a package name, generate its pool directory
 PPA_POOL_PREFIX = $(REPODIR)/pool/main/$(shell echo $($(1)_SOURCE_NAME) | \
-	sed 's/^\(.\(ibs\)\?\).*$$/\1/')/$($(1)_SOURCE_NAME)
+	sed 's/^\(\(lib\)\?.\).*$$/\1/')/$($(1)_SOURCE_NAME)
 
 ###################################################
 # out-of-band checks
@@ -515,6 +515,11 @@ stamps/02.1.%.chroot-build: \
 .PRECIOUS:  $(call CA_EXPAND,stamps/02.1.%.chroot-build)
 INFRA_TARGETS_ARCH += stamps/02.1.%.chroot-build
 
+# Take care of arch-indep packages
+$(call C_EXPAND,stamps/02.1.%.chroot-build): \
+stamps/02.1.%.chroot-build: \
+		stamps/02.1.%-$(BUILD_INDEP_ARCH).chroot-build
+
 02.1.clean.%.chroot:  stamps/02.1.%.chroot-build
 	@echo "02.1. $(CA):  Cleaning chroot tarball"
 	rm -f chroots/base-$(CA).tgz
@@ -626,12 +631,12 @@ TARGET_$(1)_update-ppa-source_DESC := Update PPA with source package
 TARGETS_$(1) += update-ppa-source
 
 TARGET_$(1)_build-binary-package_INDEX := 6
-TARGET_$(1)_build-binary-package_TYPE := ARCH
+TARGET_$(1)_build-binary-package_TYPE := $$(if $$($(1)_ARCH),$$($(1)_ARCH),ARCH)
 TARGET_$(1)_build-binary-package_DESC := Build binary packages
 TARGETS_$(1) += build-binary-package
 
 TARGET_$(1)_update-ppa_INDEX := 7
-TARGET_$(1)_update-ppa_TYPE := ARCH
+TARGET_$(1)_update-ppa_TYPE := $$(if $$($(1)_ARCH),$$($(1)_ARCH),ARCH)
 TARGET_$(1)_update-ppa_DESC := Update PPA with new packages
 TARGETS_$(1) += update-ppa
 
@@ -670,7 +675,7 @@ ifeq ($($(1)_TARBALL_PACKAGE),)
 $(call STAMP,$(1),tarball-download):
 	$(call INFO,$(1),tarball-download)
 	mkdir -p $(DISTDIR)
-	wget $($(1)_URL)/$($(1)_TARBALL) -O $(DISTDIR)/$($(1)_TARBALL)
+	wget "$($(1)_URL)" -O $(DISTDIR)/$($(1)_TARBALL)
 	mkdir -p $$(dir $$@) && touch $$@
 
 else
@@ -752,7 +757,7 @@ endif
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian/changelog \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)
 #	# Link source tarball with Debian name
-	cp -f $(DISTDIR)/$($(1)_TARBALL) \
+	ln -sf $(DISTDIR)/$($(1)_TARBALL) \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL_ORIG,$(1))
 #	# Copy Debian tarball to package directory
 	mkdir -p $(BUILDRESULT)
@@ -943,8 +948,16 @@ define BUILD_BINARY_PACKAGE
 $(call STAMP,$(1),build-binary-package): \
 	BUILDTYPE = $$(if $$(findstring $$(ARCH),$(BUILD_INDEP_ARCH)),-b,-B)
 
+# handle arch-indep packages
 # Depends on the source package build
+ifeq ($$($(1)_ARCH),INDEP)
+$(call STAMP_EXPAND,$(1),build-binary-package): \
+$(call STAMP,$(1),build-binary-package): \
+		$(call STAMP,$(1),update-ppa-source)
+else
 $(call CA2C_DEPS,$(1),build-binary-package,update-ppa-source)
+endif
+
 
 $(call STAMP_EXPAND,$(1),build-binary-package): \
 $(call STAMP,$(1),build-binary-package): \

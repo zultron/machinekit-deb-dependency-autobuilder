@@ -31,10 +31,8 @@ CZMQ_PKGS_ARCH := libczmq2 libczmq-dbg libczmq-dev
 
 # Misc paths, filenames, executables
 CZMQ_COMPRESSION = gz
-CZMQ_URL = http://download.zeromq.org
-
-# Tarball name
 CZMQ_TARBALL := czmq-$(CZMQ_VERSION).tar.$(CZMQ_COMPRESSION)
+CZMQ_URL = http://download.zeromq.org/$(CZMQ_TARBALL)
 
 # Dependencies on other locally-built packages
 #

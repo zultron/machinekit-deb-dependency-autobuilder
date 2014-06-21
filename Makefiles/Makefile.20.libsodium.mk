@@ -27,11 +27,10 @@ LIBSODIUM_PKGS_ALL := libsodium-dev
 LIBSODIUM_PKGS_ARCH := libsodium
 
 # Misc paths, filenames, executables
-LIBSODIUM_URL = http://download.libsodium.org/libsodium/releases
 LIBSODIUM_COMPRESSION = gz
-
-# Tarball name
 LIBSODIUM_TARBALL := libsodium-$(LIBSODIUM_VERSION).tar.$(LIBSODIUM_COMPRESSION)
+LIBSODIUM_URL = \
+	http://download.libsodium.org/libsodium/releases/$(LIBSODIUM_TARBALL)
 
 
 ###################################################

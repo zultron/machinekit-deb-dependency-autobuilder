@@ -31,10 +31,8 @@ JANSSON_PKGS_ARCH := libjansson4 libjansson-dev libjansson-dbg
 
 # Misc paths, filenames, executables
 JANSSON_COMPRESSION = bz2
-JANSSON_URL = http://www.digip.org/jansson/releases
-
-# Tarball name
 JANSSON_TARBALL := jansson-$(JANSSON_VERSION).tar.$(JANSSON_COMPRESSION)
+JANSSON_URL = http://www.digip.org/jansson/releases/$(JANSSON_TARBALL)
 
 
 ###################################################

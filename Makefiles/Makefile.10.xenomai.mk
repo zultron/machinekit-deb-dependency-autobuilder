@@ -44,11 +44,9 @@ XENOMAI_PKGS_ALL := xenomai-kernel-source xenomai-doc
 XENOMAI_PKGS_ARCH := xenomai-runtime libxenomai1 libxenomai-dev
 
 # Misc paths, filenames, executables
-XENOMAI_URL = http://download.gna.org/xenomai/stable
 XENOMAI_COMPRESSION = bz2
-
-# Tarball name
 XENOMAI_TARBALL := xenomai-$(XENOMAI_VERSION).tar.$(XENOMAI_COMPRESSION)
+XENOMAI_URL = http://download.gna.org/xenomai/stable/$(XENOMAI_TARBALL)
 
 # Dependencies on other locally-built packages
 #

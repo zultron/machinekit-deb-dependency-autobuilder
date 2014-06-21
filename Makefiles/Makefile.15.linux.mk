@@ -60,13 +60,14 @@ endef
 $(foreach a,amd64 i386 armhf,$(eval $(call LINUX_PKGS_ARCH_GEN,$(a))))
 
 # Misc paths, filenames, executables
-LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0
-LINUX_COMPRESSION := xz
-# This package likes to use xz compression for the Debian tarball
-LINUX_DEBIAN_COMPRESSION := xz
 
 # Tarball name
+LINUX_COMPRESSION := xz
 LINUX_TARBALL := linux-$(LINUX_VERSION).tar.$(LINUX_COMPRESSION)
+LINUX_URL = http://www.kernel.org/pub/linux/kernel/v3.0/$(LINUX_TARBALL)
+
+# This package likes to use xz compression for the Debian tarball
+LINUX_DEBIAN_COMPRESSION := xz
 
 # Dependencies on other locally-built packages
 #
