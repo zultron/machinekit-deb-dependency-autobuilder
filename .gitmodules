@@ -31,3 +31,6 @@
 [submodule "git/kernel-rt-deb"]
 	path = git/kernel-rt-deb
 	url = https://github.com/zultron/kernel-rt-deb.git
+[submodule "git/hostmot2-firmware"]
+	path = git/hostmot2-firmware
+	url = https://github.com/zultron/hostmot2-firmware-deb.git
