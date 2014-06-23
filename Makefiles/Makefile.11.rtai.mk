@@ -11,13 +11,14 @@
 #
 # Enable/disable Rtai builds by moving into the DISABLED list
 RTAI_FEATURESETS := \
-#    rtai.x86
-
-RTAI_FEATURESETS_DISABLED := \
     rtai.x86
 
+RTAI_FEATURESETS_DISABLED := \
+#    rtai.x86
+
 # RTAI package
-RTAI_PKG_RELEASE = 0.1mk
+RTAI_GIT_COMMIT = 44557fc9
+RTAI_PKG_RELEASE = 0.1mk.git$(RTAI_GIT_COMMIT)
 RTAI_VERSION = 4.0.0
 
 
@@ -39,9 +40,11 @@ RTAI_PKGS_ALL := rtai-doc python-rtai
 RTAI_PKGS_ARCH := rtai librtai1 librtai-dev rtai-source 
 
 # Misc paths, filenames, executables
-RTAI_COMPRESSION = bz2
+RTAI_COMPRESSION = gz
 RTAI_TARBALL := rtai-$(RTAI_VERSION).tar.$(RTAI_COMPRESSION)
-RTAI_URL = ???  # FIXME
+RTAI_URL = https://github.com/ShabbyX/RTAI/archive/master.tar.gz
+
+LINUX_RTAI_TARBALL_ORIG = linux_$(LINUX_VERSION).orig-rtai.tar.bz2
 
 # Dependencies on other locally-built packages
 #
@@ -54,8 +57,38 @@ endif
 # Pass featureset list to Linux package
 LINUX_FEATURESET_PKGS += RTAI
 
+# Set up a rule to move the RTAI source tarball from the chroot build
+# into $DISTDIR, symlink it as a second Debian upstream source
+# tarball, and unpack it the source directory
+#
+# Insert it before 15.4, build-source-package, and after 15.8,
+# configure-source-package
+stamps/15.8.linux.configure-source-package: \
+		stamps/15.9.linux.link-rtai-source-tarball
+
+stamps/15.9.linux.link-rtai-source-tarball: \
+		stamps/15.9.linux.$(BUILD_ARCH_CHROOT).configure-source-package-chroot
+	@echo "===== 15.9. All:  RTAI source tarball ====="
+	! test -f \
+	    $(SOURCEDIR)/linux/$(LINUX_RTAI_TARBALL_ORIG) -a \
+	    ! -h $(SOURCEDIR)/linux/$(LINUX_RTAI_TARBALL_ORIG) || \
+	    mv -f $(SOURCEDIR)/linux/$(LINUX_RTAI_TARBALL_ORIG) $(DISTDIR)
+	ln -sf $(DISTDIR)/$(LINUX_RTAI_TARBALL_ORIG) \
+	    $(SOURCEDIR)/linux/$(LINUX_RTAI_TARBALL_ORIG)
+	rm -rf  $(SOURCEDIR)/linux/build/rtai
+	mkdir -p $(SOURCEDIR)/linux/build/rtai
+#	# If a source tarball top-level directory only contains a
+#	# single subdirectory, Debian strips the top directory while
+#	# unpacking and renames the subdirectory to match the source
+#	# name
+	tar xCf \
+	    $(SOURCEDIR)/linux/build/rtai \
+	    $(DISTDIR)/$(LINUX_RTAI_TARBALL_ORIG) \
+	    --strip-components=1
+	touch $@
+
 
 ###################################################
 # Do the standard build for this package
-#$(eval $(call TARGET_VARS,RTAI))
-#$(eval $(call DEBUG_BUILD,RTAI))
+$(eval $(call TARGET_VARS,RTAI))
+$(eval $(call DEBUG_BUILD,RTAI))

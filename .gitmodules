@@ -4,9 +4,6 @@
 [submodule "git/rcn-linux-arm"]
 	path = git/rcn-linux-arm
 	url = https://github.com/zultron/rcn-linux-arm.git
-[submodule "git/rtai"]
-	path = git/rtai
-	url = https://github.com/zultron/RTAI.git
 [submodule "git/rtai-deb"]
 	path = git/rtai-deb
 	url = https://github.com/zultron/rtai-deb.git

@@ -18,7 +18,7 @@
 # Variables that may change
 
 # Linux vanilla tarball
-LINUX_PKG_RELEASE = 1mk
+LINUX_PKG_RELEASE = 2mk
 LINUX_VERSION = 3.8.13
 
 
