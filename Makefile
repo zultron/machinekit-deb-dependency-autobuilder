@@ -805,7 +805,7 @@ $(call STAMP_CLEAN,$(1),update-chroot-deps): \
 	$(call INFO_CLEAN,$(1),update-chroot-deps)
 	rm -f $(call STAMP,$(1),update-chroot-deps)
 # Cleaning this cleans up all (non-squeaky) arch and indep artifacts
-$(1)_CLEAN_ARCH += $(call STAMP_CLEAN,$(1),update-chroot-deps)
+$(1)_SQUEAKY_ARCH += $(call STAMP_CLEAN,$(1),update-chroot-deps)
 endif # package deps defined
 endef
 
