@@ -827,7 +827,7 @@ $(call STAMP,$(1),configure-source-package-chroot): \
 	$(call INFO,$(1),configure-source-package-chroot)
 #	# Configure the package in the BUILD_INDEP chroot
 	$(SUDO) $(PBUILD) --execute \
-		--bindmounts $(SOURCEDIR) \
+		--bindmounts "$(SOURCEDIR) $(DISTDIR)" \
 		$(PBUILD_ARGS) $($(1)_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND)
 	touch $$@
 
