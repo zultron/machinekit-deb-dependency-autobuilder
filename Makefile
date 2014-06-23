@@ -360,6 +360,14 @@ HELP_PACKAGE_CLEAN_TARGET_INDEP := \<package\>-clean
 HELP_PACKAGE_CLEAN_DESC := Clean package build, all codenames/arches
 HELP_VARS_COMMON += HELP_PACKAGE_CLEAN
 
+HELP_PACKAGE_CODENAME_TARGET_INDEP := \<package-codename\>
+HELP_PACKAGE_CODENAME_DESC := Build package for <codename>, all architectures
+HELP_VARS_COMMON += HELP_PACKAGE_CODENAME
+
+HELP_PACKAGE_CODENAME_ARCH_TARGET_INDEP := \<package-codename-arch\>
+HELP_PACKAGE_CODENAME_ARCH_DESC := Build package for <codename-arch>
+HELP_VARS_COMMON += HELP_PACKAGE_CODENAME_ARCH
+
 
 ###################################################
 # PPA rules
@@ -1043,23 +1051,31 @@ SOURCE_NAME_VAR_$($(1)_SOURCE_NAME) = $(1)
 # <package> and <package>-<distro> target, update-ppa by default
 $(1)_DEFAULT_TARGET =  update-ppa
 # 
+# Build specific codename-arch:  make linux-wheezy-amd64
+$(call CA_EXPAND,$($(1)_SOURCE_NAME)-%): \
+$($(1)_SOURCE_NAME)-%: $$(call STAMP,$(1),$$($(1)_DEFAULT_TARGET))
+# Build specific codename, all arches:  make linux-wheezy
 $(call C_EXPAND,$($(1)_SOURCE_NAME)-%): \
-$($(1)_SOURCE_NAME)-%: $(call STAMP,$(1),$(if \
-	$($(1)_DEFAULT_TARGET),$($(1)_DEFAULT_TARGET),update-ppa))
-$($(1)_SOURCE_NAME):  $(call STAMP_EXPAND,$(1),$(if \
-	$($(1)_DEFAULT_TARGET),$($(1)_DEFAULT_TARGET),update-ppa))
+$($(1)_SOURCE_NAME)-%: \
+	$$(patsubst %,$$(call STAMP,$(1),$$($(1)_DEFAULT_TARGET)),$(call A_EXPAND,\%-%))
+# Build all codename+arch combos:  make linux
+$($(1)_SOURCE_NAME):  $$(call STAMP_EXPAND,$(1),$$($(1)_DEFAULT_TARGET))
+
+# Help
+#
+# Add package to 'package targets' help section
 $(1)_TARGET_ALL := $($(1)_SOURCE_NAME)
 $(1)_DESC := Build $($(1)_SOURCE_NAME) packages for all distros
 HELP_VARS_PACKAGE += $(1)
 
 # Cleaning
 #
-# Clean codename-arch:  linux-wheezy-amd64-clean
+# Clean codename-arch:  make linux-wheezy-amd64-clean
 #    Don't clean shared arch-independent targets
 $(call CA_EXPAND,$($(1)_SOURCE_NAME)-%-clean): \
 $$($(1)_SOURCE_NAME)-%-clean: \
 	$$($(1)_CLEAN_ARCH)
-# Clean codename:  linux-wheezy-clean
+# Clean codename:  make linux-wheezy-clean
 #
 #    Clean distro-specific targets, both arch-dependent and -independent
 $(call C_EXPAND,$($(1)_SOURCE_NAME)-%-clean): \
@@ -1067,7 +1083,7 @@ $$($(1)_SOURCE_NAME)-%-clean: \
 	$$($(1)_CLEAN_COMMON) \
 	$$($(1)_CLEAN_INDEP) \
 	$$(foreach t,$$($(1)_CLEAN_ARCH),$$(patsubst %,$$(t),$$(patsubst %,\%-%,$$(ARCHES))))
-# Clean whole package:  linux-clean
+# Clean whole package:  make linux-clean
 #
 #    Clean all package targets for all arches and distros
 $($(1)_SOURCE_NAME)-clean: \
