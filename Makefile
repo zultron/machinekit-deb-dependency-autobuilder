@@ -348,13 +348,17 @@ ALL_DESC := Make all packages for all codenames and arches
 HELP_VARS_COMMON += ALL
 
 # Define main help items here so they come first in 'make help' list
-HELP_PACKAGE_TARGET_INDEP := help-\<package\>
+HELP_PACKAGE_TARGET_INDEP := \<package\>-help
 HELP_PACKAGE_DESC := Help for all targets related to a package
 HELP_VARS_COMMON += HELP_PACKAGE
 
 HELP_CLEAN_TARGET_INDEP := clean
 HELP_CLEAN_DESC := Clean all packages (not downloads/chroots/caches)
 HELP_VARS_COMMON += HELP_CLEAN
+
+HELP_PACKAGE_CLEAN_TARGET_INDEP := \<package\>-clean
+HELP_PACKAGE_CLEAN_DESC := Clean package build, all codenames/arches
+HELP_VARS_COMMON += HELP_PACKAGE_CLEAN
 
 
 ###################################################
@@ -1049,14 +1053,23 @@ $(1)_DESC := Build $($(1)_SOURCE_NAME) packages for all distros
 HELP_VARS_PACKAGE += $(1)
 
 # Cleaning
+#
+# Clean codename-arch:  linux-wheezy-amd64-clean
+#    Don't clean shared arch-independent targets
 $(call CA_EXPAND,$($(1)_SOURCE_NAME)-%-clean): \
 $$($(1)_SOURCE_NAME)-%-clean: \
 	$$($(1)_CLEAN_ARCH)
+# Clean codename:  linux-wheezy-clean
+#
+#    Clean distro-specific targets, both arch-dependent and -independent
 $(call C_EXPAND,$($(1)_SOURCE_NAME)-%-clean): \
 $$($(1)_SOURCE_NAME)-%-clean: \
 	$$($(1)_CLEAN_COMMON) \
 	$$($(1)_CLEAN_INDEP) \
 	$$(foreach t,$$($(1)_CLEAN_ARCH),$$(patsubst %,$$(t),$$(patsubst %,\%-%,$$(ARCHES))))
+# Clean whole package:  linux-clean
+#
+#    Clean all package targets for all arches and distros
 $($(1)_SOURCE_NAME)-clean: \
 	$(call C_EXPAND,$($(1)_SOURCE_NAME)-%-clean)
 
@@ -1192,9 +1205,9 @@ define PACKAGE_HELP
 	$(foreach t,$($(call SOURCE_NAME_VAR,$(1),TARGETS_%)),\
 	    $(call PACKAGE_TARGET_HELP,$(SOURCE_NAME_VAR_$(1)),$(t),COMMON))
 endef
-$(foreach p,$(PACKAGES),help-$($(p)_SOURCE_NAME)): \
-help-%:
-	@echo "targets for package $*:"
+$(foreach p,$(PACKAGES),$($(p)_SOURCE_NAME)-help): \
+%-help:
+	@echo "targets for package $* (append '-clean' to clean):"
 	$(call PACKAGE_HELP,$*)
 
 
