@@ -558,6 +558,24 @@ CHROOT_LOGIN_DESC := Log into a chroot
 HELP_VARS_UTIL += CHROOT_LOGIN
 
 
+#
+# Update chroot
+#
+$(call CA_EXPAND,util-%.chroot-update): BINDMOUNTS += $(TOPDIR)
+$(call CA_EXPAND,util-%.chroot-update): \
+util-%.chroot-update: \
+		stamps/02.1.%.chroot-build
+	@echo "===== Updating $(*) pbuilder chroot ====="
+	$(SUDO) INTERMEDIATE_REPO=$(REPODIR) \
+	    $(PBUILD) --update \
+		$(PBUILD_ARGS)
+.PHONY:  $(call CA_EXPAND,%.chroot-update)
+
+CHROOT_UPDATE_TARGET_ARCH := util-\<distro-arch\>.chroot-update
+CHROOT_UPDATE_DESC := Update a chroot
+HELP_VARS_UTIL += CHROOT_UPDATE
+
+
 ###################################################
 # Info generator functions
 
