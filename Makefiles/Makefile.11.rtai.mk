@@ -16,9 +16,14 @@ RTAI_FEATURESETS := \
 RTAI_FEATURESETS_DISABLED := \
 #    rtai.x86
 
+# Give the Linux rules a mapping of featureset -> flavors for the
+# funky pkg name extensions
+LINUX_FEATURESET_ARCH_MAP.rtai.x86.amd64 = amd64
+LINUX_FEATURESET_ARCH_MAP.rtai.x86.i386 = 686-pae
+
 # RTAI package
 RTAI_GIT_COMMIT = 44557fc9
-RTAI_PKG_RELEASE = 0.1mk.git$(RTAI_GIT_COMMIT)
+RTAI_PKG_RELEASE = 3.1da.git$(RTAI_GIT_COMMIT)
 RTAI_VERSION = 4.0.0
 
 
