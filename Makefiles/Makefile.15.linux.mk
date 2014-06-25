@@ -14,12 +14,34 @@
 # LINUX_KERNEL_DEPS :			Distro-arch or common target
 #					dependencies
 
+
+# Kernel package names, unlike other packages, include quite a bit of
+# extra data with special meaning.  The release also includes more
+# data.  An example with component breakdown:
+#
+# $ dpkg-query -W linux-image-\*
+# linux-image-3.8-1-rtai.x86-686-pae   3.8.13-2mk~wheezy1
+#
+# linux-image:  package base name
+# 3.8:  first two components of upstream Linux tarball
+# 1:  an 'ABI name', to be bumped with incompatible ABI updates
+# rtai.x86:  the featureset name
+# 686-pae: the kernel 'flavour'
+#
+# 3.8.13:  upstream Linux tarball release
+# 2mk:  the base package release
+# wheezy1:  the codename the package was compiled for (enables shared pool)
+
+
 ###################################################
 # Variables that may change
 
-# Linux vanilla tarball
-LINUX_PKG_RELEASE = 2mk
+# Pkg release number; bump this for every new package
+LINUX_PKG_RELEASE = 2da
+# Linux vanilla tarball version
 LINUX_VERSION = 3.8.13
+# An ABI name; must match the `abiname` defined in config/defines
+LINUX_PKG_ABI = 1
 
 
 ###################################################
@@ -35,10 +57,11 @@ LINUX_INDEX := 15
 # Submodule name:
 LINUX_SUBMODULE := git/kernel-rt-deb
 
+# 
 # This package appends part of the Linux version and an 'abi name' to
 # all binary package names
 LINUX_SUBVER := $(shell echo $(LINUX_VERSION) | sed 's/\.[0-9]*$$//')
-LINUX_PKG_EXTENSION := $(LINUX_SUBVER)-$(LINUX_PKG_RELEASE)
+LINUX_PKG_EXTENSION := $(LINUX_SUBVER)-$(LINUX_PKG_ABI)
 #
 # It also appends the featureset name to the linux-headers-common
 # package, and that plus flavor name to linux-image and linux-headers
