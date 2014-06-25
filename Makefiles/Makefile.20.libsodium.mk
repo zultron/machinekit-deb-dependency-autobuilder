@@ -5,7 +5,7 @@
 # Variables that may change
 
 # Libsodium package
-LIBSODIUM_PKG_RELEASE = 0.1mk
+LIBSODIUM_PKG_RELEASE = 0.1da
 LIBSODIUM_VERSION = 0.5.0
 
 

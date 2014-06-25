@@ -7,7 +7,7 @@
 # Variables that may change
 
 # Jansson package versions
-JANSSON_PKG_RELEASE = 2~1mk
+JANSSON_PKG_RELEASE = 2~1da
 JANSSON_VERSION = 2.6
 
 

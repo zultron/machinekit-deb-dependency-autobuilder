@@ -5,7 +5,7 @@
 # Variables that may change
 
 # Package versions
-PYZMQ_PKG_RELEASE = 2~1mk
+PYZMQ_PKG_RELEASE = 2~1da
 PYZMQ_VERSION = 14.3.0
 
 

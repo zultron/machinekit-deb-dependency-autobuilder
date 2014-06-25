@@ -22,7 +22,7 @@ LINUX_FEATURESET_ARCH_MAP.xenomai.x86.i386 = 686-pae
 LINUX_FEATURESET_ARCH_MAP.xenomai.beaglebone.armhf = omap
 
 # Xenomai package
-XENOMAI_PKG_RELEASE = 0.1mk
+XENOMAI_PKG_RELEASE = 0.1da
 XENOMAI_VERSION = 2.6.3
 
 

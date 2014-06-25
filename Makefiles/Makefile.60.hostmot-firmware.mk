@@ -11,7 +11,7 @@
 # Variables that may change
 
 # hostmot2-firmware package versions
-HOSTMOT2_FIRMWARE_PKG_RELEASE := 0.1mk
+HOSTMOT2_FIRMWARE_PKG_RELEASE := 0.1da
 HOSTMOT2_FIRMWARE_VERSION := 0.8
 # Corresponds to the v0.8 tag
 HOSTMOT2_FIRMWARE_COMMIT := 8aac1861

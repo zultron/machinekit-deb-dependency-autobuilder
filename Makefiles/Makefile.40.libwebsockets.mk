@@ -9,7 +9,7 @@
 # Built from a git revision
 LIBWEBSOCKETS_GIT_REV = dfca3abf
 # Be conservative with the pkg release, since Debian carries this package
-LIBWEBSOCKETS_PKG_RELEASE = 0.1mk~git$(LIBWEBSOCKETS_GIT_REV)
+LIBWEBSOCKETS_PKG_RELEASE = 0.1da~git$(LIBWEBSOCKETS_GIT_REV)
 LIBWEBSOCKETS_VERSION = 2.2
 
 

@@ -7,7 +7,7 @@
 # Variables that should not change much
 # (or auto-generated)
 
-LINUX_TOOLS_PKG_RELEASE := 1mk
+LINUX_TOOLS_PKG_RELEASE := 1da
 LINUX_TOOLS_VERSION := $(LINUX_VERSION)
 
 ###################################################
