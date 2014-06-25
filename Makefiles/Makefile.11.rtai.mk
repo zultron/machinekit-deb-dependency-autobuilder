@@ -69,11 +69,11 @@ LINUX_FEATURESET_PKGS += RTAI
 # Insert it before 15.4, build-source-package, and after 15.8,
 # configure-source-package
 stamps/15.8.linux.configure-source-package: \
-		stamps/15.9.linux.link-rtai-source-tarball
+		stamps/15.8.linux.link-rtai-source-tarball
 
-stamps/15.9.linux.link-rtai-source-tarball: \
+stamps/15.8.linux.link-rtai-source-tarball: \
 		stamps/15.9.linux.$(BUILD_ARCH_CHROOT).configure-source-package-chroot
-	@echo "===== 15.9. All:  RTAI source tarball ====="
+	@echo "===== 15.8. All:  RTAI source tarball ====="
 	! test -f \
 	    $(SOURCEDIR)/linux/$(LINUX_RTAI_TARBALL_ORIG) -a \
 	    ! -h $(SOURCEDIR)/linux/$(LINUX_RTAI_TARBALL_ORIG) || \
@@ -92,6 +92,13 @@ stamps/15.9.linux.link-rtai-source-tarball: \
 	    --strip-components=1
 	touch $@
 
+# Clean target, hooked into configure-source-package-clean
+stamps/15.8.linux.link-rtai-source-tarball-clean:
+	rm -f $(DISTDIR)/$(LINUX_RTAI_TARBALL_ORIG)
+	rm -f $(SOURCEDIR)/linux/$(LINUX_RTAI_TARBALL_ORIG)
+	rm -f stamps/15.8.linux.link-rtai-source-tarball
+stamps/15.8.linux.configure-source-package-clean: \
+		stamps/15.8.linux.link-rtai-source-tarball-clean
 
 ###################################################
 # Do the standard build for this package
