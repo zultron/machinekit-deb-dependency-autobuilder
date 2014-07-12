@@ -31,3 +31,6 @@
 [submodule "git/hostmot2-firmware"]
 	path = git/hostmot2-firmware
 	url = https://github.com/zultron/hostmot2-firmware-deb.git
+[submodule "git/etherlab-deb"]
+	path = git/etherlab-deb
+	url = https://github.com/zultron/etherlab-dev.git
