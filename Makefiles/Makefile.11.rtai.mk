@@ -7,14 +7,17 @@
 ###################################################
 # Variables that may change
 
-# List of Rtai featuresets; passed to kernel build
+# List of RTAI featuresets; passed to kernel build
 #
 # Enable/disable Rtai builds by moving into the DISABLED list
+#
+# RTAI only builds on x86
 RTAI_FEATURESETS := \
-    rtai.x86
+    $(if $(filter amd64 i386,$(ARCHES)),rtai.x86)
 
 RTAI_FEATURESETS_DISABLED := \
 #    rtai.x86
+
 
 # Give the Linux rules a mapping of featureset -> flavors for the
 # funky pkg name extensions
@@ -102,5 +105,7 @@ stamps/15.8.linux.configure-source-package-clean: \
 
 ###################################################
 # Do the standard build for this package
+ifneq ($(shell uname -m),armv7l)
 $(eval $(call TARGET_VARS,RTAI))
 $(eval $(call DEBUG_BUILD,RTAI))
+endif
