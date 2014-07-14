@@ -37,7 +37,7 @@
 # Variables that may change
 
 # Pkg release number; bump this for every new package
-LINUX_PKG_RELEASE = 2da
+LINUX_PKG_RELEASE = 5da
 # Linux vanilla tarball version
 LINUX_VERSION = 3.8.13
 # An ABI name; must match the `abiname` defined in config/defines
