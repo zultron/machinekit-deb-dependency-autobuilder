@@ -15,17 +15,19 @@ shell() {
 }
 trap shell ERR
 
-cd ${SOURCEDIR}/linux/build
-
 # Read list of build deps and disabled featuresets from command line
 BUILD_DEPS=
 DISABLED_FEATURESETS=
-while getopts b:d: ARG; do
+while getopts b:d:p: ARG; do
     case $ARG in
         b) BUILD_DEPS="$BUILD_DEPS $OPTARG" ;;
         d) DISABLED_FEATURESETS="$DISABLED_FEATURESETS $OPTARG" ;;
+	p) PACKAGE=$OPTARG ;;
     esac
 done
+
+test -n "${PACKAGE}"
+cd ${SOURCEDIR}/${PACKAGE}/build
 
 apt-get install -y --force-yes $BUILD_DEPS
 

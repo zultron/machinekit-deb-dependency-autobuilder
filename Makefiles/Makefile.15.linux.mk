@@ -82,6 +82,9 @@ LINUX_PKGS_ARCH_$(1) := \
 endef
 $(foreach a,amd64 i386 armhf,$(eval $(call LINUX_PKGS_ARCH_GEN,$(a))))
 
+# Arch indep pkgs
+LINUX_PKGS_ALL := linux-support-$(LINUX_PKG_EXTENSION)
+
 # Misc paths, filenames, executables
 
 # Tarball name
@@ -108,7 +111,8 @@ LINUX_KERNEL_FEATURESETS_DISABLED_ARG = \
 LINUX_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND := \
 		pbuild/linux-unpacked-chroot-script.sh \
 		    $(LINUX_KERNEL_FEATURESETS_DISABLED_ARG) \
-		    -b "$(strip $(LINUX_SOURCE_PACKAGE_DEPS))"
+		    -b "$(strip $(LINUX_SOURCE_PACKAGE_DEPS))" \
+		    -p linux
 
 
 ###################################################

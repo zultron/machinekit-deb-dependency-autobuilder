@@ -34,3 +34,7 @@
 [submodule "git/etherlab-deb"]
 	path = git/etherlab-deb
 	url = https://github.com/zultron/etherlab-dev.git
+[submodule "git/linux-latest-deb"]
+	path = git/linux-latest-deb
+	url = https://github.com/zultron/linux-latest-deb.git
+	branch = 3.8.13
