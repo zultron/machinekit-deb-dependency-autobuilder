@@ -745,6 +745,16 @@ define UNPACK_TARBALL
 ###################################################
 # xx.2. Unpack tarball
 #
+ifndef $(1)_TARBALL
+# No tarball defined; just clean and make the directory
+$(call STAMP,$(1),unpack-tarball):
+	$(call INFO,$(1),unpack-tarball)
+	rm -rf $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
+	mkdir -p $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
+	touch $$@
+
+else
+# Unpack tarball after download
 $(call STAMP,$(1),unpack-tarball): \
 		$(call STAMP,$(1),tarball-download)
 	$(call INFO,$(1),unpack-tarball)
@@ -753,6 +763,7 @@ $(call STAMP,$(1),unpack-tarball): \
 	tar xC $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build --strip-components=1 \
 	    -f $(DISTDIR)/$($(1)_TARBALL)
 	touch $$@
+endif
 
 $(call STAMP_CLEAN,$(1),unpack-tarball): \
 		$(call STAMP_CLEAN,$(1),debianize-source)
@@ -779,6 +790,7 @@ $(call STAMP,$(1),debianize-source): \
 ifneq ($($(1)_SUBMODULE),)
 #	# Unpack debianization
 	mkdir -p $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
+	rm -rf $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian
 	git --git-dir="$($(1)_SUBMODULE)/.git" archive --prefix=debian/ HEAD \
 	    | tar xCf $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build -
 endif
@@ -786,6 +798,7 @@ endif
 	cp --preserve=all \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build/debian/changelog \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)
+ifdef $(1)_TARBALL
 #	# Link source tarball with Debian name
 	ln -sf $(DISTDIR)/$($(1)_TARBALL) \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL_ORIG,$(1))
@@ -793,6 +806,7 @@ endif
 	mkdir -p $(BUILDRESULT)
 	cp --preserve=all $(DISTDIR)/$($(1)_TARBALL) \
 	    $(BUILDRESULT)/$(call DEBIAN_TARBALL_ORIG,$(1))
+endif
 	touch $$@
 
 $(call STAMP_CLEAN,$(1),debianize-source): \
@@ -923,8 +937,10 @@ ifneq ($$($(1)_SOURCE_PACKAGE_CONFIGURE_COMMAND),)
 		dpkg-buildpackage -d -Tclean
 endif
 	@echo Building source package
+ifdef $(1)_TARBALL
 	ln -sf $(DISTDIR)/$$($(1)_TARBALL) \
 	    $(SOURCEDIR)/$($(1)_SOURCE_NAME)/$(call DEBIAN_TARBALL_ORIG,$(1))
+endif
 	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && dpkg-source -i -I -b .
 	touch $$@
 .PRECIOUS: $(call STAMP_EXPAND,$(1),build-source-package)
