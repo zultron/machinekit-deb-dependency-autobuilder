@@ -25,9 +25,9 @@
 [submodule "git/czmq-deb"]
 	path = git/czmq-deb
 	url = https://github.com/zultron/czmq-deb.git
-[submodule "git/kernel-rt-deb"]
-	path = git/kernel-rt-deb
-	url = https://github.com/zultron/kernel-rt-deb.git
+[submodule "git/linux-ipipe-deb"]
+	path = git/linux-ipipe-deb
+	url = https://github.com/zultron/linux-ipipe-deb.git
 [submodule "git/hostmot2-firmware"]
 	path = git/hostmot2-firmware
 	url = https://github.com/zultron/hostmot2-firmware-deb.git

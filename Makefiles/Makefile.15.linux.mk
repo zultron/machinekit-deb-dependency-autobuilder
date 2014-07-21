@@ -55,7 +55,7 @@ LINUX_SOURCE_NAME := linux
 LINUX_INDEX := 15
 
 # Submodule name:
-LINUX_SUBMODULE := git/kernel-rt-deb
+LINUX_SUBMODULE := git/linux-ipipe-deb
 
 # 
 # This package appends part of the Linux version and an 'abi name' to
