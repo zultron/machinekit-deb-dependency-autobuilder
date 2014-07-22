@@ -157,8 +157,9 @@ BUILD_ARCH_ARCHES = $(filter-out $(ARCH_$(BUILD_ARCH_CHROOT)),$(ARCHES))
 
 # Set $(CODENAME) and $(ARCH) for all stamps/x.y.%.foo targets
 stamps/% clean-% util-%: ARCH = $(if $(ARCH_$*),$(ARCH_$*),$(BUILD_INDEP_ARCH))
-stamps/% clean-% util-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$(CA))
-stamps/% clean-% util-%: CA = $(*)
+stamps/% clean-% util-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$*)
+stamps/% clean-% util-%: CA = \
+	$(*)$(if $(*) in $(CODENAMES),-$(BUILD_INDEP_ARCH))
 
 ###################################################
 # Stamp generator functions
@@ -1000,14 +1001,16 @@ ifeq ($$($(1)_ARCH),INDEP)
 $(call STAMP_EXPAND,$(1),build-binary-package): \
 $(call STAMP,$(1),build-binary-package): \
 		$(call STAMP,$(1),update-ppa-source)
+$(1)_CHROOT_BUILD = stamps/02.1.%-$(BUILD_INDEP_ARCH).chroot-build
 else
 $(call CA2C_DEPS,$(1),build-binary-package,update-ppa-source)
+$(1)_CHROOT_BUILD = stamps/02.1.%.chroot-build
 endif
 
 
 $(call STAMP_EXPAND,$(1),build-binary-package): \
 $(call STAMP,$(1),build-binary-package): \
-		stamps/02.1.%.chroot-build \
+		$$($(1)_CHROOT_BUILD) \
 		$$(foreach dep,$$($(1)_PACKAGE_DEPS),\
 		    $$(call STAMP,$$(SOURCE_NAME_VAR_$$(dep)),update-ppa))
 	$(call INFO,$(1),build-binary-package)
@@ -1053,7 +1056,7 @@ $(call STAMP,$(1),update-ppa):\
 
 	@echo "Adding new binary packages to PPA"
 	$(REPREPRO) -C main includedeb $$(CODENAME) \
-	    $$(call REPREPRO_PACKAGE_PATHS,$(1),$$(CA))
+	    $$(call REPREPRO_PACKAGE_PATHS,$(1),$$(CODENAME)-$$(ARCH))
 	touch $$@
 .PRECIOUS: $(call STAMP_EXPAND,$(1),update-ppa)
 
