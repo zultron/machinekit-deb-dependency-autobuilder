@@ -38,3 +38,6 @@
 	path = git/linux-latest-deb
 	url = https://github.com/zultron/linux-latest-deb.git
 	branch = 3.8.13
+[submodule "git/dovetail-automata-keyring-deb"]
+	path = git/dovetail-automata-keyring-deb
+	url = https://github.com/zultron/dovetail-automata-keyring-deb.git
