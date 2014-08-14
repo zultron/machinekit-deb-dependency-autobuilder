@@ -3,6 +3,9 @@
 #
 # Backported to wheezy from Debian jessie
 
+# Enable this package build
+ENABLED_BUILDS += JANSSON
+
 ###################################################
 # Variables that may change
 
@@ -33,9 +36,3 @@ JANSSON_PKGS_ARCH := libjansson4 libjansson-dev libjansson-dbg
 JANSSON_COMPRESSION = bz2
 JANSSON_TARBALL := jansson-$(JANSSON_VERSION).tar.$(JANSSON_COMPRESSION)
 JANSSON_URL = http://www.digip.org/jansson/releases/$(JANSSON_TARBALL)
-
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,JANSSON))
-$(eval $(call DEBUG_BUILD,JANSSON))

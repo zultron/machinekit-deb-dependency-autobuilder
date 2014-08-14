@@ -156,9 +156,9 @@ BUILD_INDEP_ARCH = $(shell echo $(BUILD_ARCH_CHROOT) | sed 's/.*-//')
 BUILD_ARCH_ARCHES = $(filter-out $(ARCH_$(BUILD_ARCH_CHROOT)),$(ARCHES))
 
 # Set $(CODENAME) and $(ARCH) for all stamps/x.y.%.foo targets
-stamps/% clean-% util-%: ARCH = $(if $(ARCH_$*),$(ARCH_$*),$(BUILD_INDEP_ARCH))
-stamps/% clean-% util-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$*)
-stamps/% clean-% util-%: CA = \
+clean-% util-%: ARCH = $(if $(ARCH_$*),$(ARCH_$*),$(BUILD_INDEP_ARCH))
+clean-% util-%: CODENAME = $(if $(CODENAME_$*),$(CODENAME_$*),$*)
+clean-% util-%: CA = \
 	$(*)$(if $(*) in $(CODENAMES),-$(BUILD_INDEP_ARCH))
 
 ###################################################
@@ -397,7 +397,7 @@ HELP_VARS_UTIL += INFO_PPA_LIST
 #
 # 00.1 Generic target for non-<codename>/<arch>-specific targets
 stamps/00.1.base-builddeps:
-	@echo "===== 00.1. All:  Initialize basic build deps ====="
+	@echo "===== 00.1.all:  Initialize basic build deps ====="
 	touch $@
 ifeq ($(DEBUG),)
 # While hacking, don't rebuild everything whenever a file is changed
@@ -426,7 +426,7 @@ SQUEAKY_ALL += stamps/00.1.base-builddeps-clean
 define INIT_PPA
 $(call C_EXPAND,stamps/00.2.%.ppa-init): \
 stamps/00.2.%.ppa-init: $(CHROOT_DEPS)
-	@echo "===== 00.2.  $(CODENAME):  Init ppa directories ====="
+	@echo "===== 00.2.$(CODENAME):  Init ppa directories ====="
 	$(REASON_PAT)
 	mkdir -p $(REPODIR)/conf-$(CODENAME) $(REPODIR)/db-$(CODENAME)
 	cat pbuild/ppa-distributions.tmpl | sed \
@@ -448,7 +448,7 @@ stamps/00.2.%.ppa-init-clean:
 # 00.3 Init distro ppa
 stamps/00.3.all.ppa-init: \
 		$(call C_EXPAND,stamps/00.2.%.ppa-init)
-	@echo "===== 00.3.  All:  Init ppa directories ====="
+	@echo "===== 00.3.all:  Init ppa directories ====="
 	mkdir -p $(REPODIR)/dists $(REPODIR)/pool
 	touch $@
 .PRECIOUS: stamps/00.3.all.ppa-init
@@ -467,7 +467,7 @@ SQUEAKY_ALL += stamps/00.3.all.ppa-init-clean
 # 01.1 Download GPG keys for the various distros, needed by pbuilder
 
 stamps/01.1.keyring-downloaded:
-	@echo "===== 01.1. All variants:  Creating GPG keyring ====="
+	@echo "===== 01.1.all:  Creating GPG keyring ====="
 	$(REASON)
 	mkdir -p $(MISCDIR)
 	gpg --no-default-keyring --keyring=$(KEYRING) \
@@ -501,7 +501,7 @@ HELP_VARS_COMMON += KEYRING
 $(call CA_EXPAND,stamps/02.1.%.chroot-build): \
 stamps/02.1.%.chroot-build: \
 		$(CHROOT_DEPS)
-	@echo "===== 02.1. $(CA):  Creating pbuilder chroot tarball ====="
+	@echo "===== 02.1.$(CA):  Creating pbuilder chroot tarball ====="
 	$(REASON)
 #	# render the pbuilderrc template
 	mkdir -p $(MISCDIR)
@@ -587,8 +587,7 @@ HELP_VARS_UTIL += CHROOT_UPDATE
 define INFO
 	@echo
 	@echo "====="\
-	    "$($(1)_INDEX).$(TARGET_$(1)_$(2)_INDEX)." \
-	    "$(if $(findstring $(TARGET_$(1)_$(2)_TYPE),COMMON),all,$$(CA)): " \
+	    "$($(1)_INDEX).$(TARGET_$(1)_$(2)_INDEX).$$(CAPr): " \
 	    "$($(1)_SOURCE_NAME): " \
 	    "$(if $(3),$(3),$(TARGET_$(1)_$(2)_DESC))" \
 	    "====="
@@ -604,29 +603,29 @@ INFO_CLEAN = $(call INFO,$(1),$(2),Cleaning target $(2))
 ###################################################
 # Config variables for each target
 define TARGET_VARS
-TARGET_$(1)_checkout-submodule_INDEX := 0
+TARGET_$(1)_checkout-submodule_INDEX := 00
 TARGET_$(1)_checkout-submodule_TYPE := COMMON
 TARGET_$(1)_checkout-submodule_DESC := Check out submodule
 TARGETS_$(1) += checkout-submodule
 
-TARGET_$(1)_tarball-download_INDEX := 1
+TARGET_$(1)_tarball-download_INDEX := 01
 TARGET_$(1)_tarball-download_TYPE := COMMON
 TARGET_$(1)_tarball-download_DESC := Download tarball
 TARGETS_$(1) += tarball-download
 
-TARGET_$(1)_unpack-tarball_INDEX := 2
+TARGET_$(1)_unpack-tarball_INDEX := 02
 TARGET_$(1)_unpack-tarball_TYPE := COMMON
 TARGET_$(1)_unpack-tarball_DESC := Unpack tarball
 TARGETS_$(1) += unpack-tarball
 
-TARGET_$(1)_debianize-source_INDEX := 3
+TARGET_$(1)_debianize-source_INDEX := 03
 TARGET_$(1)_debianize-source_TYPE := COMMON
 TARGET_$(1)_debianize-source_DESC := Debianize source
 TARGETS_$(1) += debianize-source
 
 
 ifneq ($$($(1)_PACKAGE_DEPS),)
-TARGET_$(1)_update-chroot-deps_INDEX := 5
+TARGET_$(1)_update-chroot-deps_INDEX := 04
 TARGET_$(1)_update-chroot-deps_TYPE := ARCH
 TARGET_$(1)_update-chroot-deps_DESC := Update chroot packages from PPA
 TARGETS_$(1) += update-chroot-deps
@@ -638,35 +637,35 @@ $(1)_SOURCE_PACKAGE_CONFIGURE_COMMAND += \
 
 ifneq ($$($(1)_SOURCE_PACKAGE_CONFIGURE_COMMAND),)
 ifneq ($$($(1)_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND),)
-TARGET_$(1)_configure-source-package-chroot_INDEX := 9
+TARGET_$(1)_configure-source-package-chroot_INDEX := 05
 TARGET_$(1)_configure-source-package-chroot_TYPE := ARCH
 TARGET_$(1)_configure-source-package-chroot_DESC := \
 	Configure source package in chroot
 TARGETS_$(1) += configure-source-package-chroot
 endif # have source pkg chroot configure command
 
-TARGET_$(1)_configure-source-package_INDEX := 8
+TARGET_$(1)_configure-source-package_INDEX := 06
 TARGET_$(1)_configure-source-package_TYPE := COMMON
 TARGET_$(1)_configure-source-package_DESC := Configure source package
 TARGETS_$(1) += configure-source-package
 endif # have source pkg configure command
 
-TARGET_$(1)_build-source-package_INDEX := 4
+TARGET_$(1)_build-source-package_INDEX := 07
 TARGET_$(1)_build-source-package_TYPE := INDEP
 TARGET_$(1)_build-source-package_DESC := Build source package
 TARGETS_$(1) += build-source-package
 
-TARGET_$(1)_update-ppa-source_INDEX := 10
+TARGET_$(1)_update-ppa-source_INDEX := 08
 TARGET_$(1)_update-ppa-source_TYPE := INDEP
 TARGET_$(1)_update-ppa-source_DESC := Update PPA with source package
 TARGETS_$(1) += update-ppa-source
 
-TARGET_$(1)_build-binary-package_INDEX := 6
+TARGET_$(1)_build-binary-package_INDEX := 09
 TARGET_$(1)_build-binary-package_TYPE := $$(if $$($(1)_ARCH),$$($(1)_ARCH),ARCH)
 TARGET_$(1)_build-binary-package_DESC := Build binary packages
 TARGETS_$(1) += build-binary-package
 
-TARGET_$(1)_update-ppa_INDEX := 7
+TARGET_$(1)_update-ppa_INDEX := 10
 TARGET_$(1)_update-ppa_TYPE := $$(if $$($(1)_ARCH),$$($(1)_ARCH),ARCH)
 TARGET_$(1)_update-ppa_DESC := Update PPA with new packages
 TARGETS_$(1) += update-ppa
@@ -676,7 +675,7 @@ endef
 
 define UPDATE_SUBMODULE
 ###################################################
-# xx.0. Update submodule
+# xx.00. Update submodule
 #
 ifneq ($($(1)_SUBMODULE),)
 # $$(call UPDATE_SUBMODULE,<VARIABLE>)
@@ -699,7 +698,7 @@ endef
 
 define DOWNLOAD_TARBALL
 ###################################################
-# xx.1. Download tarball distribution
+# xx.01. Download tarball distribution
 #
 ifeq ($($(1)_TARBALL_PACKAGE),)
 # Download a tarball
@@ -744,12 +743,12 @@ endef
 
 define UNPACK_TARBALL
 ###################################################
-# xx.2. Unpack tarball
+# xx.02. Unpack tarball
 #
 ifndef $(1)_TARBALL
 # No tarball defined; just clean and make the directory
 $(call STAMP,$(1),unpack-tarball):
-	$(call INFO,$(1),unpack-tarball)
+	$(call INFO,$(1),unpack-tarball,Cleaning build directory (no tarball))
 	rm -rf $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
 	mkdir -p $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build
 	touch $$@
@@ -778,7 +777,7 @@ endef
 
 define DEBIANIZE_SOURCE
 ###################################################
-# xx.3. Debianize source
+# xx.03. Debianize source
 
 # Some packages include Debianization and need no submodule
 ifneq ($($(1)_SUBMODULE),)
@@ -823,7 +822,7 @@ endef
 
 define UPDATE_CHROOT_DEPS
 ###################################################
-# xx.5. Update chroot with locally-built dependent packages
+# xx.04. Update chroot with locally-built dependent packages
 #
 # This is optional; intended for packages depending on other packages
 # built here
@@ -857,7 +856,7 @@ endef
 
 define CONFIGURE_SOURCE_PACKAGE_CHROOT
 ###################################################
-# xx.10. Configure package source in a chroot
+# xx.05. Configure package source in a chroot
 #
 # This is only added to those packages needing source package
 # configuration in a chroot with specific dependency packages
@@ -867,7 +866,7 @@ ifneq ($($(1)_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND),)
 # packages installed; requires an updated BUILD_INDEP chroot
 $(call STAMP_INDEP_CA,$(1),configure-source-package-chroot): \
 $(call STAMP,$(1),configure-source-package-chroot): \
-		$(call STAMP_INDEP_CA,$(1),update-chroot-deps) \
+		$(call STAMP,$(1),update-chroot-deps) \
 		$(call STAMP,$(1),debianize-source)
 	$(call INFO,$(1),configure-source-package-chroot)
 #	# Configure the package in the BUILD_INDEP chroot
@@ -885,7 +884,7 @@ endef
 
 define CONFIGURE_SOURCE_PACKAGE
 ###################################################
-# xx.8. Configure package source
+# xx.06. Configure package source
 #
 # This is only added to those packages needing an extra configuration step
 ifneq ($($(1)_SOURCE_PACKAGE_CONFIGURE_COMMAND),)
@@ -918,7 +917,7 @@ endef
 
 define BUILD_SOURCE_PACKAGE
 ###################################################
-# xx.4. Build source package for each distro
+# xx.07. Build source package for each distro
 
 $(call STAMP_EXPAND,$(1),build-source-package): \
 $(call STAMP,$(1),build-source-package): \
@@ -958,7 +957,7 @@ endef
 
 
 ###################################################
-# xx.10. Update PPA with source package for a codename
+# xx.08. Update PPA with source package for a codename
 #
 define UPDATE_PPA_SOURCE
 $(call STAMP_EXPAND,$(1),update-ppa-source): \
@@ -989,7 +988,7 @@ endef
 
 define BUILD_BINARY_PACKAGE
 ###################################################
-# xx.6. Build binary packages for each distro/arch
+# xx.09. Build binary packages for each distro/arch
 #
 #   Only build binary-indep packages once:
 $(call STAMP,$(1),build-binary-package): \
@@ -1036,7 +1035,7 @@ endef
 
 define UPDATE_PPA
 ###################################################
-# xx.7. Add packages to the PPA for a codename+arch
+# xx.10. Add packages to the PPA for a codename+arch
 
 # Only add binary-indep packages once:
 $(call STAMP,$(1),update-ppa):\
@@ -1075,7 +1074,7 @@ endef
 
 define ADD_HOOKS
 ###################################################
-# xx.9. Wrap up
+# xx.11. Wrap up
 
 # Hook builds into final builds, if configured
 FINAL_DEPS_ARCH += $$($(1)_ARCH)
@@ -1131,7 +1130,7 @@ endef
 
 ###################################################
 #
-# xx.9. The whole enchilada
+# xx.12. The whole enchilada
 
 define STANDARD_BUILD
 $(call UPDATE_SUBMODULE,$(1))
@@ -1183,10 +1182,96 @@ endif # Debuggery
 endef
 
 ###################################################
-# Include package build makefiles
+# Include package build makefiles and set up rules
 
 -include $(wildcard Makefiles/Makefile.*.mk)
 
+# Evaluate variables for each build
+$(eval $(foreach b,$(ENABLED_BUILDS),$(call TARGET_VARS,$(b))))
+
+# call GEN_VARIABLES,PKG,TARGET,CA,CODENAME,ARCH,ALL?
+define GEN_VARIABLES
+$(call STAMP_EXPAND_PAT,$(1),$(2),$(3)):  CA = $(4)-$(5)
+$(call STAMP_EXPAND_PAT,$(1),$(2),$(3)):  CAPr = $(6)
+$(call STAMP_EXPAND_PAT,$(1),$(2),$(3)):  ARCH = $(5)
+$(call STAMP_EXPAND_PAT,$(1),$(2),$(3)):  CODENAME = $(4)
+
+endef
+
+# call GEN_BUILD_TARGET_DEPS_COMMON,PKG,TARGET
+define GEN_BUILD_TARGET_DEPS_COMMON
+#
+# Maps for package $(1), COMMON target $(2)
+# ARCH -> COMMON deps
+$(call STAMP_EXPAND_ARCH,$(1),$(2)): $(call STAMP,$(1),$(2))
+.PHONY: $(call STAMP_EXPAND_ARCH,$(1),$(2))
+# INDEP -> COMMON deps
+$(call STAMP_EXPAND_INDEP,$(1),$(2)): $(call STAMP,$(1),$(2))
+.PHONY: $(call STAMP_EXPAND_INDEP,$(1),$(2))
+# Variables
+$(call GEN_VARIABLES,$(1),$(2),,$(BUILD_INDEP_CODENAME),$(BUILD_INDEP_ARCH),all)
+
+endef
+
+# call GEN_BUILD_TARGET_DEPS_INDEP,PKG,TARGET,CODENAME
+define GEN_BUILD_TARGET_DEPS_INDEP_HELPER
+# ARCH -> INDEP deps for $(3)
+$(call A_EXPAND,$(call STAMP_EXPAND_PAT,$(1),$(2),.$(3)-%)): \
+	$(call STAMP_EXPAND_PAT,$(1),$(2),.$(3))
+.PHONY: $(call A_EXPAND,$(call STAMP_EXPAND_PAT,$(1),$(2),.$(3)-%))
+
+endef
+define GEN_BUILD_TARGET_DEPS_INDEP
+#
+# Maps for package $(1), INDEP target $(2)
+$(foreach c,$(CODENAMES),$(call \
+	GEN_BUILD_TARGET_DEPS_INDEP_HELPER,$(1),$(2),$(c)))
+# COMMON -> INDEP deps
+$(call STAMP_EXPAND_PAT,$(1),$(2),): \
+	$(call C_EXPAND,$(call STAMP_EXPAND_PAT,$(1),$(2),.%))
+.PHONY: $(call STAMP_EXPAND_PAT,$(1),$(2),)
+# Variables
+$(foreach c,$(CODENAMES),$(call \
+    GEN_VARIABLES,$(1),$(2),.$(c),$(c),$(BUILD_INDEP_ARCH),$(c)-all))
+
+endef
+
+# call GEN_BUILD_TARGET_DEPS_ARCH_HELPER,PKG,TARGET,CODENAME
+define GEN_BUILD_TARGET_DEPS_ARCH_HELPER
+# INDEP -> ARCH deps for $(3)
+$(call STAMP_EXPAND_PAT,$(1),$(2),.$(3)): \
+	$(call A_EXPAND, $(call STAMP_EXPAND_PAT,$(1),$(2),.$(3)-%))
+.PHONY: $(call STAMP_EXPAND_PAT,$(1),$(2),.$(3))
+
+endef
+# call GEN_BUILD_TARGET_DEPS_ARCH,PKG,TARGET
+define GEN_BUILD_TARGET_DEPS_ARCH
+#
+# Maps for package $(1), ARCH target $(2)
+$(foreach c,$(CODENAMES),$(call \
+	GEN_BUILD_TARGET_DEPS_ARCH_HELPER,$(1),$(2),$(c)))
+# COMMON -> ARCH deps
+$(call STAMP_EXPAND_PAT,$(1),$(2),): \
+	$(call CA_EXPAND,$(call STAMP_EXPAND_PAT,$(1),$(2),.%))
+.PHONY: $(call STAMP_EXPAND_PAT,$(1),$(2),)
+# Variables
+$(foreach c,$(CODENAMES),$(foreach a,$(ARCHES),$(call \
+    GEN_VARIABLES,$(1),$(2),.$(c)-$(a),$(c),$(a),$(c)-$(a))))
+
+endef
+
+# call GEN_BUILD_TARGET_DEPS,PKG,TARGET
+define GEN_BUILD_TARGET_DEPS
+$(foreach p,$(ENABLED_BUILDS) \
+   ,$(foreach t,$(TARGETS_$(p)) \
+	,$(call GEN_BUILD_TARGET_DEPS_$(TARGET_$(p)_$(t)_TYPE) \
+	    ,$(p),$(t))))
+endef
+$(info $(call GEN_BUILD_TARGET_DEPS))
+$(eval $(call GEN_BUILD_TARGET_DEPS))
+
+# Evaluate rules for each build
+$(eval $(foreach b,$(ENABLED_BUILDS),$(call DEBUG_BUILD,$(b))))
 
 ###################################################
 # 90. Infra Targets

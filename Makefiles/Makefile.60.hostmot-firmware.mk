@@ -6,6 +6,8 @@
 # DISABLED
 # (see end)
 # ghdl is no longer in Debian, so this can't be built.
+#ENABLED_BUILDS += HOSTMOT2_FIRMWARE
+
 
 ###################################################
 # Variables that may change
@@ -61,10 +63,3 @@ HOSTMOT2_FIRMWARE_TARBALL := hostmot2-firmware-$(HOSTMOT2_FIRMWARE_VERSION).tar.
 # This package needs to be configured
 HOSTMOT2_FIRMWARE_SOURCE_PACKAGE_CONFIGURE_COMMAND = \
 	cd $(SOURCEDIR)/$($(1)_SOURCE_NAME)/build && debian/gencontrol
-
-###################################################
-# Do the standard build for this package
-
-# DISABLED:  this is broken
-#$(eval $(call TARGET_VARS,HOSTMOT2_FIRMWARE))
-#$(eval $(call DEBUG_BUILD,HOSTMOT2_FIRMWARE))

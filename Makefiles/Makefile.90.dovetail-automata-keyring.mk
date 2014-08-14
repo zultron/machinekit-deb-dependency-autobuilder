@@ -1,6 +1,9 @@
 ###################################################
 # 90. dovetail-automata-keyring build rules
 
+# Enable this package build
+ENABLED_BUILDS += DOVETAIL_AUTOMATA_KEYRING
+
 ###################################################
 # Variables that may change
 
@@ -34,9 +37,3 @@ DOVETAIL_AUTOMATA_KEYRING_COMPRESSION = gz
 # No tarball
 DOVETAIL_AUTOMATA_KEYRING_TARBALL := 
 DOVETAIL_AUTOMATA_KEYRING_URL = 
-
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,DOVETAIL_AUTOMATA_KEYRING))
-$(eval $(call DEBUG_BUILD,DOVETAIL_AUTOMATA_KEYRING))

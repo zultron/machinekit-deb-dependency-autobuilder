@@ -3,6 +3,9 @@
 #
 # Not in Debian
 
+# Enable this package build
+ENABLED_BUILDS += CZMQ
+
 ###################################################
 # Variables that may change
 
@@ -37,9 +40,3 @@ CZMQ_URL = http://download.zeromq.org/$(CZMQ_TARBALL)
 # Dependencies on other locally-built packages
 #
 CZMQ_PACKAGE_DEPS = zeromq4 libsodium
-
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,CZMQ))
-$(eval $(call DEBUG_BUILD,CZMQ))

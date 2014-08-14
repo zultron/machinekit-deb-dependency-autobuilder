@@ -1,6 +1,10 @@
 ###################################################
 # 17. etherlab package build rules
 
+# Enable this package build
+# Disabled:  WIP
+#ENABLED_BUILDS += ETHERLAB
+
 ###################################################
 # Variables that should not change much
 # (or auto-generated)
@@ -57,9 +61,3 @@ ETHERLAB_PACKAGE_DEPS = linux
 ETHERLAB_SOURCE_PACKAGE_CONFIGURE_COMMAND := \
 	cd $(SOURCEDIR)/etherlab/build && \
 	    debian/rules debian/control || true # always fails
-
-###################################################
-# Do the standard build for this package
-# DISABLED until this is working
-#$(eval $(call TARGET_VARS,ETHERLAB))
-#$(eval $(call DEBUG_BUILD,ETHERLAB))

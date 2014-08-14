@@ -1,6 +1,9 @@
 ###################################################
 # 10. Xeno build rules
 
+# Enable this package build
+ENABLED_BUILDS += XENOMAI
+
 ###################################################
 # Variables that may change
 
@@ -58,9 +61,3 @@ endif
 
 # Pass featureset list to Linux package
 LINUX_FEATURESET_PKGS += XENOMAI
-
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,XENOMAI))
-$(eval $(call DEBUG_BUILD,XENOMAI))

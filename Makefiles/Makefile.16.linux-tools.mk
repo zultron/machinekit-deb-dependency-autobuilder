@@ -3,6 +3,9 @@
 #
 # This is built in much the same way as the kernel
 
+# Enable this package build
+ENABLED_BUILDS += LINUX_TOOLS
+
 ###################################################
 # Variables that should not change much
 # (or auto-generated)
@@ -54,8 +57,3 @@ LINUX_TOOLS_PACKAGE_DEPS = linux
 LINUX_TOOLS_SOURCE_PACKAGE_CONFIGURE_COMMAND := \
 	cd $(SOURCEDIR)/linux-tools/build && \
 	    debian/rules debian/control || true # always fails
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,LINUX_TOOLS))
-$(eval $(call DEBUG_BUILD,LINUX_TOOLS))

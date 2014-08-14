@@ -1,6 +1,9 @@
 ###################################################
 # 40. libwebsockets build rules
 
+# Enable this package build
+ENABLED_BUILDS += LIBWEBSOCKETS
+
 ###################################################
 # Variables that may change
 
@@ -36,9 +39,3 @@ LIBWEBSOCKETS_COMPRESSION = gz
 LIBWEBSOCKETS_TARBALL := libwebsockets-$(LIBWEBSOCKETS_GIT_REV).tar.gz
 LIBWEBSOCKETS_URL = \
 	http://git.libwebsockets.org/cgi-bin/cgit/libwebsockets/snapshot/$(LIBWEBSOCKETS_TARBALL)
-
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,LIBWEBSOCKETS))
-$(eval $(call DEBUG_BUILD,LIBWEBSOCKETS))

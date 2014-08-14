@@ -1,6 +1,9 @@
 ###################################################
 # 15. Linux kernel build rules
 
+# Enable this package build
+ENABLED_BUILDS += LINUX
+
 # This kernel can build featuresets for Xenomai and RTAI.  To hook
 # dependencies into this build, add to these variables in the
 # dependency's Makefile:
@@ -113,9 +116,3 @@ LINUX_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND := \
 		    $(LINUX_KERNEL_FEATURESETS_DISABLED_ARG) \
 		    -b "$(strip $(LINUX_SOURCE_PACKAGE_DEPS))" \
 		    -p linux
-
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,LINUX))
-$(eval $(call DEBUG_BUILD,LINUX))

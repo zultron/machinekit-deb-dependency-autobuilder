@@ -1,8 +1,13 @@
 ###################################################
 # 11. RTAI build rules
 
-# FIXME:  This is broken
-# It needs a tarball, but is built from git
+
+###################################################
+# Do the standard build for this package
+ifneq ($(shell uname -m),armv7l)
+# Enable this package build
+ENABLED_BUILDS += RTAI
+endif
 
 ###################################################
 # Variables that may change
@@ -102,10 +107,3 @@ stamps/15.8.linux.link-rtai-source-tarball-clean:
 	rm -f stamps/15.8.linux.link-rtai-source-tarball
 stamps/15.8.linux.configure-source-package-clean: \
 		stamps/15.8.linux.link-rtai-source-tarball-clean
-
-###################################################
-# Do the standard build for this package
-ifneq ($(shell uname -m),armv7l)
-$(eval $(call TARGET_VARS,RTAI))
-$(eval $(call DEBUG_BUILD,RTAI))
-endif

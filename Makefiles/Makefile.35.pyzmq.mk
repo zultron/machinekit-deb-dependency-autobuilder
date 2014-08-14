@@ -1,6 +1,9 @@
 ###################################################
 # 35. pyzmq build rules
 
+# Enable this package build
+ENABLED_BUILDS += PYZMQ
+
 ###################################################
 # Variables that may change
 
@@ -37,9 +40,3 @@ PYZMQ_URL = https://github.com/zeromq/pyzmq/archive/$(PYZMQ_TARBALL)
 #
 # Arch- and distro-dependent targets
 PYZMQ_PACKAGE_DEPS = zeromq4
-
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,PYZMQ))
-$(eval $(call DEBUG_BUILD,PYZMQ))

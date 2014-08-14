@@ -1,6 +1,9 @@
 ###################################################
 # 20. libsodium build rules
 
+# Enable this package build
+ENABLED_BUILDS += LIBSODIUM
+
 ###################################################
 # Variables that may change
 
@@ -31,9 +34,3 @@ LIBSODIUM_COMPRESSION = gz
 LIBSODIUM_TARBALL := libsodium-$(LIBSODIUM_VERSION).tar.$(LIBSODIUM_COMPRESSION)
 LIBSODIUM_URL = \
 	http://download.libsodium.org/libsodium/releases/$(LIBSODIUM_TARBALL)
-
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,LIBSODIUM))
-$(eval $(call DEBUG_BUILD,LIBSODIUM))

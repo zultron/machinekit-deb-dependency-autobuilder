@@ -3,6 +3,9 @@
 #
 # This is built in much the same way as the kernel
 
+# Enable this package build
+ENABLED_BUILDS += LINUX_LATEST
+
 ###################################################
 # Variables that should not change much
 # (or auto-generated)
@@ -57,9 +60,3 @@ LINUX_LATEST_SOURCE_PACKAGE_CHROOT_CONFIGURE_COMMAND := \
 		pbuild/linux-unpacked-chroot-script.sh \
 		    -b "$(strip $(LINUX_LATEST_SOURCE_PACKAGE_DEPS))" \
 		    -p linux-latest
-
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,LINUX_LATEST))
-$(eval $(call DEBUG_BUILD,LINUX_LATEST))

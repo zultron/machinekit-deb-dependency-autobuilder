@@ -1,6 +1,9 @@
 ###################################################
 # 25. zeromq4 build rules
 
+# Enable this package build
+ENABLED_BUILDS += ZEROMQ4
+
 ###################################################
 # Variables that may change
 
@@ -35,9 +38,3 @@ ZEROMQ4_URL = http://download.zeromq.org/$(ZEROMQ4_TARBALL)
 # Dependencies on other locally-built packages
 #
 ZEROMQ4_PACKAGE_DEPS = libsodium
-
-
-###################################################
-# Do the standard build for this package
-$(eval $(call TARGET_VARS,ZEROMQ4))
-$(eval $(call DEBUG_BUILD,ZEROMQ4))
