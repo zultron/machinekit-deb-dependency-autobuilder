@@ -7,10 +7,10 @@
 # Libwebsockets package versions
 #
 # Built from a git revision
-LIBWEBSOCKETS_GIT_REV = dfca3abf
+LIBWEBSOCKETS_GIT_REV = 95a8abb
 # Be conservative with the pkg release, since Debian carries this package
-LIBWEBSOCKETS_PKG_RELEASE = 0.1da~git$(LIBWEBSOCKETS_GIT_REV)
-LIBWEBSOCKETS_VERSION = 2.2
+LIBWEBSOCKETS_PKG_RELEASE = 0.2da~git$(LIBWEBSOCKETS_GIT_REV)
+LIBWEBSOCKETS_VERSION = 2.2.git$(LIBWEBSOCKETS_GIT_REV)
 
 
 ###################################################
