@@ -74,3 +74,11 @@ Some packages depend on each other packages; here's a list of all deps:
     - pyzmq
 - libwebsockets
 - jansson
+
+---------------------------
+Maintenance
+
+Occasionally, chroots will need to be updated as upstream distro
+packages change.  To do so, run, for example:
+
+  make util-jessie-amd64.chroot-update
