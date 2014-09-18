@@ -111,7 +111,7 @@ endif
 PBUILD = pbuilder
 PBUILD_ARGS = --configfile \
 	$(MISCDIR)/pbuilderrc.$(if $(CODENAME),$(CODENAME)-$(ARCH),$(BUILD_ARCH_CHROOT)) \
-	--allow-untrusted \
+	--allow-untrusted $(EXTRA_PBUILD_ARGS) \
 	$(DEBBUILDOPTS_ARG) $(BINDMOUNTS_ARG)
 
 # Auto generate Maintainer: field if not set above
