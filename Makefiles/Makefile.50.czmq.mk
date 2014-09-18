@@ -10,7 +10,7 @@ ENABLED_BUILDS += CZMQ
 # Variables that may change
 
 # Czmq package versions
-CZMQ_PKG_RELEASE = 0.1da
+CZMQ_PKG_RELEASE = 0.2~1da
 CZMQ_VERSION = 2.2.0
 
 
