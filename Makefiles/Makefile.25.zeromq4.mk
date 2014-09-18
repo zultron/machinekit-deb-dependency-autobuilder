@@ -8,7 +8,7 @@ ENABLED_BUILDS += ZEROMQ4
 # Variables that may change
 
 # Zeromq4 package
-ZEROMQ4_PKG_RELEASE = 1da
+ZEROMQ4_PKG_RELEASE = 2~1da
 ZEROMQ4_VERSION = 4.0.4
 
 
