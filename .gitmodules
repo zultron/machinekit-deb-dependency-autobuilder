@@ -41,3 +41,6 @@
 [submodule "git/dovetail-automata-keyring-deb"]
 	path = git/dovetail-automata-keyring-deb
 	url = https://github.com/zultron/dovetail-automata-keyring-deb.git
+[submodule "git/python-pyftpdlib-deb"]
+	path = git/python-pyftpdlib-deb
+	url = https://github.com/zultron/python-pyftpdlib-deb.git
