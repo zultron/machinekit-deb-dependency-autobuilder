@@ -26,6 +26,10 @@ export SOURCEDIR="@SOURCEDIR@"
 DIST=${DISTRO_ARCH/-*/}
 ARCH=${DISTRO_ARCH/*-/}
 
+# bind mount /run/shm (pointed to by /dev/shm)
+# http://stackoverflow.com/questions/2009278/python-multiprocessing-permission-denied
+BINDMOUNTS="$BINDMOUNTS /run/shm"
+
 # bind mount ppa directory
 BINDMOUNTS="$BINDMOUNTS $REPODIR"
 OTHERMIRROR="deb [arch=$ARCH] file://$REPODIR $DIST main"
