@@ -265,6 +265,45 @@ $(foreach dep,$(2),\
 $(foreach c,$(CODENAMES),$(call C_TO_CA_DEP,$(1),$(dep),$(c))))
 endef
 
+##############################################################
+# Different style of variable and dep generator  :P
+
+define GEN_C_VARIABLES_HELPER
+
+$(patsubst %,$(1),$(2)):  CA = $(2)-$(BUILD_INDEP_ARCH)
+$(patsubst %,$(1),$(2)):  CAPr = $(2)-all
+$(patsubst %,$(1),$(2)):  ARCH = $(BUILD_INDEP_ARCH)
+$(patsubst %,$(1),$(2)):  CODENAME = $(2)
+
+endef
+define GEN_C_CA_TARGETS_HELPER
+
+$(foreach a,$(ARCHES),$(patsubst %,$(1),$(2)-$(a))): $(patsubst %,$(1),$(2))
+.PHONY: $(foreach a,$(ARCHES),$(patsubst %,$(1),$(2)-$(a)))
+
+endef
+define GEN_C_VARIABLES
+$(foreach c,$(CODENAMES),$(call \
+	GEN_C_VARIABLES_HELPER,$(1),$(c)))
+$(foreach c,$(CODENAMES),$(call \
+	GEN_C_CA_TARGETS_HELPER,$(1),$(c)))
+endef
+
+define GEN_CA_VARIABLES_HELPER
+
+$(patsubst %,$(1),$(2)-$(3)):  CA = $(2)-$(3)
+$(patsubst %,$(1),$(2)-$(3)):  CAPr = $(2)-$(3)
+$(patsubst %,$(1),$(2)-$(3)):  ARCH = $(3)
+$(patsubst %,$(1),$(2)-$(3)):  CODENAME = $(2)
+
+endef
+define GEN_CA_VARIABLES
+$(foreach c,$(CODENAMES),$(foreach a,$(ARCHES),$(call \
+	GEN_CA_VARIABLES_HELPER,$(1),$(c),$(a))))
+endef
+
+
+
 ###################################################
 # File name generator functions
 
@@ -426,17 +465,17 @@ SQUEAKY_ALL += stamps/00.1.base-builddeps-clean
 define INIT_PPA
 $(call C_EXPAND,stamps/00.2.%.ppa-init): \
 stamps/00.2.%.ppa-init: $(CHROOT_DEPS)
-	@echo "===== 00.2.$(CODENAME):  Init ppa directories ====="
-	$(REASON_PAT)
-	mkdir -p $(REPODIR)/conf-$(CODENAME) $(REPODIR)/db-$(CODENAME)
+	@echo "===== 00.2.$$(CODENAME):  Init ppa directories ====="
+	mkdir -p $(REPODIR)/conf-$$(CODENAME) $(REPODIR)/db-$$(CODENAME)
 	cat pbuild/ppa-distributions.tmpl | sed \
-		-e "s/@codename@/$(CODENAME)/g" \
-		-e "s/@arch@/$(call CODENAME_ARCHES,$(CODENAME))/g" \
-		> $(REPODIR)/conf-$(CODENAME)/distributions
-	$(REPREPRO) export $(CODENAME)
-
+		-e "s/@codename@/$$(CODENAME)/g" \
+		-e "s/@arch@/$$(call CODENAME_ARCHES,$$(CODENAME))/g" \
+		> $(REPODIR)/conf-$$(CODENAME)/distributions
+	$(REPREPRO) export $$(CODENAME)
+	mkdir -p $(REPODIR)/dists $(REPODIR)/pool
 	touch $$@
 .PRECIOUS:  $(call C_EXPAND,stamps/00.2.%.ppa-init)
+$(call GEN_C_VARIABLES,stamps/00.2.%.ppa-init)
 endef
 $(eval $(call INIT_PPA))
 
@@ -444,21 +483,6 @@ $(call C_EXPAND,stamps/00.2.%.ppa-init-clean): \
 stamps/00.2.%.ppa-init-clean:
 	@echo "00.2. $(CODENAME):  Removing ppa directories"
 	rm -rf $(REPODIR)/conf-$(CODENAME) $(REPODIR)/db-$(CODENAME)
-
-# 00.3 Init distro ppa
-stamps/00.3.all.ppa-init: \
-		$(call C_EXPAND,stamps/00.2.%.ppa-init)
-	@echo "===== 00.3.all:  Init ppa directories ====="
-	mkdir -p $(REPODIR)/dists $(REPODIR)/pool
-	touch $@
-.PRECIOUS: stamps/00.3.all.ppa-init
-INFRA_TARGETS_ALL += stamps/00.3.all.ppa-init
-
-stamps/00.3.all.ppa-init-clean: \
-	$(call C_EXPAND,stamps/00.2.%.ppa-init-clean)
-	@echo "00.3.  All:  Remove ppa directories"
-	rm -rf $(REPODIR)
-SQUEAKY_ALL += stamps/00.3.all.ppa-init-clean
 
 
 ###################################################
@@ -500,7 +524,7 @@ HELP_VARS_COMMON += KEYRING
 # 02.1.  Build chroot tarball
 $(call CA_EXPAND,stamps/02.1.%.chroot-build): \
 stamps/02.1.%.chroot-build: \
-		$(CHROOT_DEPS)
+		$(call C_EXPAND,stamps/00.2.%.ppa-init)
 	@echo "===== 02.1.$(CA):  Creating pbuilder chroot tarball ====="
 	$(REASON)
 #	# render the pbuilderrc template
@@ -532,6 +556,14 @@ INFRA_TARGETS_ARCH += stamps/02.1.%.chroot-build
 $(call C_EXPAND,stamps/02.1.%.chroot-build): \
 stamps/02.1.%.chroot-build: \
 		stamps/02.1.%-$(BUILD_INDEP_ARCH).chroot-build
+
+ifdef DEBUG_CHROOT_BUILD
+$(info $(call GEN_CA_VARIABLES,stamps/02.1.%.chroot-build))
+endif
+$(eval $(call GEN_CA_VARIABLES,stamps/02.1.%.chroot-build))
+CHROOT_BUILD_TARGET_ALL := DEBUG_CHROOT_BUILD=1
+CHROOT_BUILD_DESC := Show chroot-build generated variables
+HELP_VARS_DEBUG += CHROOT_BUILD
 
 02.1.clean.%.chroot:  stamps/02.1.%.chroot-build
 	@echo "02.1. $(CA):  Cleaning chroot tarball"
@@ -1044,8 +1076,7 @@ $(call STAMP,$(1),update-ppa):\
 
 $(call STAMP_EXPAND,$(1),update-ppa):\
 $(call STAMP,$(1),update-ppa):\
-		$(call STAMP,$(1),build-binary-package) \
-		stamps/00.3.all.ppa-init
+		$(call STAMP,$(1),build-binary-package)
 	$(call INFO,$(1),update-ppa)
 
 	@echo "Removing any existing binary packages from PPA"
@@ -1101,7 +1132,7 @@ $($(1)_SOURCE_NAME):  $$(call STAMP_EXPAND,$(1),$$($(1)_DEFAULT_TARGET))
 #
 # Add package to 'package targets' help section
 $(1)_TARGET_ALL := $($(1)_SOURCE_NAME)
-$(1)_DESC := Build $($(1)_SOURCE_NAME) packages for all distros
+$(1)_DESC := Build $($(1)_SOURCE_NAME) packages
 HELP_VARS_PACKAGE += $(1)
 
 # Cleaning
@@ -1132,19 +1163,36 @@ endef
 #
 # xx.12. The whole enchilada
 
+# Basically just render a target for a package;
+# also add debugging
+#
+# synopsis:  $$(call RENDER_TARGET,TARGET_NAME,PACKAGE)
+# example:  $$(call RENDER_TARGET,UPDATE_SUBMODULE,XENOMAI)
+define RENDER_TARGET
+ifdef DEBUG_$(1)_$(2)
+$$(info #######################################)
+$$(info # DEBUG $(1) $(2))
+$$(info $$(call $(1),$(2)))
+$$(info # /DEBUG $(1) $(2))
+$$(info #######################################)
+
+endif
+$(call $(1),$(2))
+endef
+
 define STANDARD_BUILD
-$(call UPDATE_SUBMODULE,$(1))
-$(call DOWNLOAD_TARBALL,$(1))
-$(call UNPACK_TARBALL,$(1))
-$(call DEBIANIZE_SOURCE,$(1))
-$(call CONFIGURE_SOURCE_PACKAGE_CHROOT,$(1))
-$(call CONFIGURE_SOURCE_PACKAGE,$(1))
-$(call UPDATE_CHROOT_DEPS,$(1))
-$(call BUILD_SOURCE_PACKAGE,$(1))
-$(call UPDATE_PPA_SOURCE,$(1))
-$(call BUILD_BINARY_PACKAGE,$(1))
-$(call UPDATE_PPA,$(1))
-$(call ADD_HOOKS,$(1))
+$(call RENDER_TARGET,UPDATE_SUBMODULE,$(1))
+$(call RENDER_TARGET,DOWNLOAD_TARBALL,$(1))
+$(call RENDER_TARGET,UNPACK_TARBALL,$(1))
+$(call RENDER_TARGET,DEBIANIZE_SOURCE,$(1))
+$(call RENDER_TARGET,CONFIGURE_SOURCE_PACKAGE_CHROOT,$(1))
+$(call RENDER_TARGET,CONFIGURE_SOURCE_PACKAGE,$(1))
+$(call RENDER_TARGET,UPDATE_CHROOT_DEPS,$(1))
+$(call RENDER_TARGET,BUILD_SOURCE_PACKAGE,$(1))
+$(call RENDER_TARGET,UPDATE_PPA_SOURCE,$(1))
+$(call RENDER_TARGET,BUILD_BINARY_PACKAGE,$(1))
+$(call RENDER_TARGET,UPDATE_PPA,$(1))
+$(call RENDER_TARGET,ADD_HOOKS,$(1))
 endef
 
 # A debuggable build
@@ -1267,11 +1315,27 @@ $(foreach p,$(ENABLED_BUILDS) \
 	,$(call GEN_BUILD_TARGET_DEPS_$(TARGET_$(p)_$(t)_TYPE) \
 	    ,$(p),$(t))))
 endef
+# Debugging:  Show all auto-generated rules
+ifdef DEBUG_BUILD_TARGET_DEPS
 $(info $(call GEN_BUILD_TARGET_DEPS))
+endif
 $(eval $(call GEN_BUILD_TARGET_DEPS))
+TARGET_DEPS_TARGET_ALL := DEBUG_BUILD_TARGET_DEPS=1
+TARGET_DEPS_DESC := Show target generated dependencies
+HELP_VARS_DEBUG += TARGET_DEPS
+
+# Debugging:  Show rules for a particular build
+# $(eval $(foreach b,$(ENABLED_BUILDS),$(if $(DEBUG_$(b)_BUILD)\
+# 	,$(info $(call DEBUG_BUILD,$(b))))))
+$(eval $(foreach b,$(ENABLED_BUILDS),$(if $(DEBUG_$(b)_BUILD)\
+	,$(info $(call STANDARD_BUILD,$(b))))))
+DEBUG_TARGET_ALL := "DEBUG_<PACKAGE>_BUILD=1"
+DEBUG_DESC := Show rules for package, e.g. DEBUG_RTAI_BUILD=1
+HELP_VARS_DEBUG += DEBUG
 
 # Evaluate rules for each build
-$(eval $(foreach b,$(ENABLED_BUILDS),$(call DEBUG_BUILD,$(b))))
+#$(eval $(foreach b,$(ENABLED_BUILDS),$(call DEBUG_BUILD,$(b))))
+$(eval $(foreach b,$(ENABLED_BUILDS),$(call STANDARD_BUILD,$(b))))
 
 ###################################################
 # 90. Infra Targets
@@ -1312,9 +1376,13 @@ define HELP_ITEM
 
 endef
 # Print help for a particular section
+HELP_COMMON_HEADER := Targets that apply to all distro + arch combinations
+HELP_PACKAGE_HEADER := Available packages
+HELP_UTIL_HEADER := Utility targets
+HELP_DEBUG_HEADER := Debug variables
 define HELP_SECTION
 	@echo
-	@echo "$(1) TARGETS:"
+	@echo "$(HELP_$(1)_HEADER)"
 	$(foreach var,$(HELP_VARS_$(1)),\
 	    $(if $($(var)_TARGET_INDEP),\
 		$(call HELP_ITEM,$(var),INDEP),\
@@ -1324,7 +1392,7 @@ define HELP_SECTION
 endef
 
 help:
-	$(foreach sec,COMMON PACKAGE UTIL,$(call HELP_SECTION,$(sec)))
+	$(foreach sec,COMMON PACKAGE UTIL DEBUG,$(call HELP_SECTION,$(sec)))
 .PHONY: help
 
 # Help for a package
